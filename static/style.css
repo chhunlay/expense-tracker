@@ -145,3 +145,10 @@ body {
 table.txn-table td, table.txn-table th {
     border-bottom: 1px solid var(--card-border);
 }
+
+/* Opens the Export menu on hover; script.js handles the click-to-keep-
+   open / click-outside-to-close behavior via #exportMenu's own "hidden"
+   class, which this must out-specificity while hovering. */
+#exportMenuWrap:hover #exportMenu {
+    display: block;
+}

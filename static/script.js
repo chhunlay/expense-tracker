@@ -92,3 +92,22 @@ if (amountToggle) {
         try { localStorage.setItem(HIDE_AMOUNTS_KEY, amountsHidden ? '1' : '0'); } catch (e) {}
     });
 }
+
+// ---------- Export dropdown (Transactions page) ----------
+// Hover-to-open is pure CSS (#exportMenuWrap:hover in style.css, which
+// out-specificities the .hidden class below regardless of its state).
+// This only handles the parts CSS can't: click to keep it open on
+// touch (where hover never fires), and closing it on an outside click.
+const exportMenuBtn = document.getElementById('exportMenuBtn');
+const exportMenu = document.getElementById('exportMenu');
+if (exportMenuBtn && exportMenu) {
+    exportMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exportMenu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!exportMenu.classList.contains('hidden') && !exportMenu.contains(e.target) && e.target !== exportMenuBtn) {
+            exportMenu.classList.add('hidden');
+        }
+    });
+}
