@@ -50,6 +50,8 @@
 
     {% block content %}{% endblock %}
 
+    <p class="text-center text-xs text-faint mt-6">v{{ app_version }}</p>
+
 </div>
 
 <script src="{{ url_for('static', filename='script.js') }}"></script>

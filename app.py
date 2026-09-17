@@ -1,83 +1,29 @@
+"""
+Flask app: HTTP routes only. Schema/persistence lives in db.py, date math
+in dates.py, and quick-add text parsing in quick_add.py - see README.md
+("Project structure") for how these fit together.
+"""
 import os
-import re
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, url_for
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data", "expenses.db")
+from dates import month_bounds, shift_month
+from db import get_db, init_db
+from quick_add import parse_quick_add
+
+# Bump this alongside a new CHANGELOG.md entry.
+__version__ = "0.2.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-# Seeded on first run only - the user can rename/delete/add to these freely
-# afterward from the Categories page.
-DEFAULT_CATEGORIES = [
-    ("Food & Drink", "#f97316"),
-    ("Groceries", "#22c55e"),
-    ("Transport", "#38bdf8"),
-    ("Rent", "#a855f7"),
-    ("Subscriptions", "#ec4899"),
-    ("Bills & Utilities", "#eab308"),
-    ("Health", "#ef4444"),
-    ("Shopping", "#6366f1"),
-    ("Entertainment", "#14b8a6"),
-    ("Other", "#94a3b8"),
-]
 
-
-def get_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-def init_db():
-    conn = get_db()
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            color TEXT NOT NULL DEFAULT '#6366f1',
-            budget_limit REAL
-        );
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            type TEXT NOT NULL CHECK(type IN ('expense', 'income')),
-            amount REAL NOT NULL,
-            category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-            note TEXT,
-            created_at TEXT NOT NULL
-        );
-        """
-    )
-    if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
-        conn.executemany(
-            "INSERT INTO categories (name, color) VALUES (?, ?)", DEFAULT_CATEGORIES
-        )
-    conn.commit()
-    conn.close()
-
-
-def shift_month(year, month, delta):
-    """(2026, 1, -1) -> (2025, 12); (2026, 12, 1) -> (2027, 1)."""
-    idx = year * 12 + (month - 1) + delta
-    return idx // 12, idx % 12 + 1
-
-
-def month_bounds(month_str):
-    """'2026-09' -> ('2026-09-01', '2026-10-01') half-open range for SQL."""
-    year, mo = (int(p) for p in month_str.split("-"))
-    start = f"{year:04d}-{mo:02d}-01"
-    ny, nm = shift_month(year, mo, 1)
-    end = f"{ny:04d}-{nm:02d}-01"
-    return start, end
+@app.context_processor
+def inject_version():
+    return {"app_version": __version__}
 
 
 @app.template_filter("money")
@@ -88,48 +34,6 @@ def money_filter(value):
 @app.template_filter("monthlabel")
 def monthlabel_filter(month_str):
     return datetime.strptime(month_str, "%Y-%m").strftime("%B %Y")
-
-
-def parse_quick_add(text, categories):
-    """
-    Turns a one-line quick-add like "Lunch 5.50 Food" into a transaction
-    dict, or None if no amount could be found at all.
-
-    - The first number in the text is the amount. A leading '+' on it
-      (e.g. "+500 salary") marks it as income instead of an expense.
-    - If any existing category name appears as a whole word/phrase
-      anywhere in the remaining text, that transaction is filed under
-      it (and the match is stripped from the note); otherwise it's left
-      uncategorized and the caller falls back to "Other".
-    - Whatever's left after removing the amount and matched category
-      becomes the note.
-    """
-    match = re.search(r"([+-]?\d+(?:\.\d{1,2})?)", text)
-    if not match:
-        return None
-
-    raw_amount = match.group(1)
-    amount = abs(float(raw_amount))
-    txn_type = "income" if raw_amount.startswith("+") else "expense"
-
-    remainder = (text[: match.start()] + text[match.end() :]).strip()
-    remainder = re.sub(r"\s+", " ", remainder)
-
-    matched_category = None
-    for cat in sorted(categories, key=lambda c: -len(c["name"])):
-        pattern = r"(?i)\b" + re.escape(cat["name"]) + r"\b"
-        if re.search(pattern, remainder):
-            matched_category = cat
-            remainder = re.sub(pattern, "", remainder, count=1, flags=re.IGNORECASE)
-            remainder = re.sub(r"\s+", " ", remainder).strip(" -,")
-            break
-
-    return {
-        "amount": amount,
-        "type": txn_type,
-        "category_id": matched_category["id"] if matched_category else None,
-        "note": remainder or None,
-    }
 
 
 @app.route("/")
@@ -396,9 +300,12 @@ def categories_view():
 def reports():
     conn = get_db()
 
+    # 12 months, not 6 - a net-trend line needs more points than the
+    # income/expense bar chart to actually show a trend rather than just
+    # a handful of bars.
     months = []
     y, m = date.today().year, date.today().month
-    for i in range(5, -1, -1):
+    for i in range(11, -1, -1):
         yy, mm = shift_month(y, m, -i)
         months.append("%04d-%02d" % (yy, mm))
 
@@ -410,7 +317,14 @@ def reports():
             "FROM transactions WHERE date LIKE ?",
             (f"{ms}%",),
         ).fetchone()
-        monthly_totals.append({"month": ms, "expense": row["expense"], "income": row["income"]})
+        monthly_totals.append(
+            {
+                "month": ms,
+                "expense": row["expense"],
+                "income": row["income"],
+                "net": row["income"] - row["expense"],
+            }
+        )
 
     top_categories = conn.execute(
         """
