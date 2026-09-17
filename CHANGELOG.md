@@ -3,6 +3,22 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.9.1] - 2026-09-18
+### Fixed
+- The custom date picker's panel never had explicit `top`/`left`
+  positioning set - it relied on the browser's default "static
+  position" fallback for an absolutely positioned element, which is
+  fragile and could shift or misalign depending on viewport width. Now
+  explicitly anchored (`top-full left-0`) with a `max-width` clamp so it
+  can never overflow past a narrow screen's edge (verified with no
+  overflow at 1280px down to 320px).
+
+### Added
+- Click the month/year label (e.g. "September 2026") to jump straight
+  into a 12-month grid for that year, with year Prev/Next - the same
+  quick-jump shortcut the old native picker's own dropdown offered,
+  instead of only single-month-at-a-time Prev/Next.
+
 ## [0.9.0] - 2026-09-18
 ### Changed
 - Replaced the native `<input type="date">` with a custom-built date

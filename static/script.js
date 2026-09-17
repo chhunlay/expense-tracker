@@ -155,6 +155,10 @@ function initDatePicker(root) {
     let selected = parseValue();
     let viewYear = selected.getFullYear();
     let viewMonth = selected.getMonth();
+    let viewMode = 'days'; // 'days' | 'months' - clicking the month/year
+                            // label switches to a month-grid for jumping
+                            // straight to any month, like the old native
+                            // picker's own month/year dropdown did.
 
     // Exposed so the modal-reset flow (below) can re-sync the visible
     // display text after form.reset() silently restores the hidden
@@ -163,11 +167,28 @@ function initDatePicker(root) {
         selected = parseValue();
         viewYear = selected.getFullYear();
         viewMonth = selected.getMonth();
+        viewMode = 'days';
         display.textContent = formatDisplay(selected);
     };
     root._dpSyncFromValue();
 
     function render() {
+        if (viewMode === 'months') {
+            const months = MONTH_NAMES.map((name, i) => {
+                const isCurrent = i === viewMonth;
+                return `<button type="button" class="dp-month${isCurrent ? ' dp-day-selected' : ''}" data-dp-month="${i}">${name.slice(0, 3)}</button>`;
+            });
+            panel.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <button type="button" class="dp-nav" data-dp-year-prev aria-label="Previous year">&lsaquo;</button>
+                    <button type="button" class="font-semibold text-sm" data-dp-month-toggle>${viewYear}</button>
+                    <button type="button" class="dp-nav" data-dp-year-next aria-label="Next year">&rsaquo;</button>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 text-center text-sm">${months.join('')}</div>
+            `;
+            return;
+        }
+
         const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
         const today = new Date();
@@ -186,7 +207,7 @@ function initDatePicker(root) {
         panel.innerHTML = `
             <div class="flex items-center justify-between mb-2">
                 <button type="button" class="dp-nav" data-dp-prev aria-label="Previous month">&lsaquo;</button>
-                <span class="font-semibold text-sm">${MONTH_NAMES[viewMonth]} ${viewYear}</span>
+                <button type="button" class="font-semibold text-sm" data-dp-month-toggle>${MONTH_NAMES[viewMonth]} ${viewYear}</button>
                 <button type="button" class="dp-nav" data-dp-next aria-label="Next month">&rsaquo;</button>
             </div>
             <div class="grid grid-cols-7 gap-1 text-center text-xs text-faint mb-1">
@@ -210,7 +231,20 @@ function initDatePicker(root) {
     // it can reach that listener at all.
     panel.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (e.target.closest('[data-dp-prev]')) {
+        if (e.target.closest('[data-dp-month-toggle]')) {
+            viewMode = viewMode === 'days' ? 'months' : 'days';
+            render();
+        } else if (e.target.closest('[data-dp-month]')) {
+            viewMonth = Number(e.target.closest('[data-dp-month]').dataset.dpMonth);
+            viewMode = 'days';
+            render();
+        } else if (e.target.closest('[data-dp-year-prev]')) {
+            viewYear -= 1;
+            render();
+        } else if (e.target.closest('[data-dp-year-next]')) {
+            viewYear += 1;
+            render();
+        } else if (e.target.closest('[data-dp-prev]')) {
             viewMonth -= 1;
             if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
             render();
@@ -222,6 +256,7 @@ function initDatePicker(root) {
             selected = new Date();
             viewYear = selected.getFullYear();
             viewMonth = selected.getMonth();
+            viewMode = 'days';
             commit();
         } else {
             const dayBtn = e.target.closest('[data-dp-day]');
