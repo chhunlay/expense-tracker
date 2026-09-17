@@ -5,14 +5,18 @@
 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
     <h2 class="font-bold text-lg">Transactions</h2>
     <div class="flex flex-wrap gap-2">
-        <a href="{{ url_for('export_csv') }}"
-           class="action-btn bg-white/10 hover:bg-white/15 text-muted font-semibold px-3 py-2 rounded-xl text-sm">
-            Export CSV
-        </a>
-        <a href="{{ url_for('export_xlsx') }}"
-           class="action-btn bg-white/10 hover:bg-white/15 text-muted font-semibold px-3 py-2 rounded-xl text-sm">
-            Export XLSX
-        </a>
+        <!-- Native <details>/<summary> dropdown - same pattern already
+             used for each category row on the Categories page, so no
+             extra JS is needed just to pick a file format. -->
+        <details class="relative inline-block">
+            <summary class="action-btn bg-white/10 hover:bg-white/15 text-muted font-semibold px-3 py-2 rounded-xl text-sm cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                Export
+            </summary>
+            <div class="absolute right-0 mt-2 w-32 glass-card rounded-xl p-1.5 space-y-1 z-10">
+                <a href="{{ url_for('export_csv') }}" class="nav-link block px-3 py-2 rounded-lg text-sm">CSV</a>
+                <a href="{{ url_for('export_xlsx') }}" class="nav-link block px-3 py-2 rounded-lg text-sm">XLSX</a>
+            </div>
+        </details>
         <a href="{{ url_for('import_transactions') }}"
            class="action-btn bg-white/10 hover:bg-white/15 text-muted font-semibold px-3 py-2 rounded-xl text-sm">
             Import
