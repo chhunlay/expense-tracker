@@ -53,20 +53,25 @@ document.querySelectorAll('[data-width]').forEach((el) => {
 });
 
 // ---------- Hide/show sensitive amounts (dashboard Income + Net) ----------
-// One toggle masks both at once; the real formatted amount is kept in
-// data-amount so un-hiding doesn't need a round trip to the server.
-// State persists in localStorage, same pattern as the theme, so it stays
-// hidden across page loads/navigation instead of resetting every visit.
+// One toggle blurs both at once, in place - the real digits stay in the
+// DOM (unlike a text-swap mask), a CSS filter just obscures them, same
+// look as a banking app's balance-privacy toggle. State persists in
+// localStorage, same pattern as the theme, so it stays hidden across
+// page loads/navigation instead of resetting every visit.
 const HIDE_AMOUNTS_KEY = 'expense-tracker-hide-amounts';
 const amountToggle = document.getElementById('amountToggle');
 const amountToggleIcon = document.getElementById('amountToggleIcon');
 const hideableAmounts = document.querySelectorAll('.hideable-amount');
 
+// Feather-style eye / eye-off icons (stroke, inherits currentColor).
+const EYE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+const EYE_OFF_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+
 function applyAmountVisibility(hidden) {
     hideableAmounts.forEach((el) => {
-        el.textContent = hidden ? '$••••' : el.dataset.amount;
+        el.classList.toggle('amount-hidden', hidden);
     });
-    if (amountToggleIcon) amountToggleIcon.textContent = hidden ? '🙈' : '👁️';
+    if (amountToggleIcon) amountToggleIcon.innerHTML = hidden ? EYE_OFF_ICON : EYE_ICON;
 }
 
 function getStoredHideAmounts() {

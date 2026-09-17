@@ -109,6 +109,14 @@ body {
 .kpi-net { background: linear-gradient(135deg, #6366f1, #a855f7); }
 .kpi-card .kpi-label { color: rgba(255, 255, 255, 0.75); }
 
+.hideable-amount {
+    transition: filter 0.2s ease;
+}
+.hideable-amount.amount-hidden {
+    filter: blur(7px);
+    user-select: none;
+}
+
 .action-btn { transition: transform 0.15s ease, opacity 0.15s ease; }
 .action-btn:hover { transform: translateY(-2px); }
 .action-btn:active { transform: translateY(0); }
