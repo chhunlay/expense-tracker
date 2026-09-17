@@ -152,3 +152,21 @@ table.txn-table td, table.txn-table th {
 #exportMenuWrap:hover #exportMenu {
     display: block;
 }
+
+/* Native <dialog> default UA style is a white boxed panel - strip that
+   so the inner .glass-card div (in transactions.html) supplies all the
+   actual visuals, matching every other card in the app. */
+dialog {
+    background: transparent;
+    border: none;
+    padding: 0;
+    max-width: 90vw;
+    color: var(--text-main);
+}
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+}
+dialog[open] {
+    animation: fadeUp 0.2s ease;
+}

@@ -5,43 +5,7 @@
 <div class="glass-card rounded-2xl p-5 max-w-md">
     <h2 class="font-bold text-lg mb-4">Add transaction</h2>
     <form method="post" class="space-y-4">
-        <div>
-            <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Type</label>
-            <div class="grid grid-cols-2 gap-2">
-                <label class="flex items-center justify-center gap-2 input rounded-xl py-2.5 cursor-pointer has-[:checked]:border-indigo-400">
-                    <input type="radio" name="type" value="expense" checked class="accent-indigo-500"> Expense
-                </label>
-                <label class="flex items-center justify-center gap-2 input rounded-xl py-2.5 cursor-pointer has-[:checked]:border-indigo-400">
-                    <input type="radio" name="type" value="income" class="accent-indigo-500"> Income
-                </label>
-            </div>
-        </div>
-
-        <div>
-            <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Amount</label>
-            <input type="number" step="0.01" min="0" name="amount" required placeholder="0.00"
-                   class="input w-full py-2.5 px-3 rounded-xl">
-        </div>
-
-        <div>
-            <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Category</label>
-            <select name="category_id" class="input w-full py-2.5 px-3 rounded-xl">
-                {% for c in categories %}
-                <option value="{{ c.id }}">{{ c.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Date</label>
-            <input type="date" name="date" value="{{ today }}" required class="input w-full py-2.5 px-3 rounded-xl">
-        </div>
-
-        <div>
-            <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Note (optional)</label>
-            <input type="text" name="note" placeholder="What was it for?" class="input w-full py-2.5 px-3 rounded-xl">
-        </div>
-
+        {% include "_transaction_fields.html" %}
         <button type="submit" class="action-btn w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-500/20">
             Save
         </button>

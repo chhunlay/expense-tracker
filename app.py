@@ -17,7 +17,7 @@ from quick_add import parse_quick_add
 from xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 # Bump this alongside a new CHANGELOG.md entry.
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -246,7 +246,12 @@ def transactions():
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return render_template(
-        "transactions.html", rows=rows, categories=categories, month=month, category_id=category_id
+        "transactions.html",
+        rows=rows,
+        categories=categories,
+        month=month,
+        category_id=category_id,
+        today=date.today().isoformat(),
     )
 
 

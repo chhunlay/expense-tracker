@@ -111,3 +111,23 @@ if (exportMenuBtn && exportMenu) {
         }
     });
 }
+
+// ---------- Add-transaction modal (Transactions page) ----------
+// Native <dialog>: showModal()/close() give focus trapping, Escape-to-
+// close, and a ::backdrop for free. reset() clears any leftover input
+// from a previous open-then-cancel before showing it again.
+const addModal = document.getElementById('addModal');
+function openAddModal() {
+    if (!addModal) return;
+    const form = addModal.querySelector('form');
+    if (form) form.reset();
+    addModal.showModal();
+}
+if (addModal) {
+    // A click lands on the <dialog> element itself (not any child) when
+    // it's on the ::backdrop - the standard way to detect "clicked
+    // outside" for a native dialog.
+    addModal.addEventListener('click', (e) => {
+        if (e.target === addModal) addModal.close();
+    });
+}

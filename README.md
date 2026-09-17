@@ -54,6 +54,8 @@ expense-tracker/
 ├── csv_io.py           # CSV export/import for moving data between devices
 ├── xlsx_io.py           # Same, as a real .xlsx file (via openpyxl)
 ├── templates/         # Jinja2 pages (one file per route) + base.html layout
+│   └── _transaction_fields.html   # Shared by add.html and the Transactions
+│                                     page's Add popup, so they can't drift
 ├── static/
 │   ├── style.css       # Theme (CSS variables, dark/light) + component styles
 │   └── script.js       # Theme toggle + flash-message auto-dismiss

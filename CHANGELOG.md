@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.6.0] - 2026-09-17
+### Added
+- "+ Add" on the Transactions page now opens the add-transaction form as
+  a popup (native `<dialog>`) instead of navigating to `/add` - same
+  fields, shared with the standalone `/add` page (still reachable
+  directly) via a new `_transaction_fields.html` partial so the two
+  never drift apart. Opens on click, closes on Cancel/outside-click/Esc,
+  and resets any leftover input each time it's reopened.
+
+### Changed
+- The Export dropdown on the Transactions page now opens on hover as
+  well as click (previously click-only).
+
 ## [0.5.0] - 2026-09-17
 ### Added
 - Real `.xlsx` export/import (`xlsx_io.py`, via the `openpyxl` library),
