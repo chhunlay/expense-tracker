@@ -17,7 +17,7 @@ from quick_add import parse_quick_add
 from xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 # Bump this alongside a new CHANGELOG.md entry.
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")

@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.10.0] - 2026-09-18
+### Reverted
+- Reverted the custom date picker (0.9.0-0.9.1) back to the native
+  `<input type="date">` on both the Add-transaction popup and the
+  Edit-transaction page. Themed correctly, but inserted its calendar
+  panel inline in the page flow - inside a popup with limited height,
+  that pushed content down far enough that picking a date meant
+  scrolling first, which is worse than the theme mismatch it was meant
+  to fix. Back to the plain native input's usual behavior; the
+  color-scheme fix from 0.7.0 stays in place for it.
+
 ## [0.9.1] - 2026-09-18
 ### Fixed
 - The custom date picker's panel never had explicit `top`/`left`
