@@ -27,12 +27,12 @@ Categories page.
 - **Quick add** on the dashboard - type something like `Lunch 5.50 Food` or
   `+500 Salary` and it's parsed into an amount, category (if the name is
   found in the text), and note. Prefix the amount with `+` for income.
-- **Full form** (`/add`) for precise entry - type, amount, category, date, note.
 - **Dashboard** - monthly income/expense/net totals, a category breakdown
   doughnut chart, budget progress bars, and recent transactions. Navigate
   between months with Prev/Next.
 - **Transactions list** (`/transactions`) - filterable by month and category,
-  with inline edit/delete.
+  with inline edit/delete. "+ Add" opens a popup for precise entry (type,
+  amount, category, date, note); "+ Add" on Categories works the same way.
 - **Categories** (`/categories`) - add, rename, recolor, delete, and set a
   monthly budget limit per category. Deleting a category does not delete its
   past transactions - they fall back to "Uncategorized".
@@ -54,8 +54,6 @@ expense-tracker/
 ├── csv_io.py           # CSV export/import for moving data between devices
 ├── xlsx_io.py           # Same, as a real .xlsx file (via openpyxl)
 ├── templates/         # Jinja2 pages (one file per route) + base.html layout
-│   └── _transaction_fields.html   # Shared by add.html and the Transactions
-│                                     page's Add popup, so they can't drift
 ├── static/
 │   ├── style.css       # Theme (CSS variables, dark/light) + component styles
 │   └── script.js       # Theme toggle + flash-message auto-dismiss

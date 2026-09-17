@@ -155,30 +155,28 @@ def quick_add():
     return redirect(url_for("dashboard", month=request.form.get("month")))
 
 
-@app.route("/add", methods=["GET", "POST"])
+# POST-only - the Add-transaction form used to also have a standalone
+# GET page (add.html) at this same URL, but that's gone now that it's
+# reachable only via the popup on the Transactions page.
+@app.route("/add", methods=["POST"])
 def add_transaction():
     conn = get_db()
-    if request.method == "POST":
-        conn.execute(
-            "INSERT INTO transactions (date, type, amount, category_id, note, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                request.form["date"],
-                request.form["type"],
-                float(request.form["amount"]),
-                request.form.get("category_id") or None,
-                request.form.get("note") or None,
-                datetime.now().isoformat(),
-            ),
-        )
-        conn.commit()
-        conn.close()
-        flash("Transaction added", "success")
-        return redirect(url_for("transactions"))
-
-    categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
+    conn.execute(
+        "INSERT INTO transactions (date, type, amount, category_id, note, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            request.form["date"],
+            request.form["type"],
+            float(request.form["amount"]),
+            request.form.get("category_id") or None,
+            request.form.get("note") or None,
+            datetime.now().isoformat(),
+        ),
+    )
+    conn.commit()
     conn.close()
-    return render_template("add.html", categories=categories, today=date.today().isoformat())
+    flash("Transaction added", "success")
+    return redirect(url_for("transactions"))
 
 
 @app.route("/edit/<int:txn_id>", methods=["GET", "POST"])

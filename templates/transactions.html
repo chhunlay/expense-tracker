@@ -40,12 +40,12 @@
     </div>
 </div>
 
-<!-- Popup instead of navigating to /add - that page still exists as a
-     direct-link fallback (e.g. bookmarked), but this is the normal path
-     now. Reuses the exact same fields as add.html via the shared
-     partial, submitted to the same /add route, so a real page
-     navigation still happens on success (server redirects to this page
-     with the flash message) - just no extra page visited to get there. -->
+<!-- Adding a transaction only happens through this popup - there's no
+     standalone /add page anymore (POST /add still exists, just to
+     handle this form's submission). Submitted normally (not fetch), so
+     a real page navigation still happens on success: the server
+     redirects back here with the flash message, closing the popup by
+     virtue of the whole page reloading. -->
 <!-- Width goes on the <dialog> itself, not just the inner card - a
      <dialog> has no width of its own by default (shrink-to-fit its
      content), so a w-full div inside it doesn't actually make the
@@ -61,7 +61,43 @@
                     class="text-muted hover:text-main text-xl leading-none" aria-label="Close">&times;</button>
         </div>
         <form method="post" action="{{ url_for('add_transaction') }}" class="space-y-4">
-            {% include "_transaction_fields.html" %}
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Type</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center justify-center gap-2 input rounded-xl py-2.5 cursor-pointer has-[:checked]:border-indigo-400">
+                        <input type="radio" name="type" value="expense" checked class="accent-indigo-500"> Expense
+                    </label>
+                    <label class="flex items-center justify-center gap-2 input rounded-xl py-2.5 cursor-pointer has-[:checked]:border-indigo-400">
+                        <input type="radio" name="type" value="income" class="accent-indigo-500"> Income
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Amount</label>
+                <input type="number" step="0.01" min="0" name="amount" required placeholder="0.00"
+                       class="input w-full py-2.5 px-3 rounded-xl">
+            </div>
+
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Category</label>
+                <select name="category_id" class="input w-full py-2.5 px-3 rounded-xl">
+                    {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Date</label>
+                <input type="date" name="date" value="{{ today }}" required class="input w-full py-2.5 px-3 rounded-xl">
+            </div>
+
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Note (optional)</label>
+                <input type="text" name="note" placeholder="What was it for?" class="input w-full py-2.5 px-3 rounded-xl">
+            </div>
+
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('addModal').close()"
                         class="action-btn flex-1 bg-white/10 hover:bg-white/15 text-muted font-semibold py-3 rounded-xl">
