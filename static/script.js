@@ -112,22 +112,24 @@ if (exportMenuBtn && exportMenu) {
     });
 }
 
-// ---------- Add-transaction modal (Transactions page) ----------
-// Native <dialog>: showModal()/close() give focus trapping, Escape-to-
-// close, and a ::backdrop for free. reset() clears any leftover input
-// from a previous open-then-cancel before showing it again.
-const addModal = document.getElementById('addModal');
-function openAddModal() {
-    if (!addModal) return;
-    const form = addModal.querySelector('form');
+// ---------- Generic <dialog> modal helper ----------
+// Shared by every popup (Add transaction on transactions.html, Add
+// category on categories.html, ...) instead of each wiring up its own
+// copy. Native <dialog> gives focus trapping, Escape-to-close, and a
+// ::backdrop for free; this adds the two things it doesn't: resetting
+// any leftover input from a previous open-then-cancel before showing it
+// again, and closing on a backdrop click (a click lands on the <dialog>
+// element itself, not any child, when it's on the ::backdrop - the
+// standard way to detect that for a native dialog).
+function openModal(id) {
+    const dialog = document.getElementById(id);
+    if (!dialog) return;
+    const form = dialog.querySelector('form');
     if (form) form.reset();
-    addModal.showModal();
+    dialog.showModal();
 }
-if (addModal) {
-    // A click lands on the <dialog> element itself (not any child) when
-    // it's on the ::backdrop - the standard way to detect "clicked
-    // outside" for a native dialog.
-    addModal.addEventListener('click', (e) => {
-        if (e.target === addModal) addModal.close();
+document.querySelectorAll('dialog').forEach((dialog) => {
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) dialog.close();
     });
-}
+});

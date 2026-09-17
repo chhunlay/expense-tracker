@@ -3,6 +3,24 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.7.0] - 2026-09-17
+### Added
+- "+ Add" on the Categories page now opens the add-category form as a
+  popup, same as the Transactions page's Add-transaction popup - both
+  now share one `openModal(id)` helper in script.js instead of each
+  wiring up its own open/reset/backdrop-click-to-close logic.
+
+### Fixed
+- The Add-transaction popup's card rendered muddy gray instead of a
+  clean white in light theme (its translucent background picked up the
+  popup's dark dimming overlay through its own blur effect); popups now
+  use a solid background instead.
+- The date picker inside the Add-transaction popup could still render
+  in dark styling even with light theme active - `color-scheme` is now
+  set directly on the popup element itself instead of only relying on
+  it cascading down from the page, which isn't always reliable for an
+  open `<dialog>`.
+
 ## [0.6.0] - 2026-09-17
 ### Added
 - "+ Add" on the Transactions page now opens the add-transaction form as

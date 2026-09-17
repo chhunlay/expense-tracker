@@ -2,8 +2,15 @@
 {% block title %}Categories - Expense Tracker{% endblock %}
 {% block content %}
 
-<div class="glass-card rounded-2xl p-5 mb-4">
-    <h2 class="font-bold text-lg mb-4">Categories</h2>
+<div class="flex items-center justify-between mb-4">
+    <h2 class="font-bold text-lg">Categories</h2>
+    <button type="button" onclick="openModal('addCategoryModal')"
+            class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2 rounded-xl text-sm shadow-lg shadow-indigo-500/20">
+        + Add
+    </button>
+</div>
+
+<div class="glass-card rounded-2xl p-5">
     <div class="space-y-2">
         {% for c in categories %}
         <details class="input rounded-xl px-3 py-2.5">
@@ -47,20 +54,42 @@
     </div>
 </div>
 
-<div class="glass-card rounded-2xl p-5">
-    <h3 class="font-bold mb-3">Add a category</h3>
-    <form method="post" class="grid grid-cols-[auto_1fr] gap-2 items-center">
-        <input type="hidden" name="action" value="add">
-        <input type="color" name="color" value="#6366f1" class="w-10 h-9 rounded-lg border-0 bg-transparent">
-        <input type="text" name="name" placeholder="Category name" required class="input py-2 px-3 rounded-lg text-sm">
-        <div class="col-span-2 flex items-center gap-2">
-            <input type="number" step="0.01" min="0" name="budget_limit" placeholder="Monthly budget (optional)"
-                   class="input flex-1 py-2 px-3 rounded-lg text-sm">
-            <button type="submit" class="action-btn flex-shrink-0 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-1.5 rounded-lg text-xs">
-                Add category
-            </button>
+<!-- Popup instead of the inline "Add a category" card at the bottom of
+     the page - same pattern as the Add-transaction modal on
+     transactions.html (width on the <dialog> itself, not just the
+     inner card - see that file's comment for why). -->
+<dialog id="addCategoryModal" class="w-[calc(100%-2rem)] max-w-md">
+    <div class="glass-card rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-lg">Add a category</h2>
+            <button type="button" onclick="document.getElementById('addCategoryModal').close()"
+                    class="text-muted hover:text-main text-xl leading-none" aria-label="Close">&times;</button>
         </div>
-    </form>
-</div>
+        <form method="post" class="space-y-4">
+            <input type="hidden" name="action" value="add">
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Name &amp; color</label>
+                <div class="grid grid-cols-[auto_1fr] gap-2">
+                    <input type="color" name="color" value="#6366f1" class="w-10 h-10 rounded-lg border-0 bg-transparent">
+                    <input type="text" name="name" placeholder="Category name" required class="input py-2.5 px-3 rounded-xl text-sm">
+                </div>
+            </div>
+            <div>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Monthly budget (optional)</label>
+                <input type="number" step="0.01" min="0" name="budget_limit" placeholder="0.00"
+                       class="input w-full py-2.5 px-3 rounded-xl text-sm">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('addCategoryModal').close()"
+                        class="action-btn flex-1 bg-white/10 hover:bg-white/15 text-muted font-semibold py-3 rounded-xl">
+                    Cancel
+                </button>
+                <button type="submit" class="action-btn flex-1 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-500/20">
+                    Add category
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
 
 {% endblock %}
