@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Reports - Expense Tracker{% endblock %}
+{% block content %}
+
+<div class="glass-card rounded-2xl p-5 mb-5">
+    <h3 class="font-bold mb-3">Last 6 months</h3>
+    <canvas id="trendChart" height="180"></canvas>
+</div>
+
+<div class="glass-card rounded-2xl p-5">
+    <h3 class="font-bold mb-3">Top categories (last 6 months)</h3>
+    {% if top_categories %}
+        <div class="space-y-2">
+            {% for c in top_categories %}
+            <div class="flex items-center justify-between text-sm">
+                <span class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full" style="background:{{ c.color }}"></span>
+                    {{ c.name }}
+                </span>
+                <span class="text-muted font-medium">{{ c.total | money }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-sm text-faint">No expenses in this window yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.min.js"></script>
+<script>
+new Chart(document.getElementById('trendChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ monthly_totals | map(attribute='month') | list | tojson }},
+        datasets: [
+            { label: 'Income', data: {{ monthly_totals | map(attribute='income') | list | tojson }}, backgroundColor: '#34d399', borderRadius: 6 },
+            { label: 'Expenses', data: {{ monthly_totals | map(attribute='expense') | list | tojson }}, backgroundColor: '#f87171', borderRadius: 6 },
+        ]
+    },
+    options: {
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(148,163,184,0.15)' } },
+        },
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+    }
+});
+</script>
+{% endblock %}

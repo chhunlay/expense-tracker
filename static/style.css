@@ -1,0 +1,104 @@
+:root {
+    --bg-1: #1e2a4a;
+    --bg-2: #0b0f1c;
+    --bg-3: #05070d;
+    --card-bg: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --text-faint: #475569;
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --track-bg: rgba(255, 255, 255, 0.05);
+    --pos: #34d399;
+    --neg: #f87171;
+}
+html[data-theme="light"] {
+    --bg-1: #eef2ff;
+    --bg-2: #f8fafc;
+    --bg-3: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.75);
+    --card-border: rgba(15, 23, 42, 0.08);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --text-faint: #94a3b8;
+    --input-bg: rgba(15, 23, 42, 0.03);
+    --input-border: rgba(15, 23, 42, 0.1);
+    --track-bg: rgba(15, 23, 42, 0.06);
+    --pos: #059669;
+    --neg: #dc2626;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: radial-gradient(circle at 15% 0%, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+    color: var(--text-main);
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+.glass-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+}
+
+.text-muted { color: var(--text-muted); }
+.text-faint { color: var(--text-faint); }
+.text-pos { color: var(--pos); }
+.text-neg { color: var(--neg); }
+
+.input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-main);
+}
+.input::placeholder { color: var(--text-faint); }
+.input:focus {
+    border-color: rgba(129, 140, 248, 0.6);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    outline: none;
+}
+
+.theme-toggle {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-main);
+}
+
+.nav-link {
+    color: var(--text-muted);
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.nav-link:hover { color: var(--text-main); }
+.nav-link.active {
+    color: var(--text-main);
+    background: var(--input-bg);
+}
+
+.action-btn { transition: transform 0.15s ease, opacity 0.15s ease; }
+.action-btn:hover { transform: translateY(-2px); }
+.action-btn:active { transform: translateY(0); }
+
+.progress-track {
+    background: var(--track-bg);
+    border: 1px solid var(--input-border);
+}
+.progress-bar {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    transition: width 0.4s ease;
+}
+.progress-bar.over {
+    background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+.flash {
+    animation: fadeUp 0.25s ease;
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+table.txn-table td, table.txn-table th {
+    border-bottom: 1px solid var(--card-border);
+}

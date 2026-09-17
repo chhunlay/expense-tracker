@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Transactions - Expense Tracker{% endblock %}
+{% block content %}
+
+<div class="glass-card rounded-2xl p-4 mb-4">
+    <form method="get" class="flex flex-wrap gap-2">
+        <input type="month" name="month" value="{{ month }}" class="input py-2 px-3 rounded-xl text-sm">
+        <select name="category_id" class="input py-2 px-3 rounded-xl text-sm">
+            <option value="">All categories</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {{ 'selected' if category_id == c.id|string }}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 rounded-xl text-sm">
+            Filter
+        </button>
+        {% if month or category_id %}
+        <a href="{{ url_for('transactions') }}" class="action-btn bg-white/10 hover:bg-white/15 text-muted font-semibold px-4 py-2 rounded-xl text-sm">
+            Clear
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="glass-card rounded-2xl p-5">
+    {% if rows %}
+        <div class="overflow-x-auto">
+        <table class="txn-table w-full text-sm">
+            <thead>
+                <tr class="text-left text-muted text-xs uppercase tracking-wider">
+                    <th class="pb-2 pr-3">Date</th>
+                    <th class="pb-2 pr-3">Category</th>
+                    <th class="pb-2 pr-3">Note</th>
+                    <th class="pb-2 pr-3 text-right">Amount</th>
+                    <th class="pb-2"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="py-2 pr-3 whitespace-nowrap">{{ r.date }}</td>
+                    <td class="py-2 pr-3">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full" style="background:{{ r.category_color or '#94a3b8' }}"></span>
+                            {{ r.category_name or 'Uncategorized' }}
+                        </span>
+                    </td>
+                    <td class="py-2 pr-3 text-muted">{{ r.note or '' }}</td>
+                    <td class="py-2 pr-3 text-right font-semibold {{ 'text-pos' if r.type == 'income' else 'text-neg' }} whitespace-nowrap">
+                        {{ '+' if r.type == 'income' else '-' }}{{ r.amount | money }}
+                    </td>
+                    <td class="py-2 text-right whitespace-nowrap">
+                        <a href="{{ url_for('edit_transaction', txn_id=r.id) }}" class="text-indigo-400 text-xs font-medium">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-faint">No transactions match this filter.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
