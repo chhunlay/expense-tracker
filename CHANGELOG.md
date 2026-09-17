@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.5.0] - 2026-09-17
+### Added
+- Real `.xlsx` export/import (`xlsx_io.py`, via the `openpyxl` library),
+  alongside the existing CSV support - "Export XLSX" button on the
+  Transactions page, and the import page/route now accepts either
+  format and dispatches on the uploaded file's extension. Both
+  importers match column headers case-insensitively regardless of
+  order, and behave identically otherwise (same category auto-create
+  and row-skip rules).
+- The `/import/csv` route is now the unified `/import` (accepts both
+  formats); update any bookmark to the old URL.
+
 ## [0.4.0] - 2026-09-17
 ### Added
 - CSV export/import for transactions (`csv_io.py`), so data can move

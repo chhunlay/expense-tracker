@@ -1,18 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Import CSV - Expense Tracker{% endblock %}
+{% block title %}Import - Expense Tracker{% endblock %}
 {% block content %}
 
 <div class="glass-card rounded-2xl p-5 max-w-md">
-    <h2 class="font-bold text-lg mb-2">Import CSV</h2>
+    <h2 class="font-bold text-lg mb-2">Import transactions</h2>
     <p class="text-sm text-faint mb-4">
-        Upload a CSV with columns <code>date, type, amount, category, note</code>
-        - the same format <a href="{{ url_for('export_csv') }}" class="underline">Export CSV</a> produces.
+        Upload a <code>.csv</code> or <code>.xlsx</code> file with columns
+        <code>date, type, amount, category, note</code> (column order and
+        capitalization don't matter) - the same shape
+        <a href="{{ url_for('export_csv') }}" class="underline">Export CSV</a> or
+        <a href="{{ url_for('export_xlsx') }}" class="underline">Export XLSX</a> produces.
         <code>date</code> must be <code>YYYY-MM-DD</code> and <code>type</code> must be
         <code>expense</code> or <code>income</code>; a category name that doesn't exist
         yet is created automatically.
     </p>
     <form method="post" enctype="multipart/form-data" class="space-y-3">
-        <input type="file" name="file" accept=".csv" required class="input w-full py-2.5 px-3 rounded-xl text-sm">
+        <input type="file" name="file" accept=".csv,.xlsx" required class="input w-full py-2.5 px-3 rounded-xl text-sm">
         <button type="submit" class="action-btn w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-2.5 rounded-xl text-sm">
             Import
         </button>

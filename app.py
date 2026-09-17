@@ -14,9 +14,10 @@ from csv_io import export_transactions_csv, import_transactions_csv
 from dates import month_bounds, shift_month
 from db import get_db, get_monthly_totals, init_db
 from quick_add import parse_quick_add
+from xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 # Bump this alongside a new CHANGELOG.md entry.
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -262,16 +263,45 @@ def export_csv():
     )
 
 
-@app.route("/import/csv", methods=["GET", "POST"])
-def import_csv():
+@app.route("/export/xlsx")
+def export_xlsx():
+    conn = get_db()
+    xlsx_bytes = export_transactions_xlsx(conn)
+    conn.close()
+    filename = f"expenses-export-{date.today().isoformat()}.xlsx"
+    return Response(
+        xlsx_bytes,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# One importer handles both formats - dispatches on the uploaded file's
+# extension to csv_io or xlsx_io, which behave identically (same return
+# shape, same category-auto-create and row-skip rules) so the flash
+# message logic below doesn't need to know which one ran.
+_IMPORTERS = {
+    ".csv": import_transactions_csv,
+    ".xlsx": import_transactions_xlsx,
+}
+
+
+@app.route("/import", methods=["GET", "POST"])
+def import_transactions():
     if request.method == "POST":
         file = request.files.get("file")
         if not file or not file.filename:
-            flash("Choose a CSV file first", "error")
-            return redirect(url_for("import_csv"))
+            flash("Choose a file first", "error")
+            return redirect(url_for("import_transactions"))
+
+        ext = os.path.splitext(file.filename)[1].lower()
+        importer = _IMPORTERS.get(ext)
+        if importer is None:
+            flash("Unsupported file type - upload a .csv or .xlsx file", "error")
+            return redirect(url_for("import_transactions"))
 
         conn = get_db()
-        imported, skipped, created = import_transactions_csv(conn, file.read())
+        imported, skipped, created = importer(conn, file.read())
         conn.close()
 
         parts = [f"Imported {imported} transaction{'s' if imported != 1 else ''}"]

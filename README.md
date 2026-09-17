@@ -38,8 +38,9 @@ Categories page.
   past transactions - they fall back to "Uncategorized".
 - **Reports** (`/reports`) - a 12-month net trend line, an income vs. expense
   bar chart, and a ranked list of top-spending categories over that window.
-- **CSV export/import** (`/export/csv`, `/import/csv`, linked from the
-  Transactions page) - see "Moving data between devices" below.
+- **CSV/XLSX export/import** (`/export/csv`, `/export/xlsx`, `/import`,
+  linked from the Transactions page) - see "Moving data between devices"
+  below.
 - **Hide amounts** - an eye-icon toggle on the dashboard blurs Income and Net
   (not Expenses) in place, for looking at the app around other people.
 
@@ -51,6 +52,7 @@ expense-tracker/
 ├── dates.py          # Pure month-arithmetic helpers (nav + report windows)
 ├── quick_add.py       # Parses the dashboard's one-line quick-add text
 ├── csv_io.py           # CSV export/import for moving data between devices
+├── xlsx_io.py           # Same, as a real .xlsx file (via openpyxl)
 ├── templates/         # Jinja2 pages (one file per route) + base.html layout
 ├── static/
 │   ├── style.css       # Theme (CSS variables, dark/light) + component styles
@@ -86,10 +88,11 @@ Two tables, defined in `db.py`:
 history is never pushed to a git remote. That means setting the app up fresh
 on a second device starts with an **empty** database, not your existing data.
 To carry data over, either:
-- **Export/Import CSV** (built in) - click "Export CSV" on the Transactions
-  page on the source device, then "Import CSV" on the destination device.
-  Round-trips every transaction; a category name that doesn't exist yet on
-  the destination is created automatically.
+- **Export/Import CSV or XLSX** (built in) - click "Export CSV" or "Export
+  XLSX" on the Transactions page on the source device, then "Import" on the
+  destination device (it accepts either format). Round-trips every
+  transaction; a category name that doesn't exist yet on the destination is
+  created automatically.
 - **Copy the file directly** - copy `data/expenses.db` itself onto the other
   device's `data/` folder. Simpler for a one-time full move, but all-or-
   nothing (overwrites whatever's already there) and only works file-to-file,

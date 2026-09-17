@@ -52,6 +52,10 @@ def import_transactions_csv(conn, file_bytes):
 
     imported = skipped = created_categories = 0
     for row in reader:
+        # Case-insensitive header match (a hand-edited "Date"/"Amount"
+        # header works the same as our own lowercase export) - same
+        # tolerance xlsx_io.import_transactions_xlsx applies.
+        row = {(k or "").strip().lower(): v for k, v in row.items()}
         txn_date = (row.get("date") or "").strip()
         txn_type = (row.get("type") or "").strip().lower()
         try:
