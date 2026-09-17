@@ -51,3 +51,39 @@ document.querySelectorAll('[data-color]').forEach((el) => {
 document.querySelectorAll('[data-width]').forEach((el) => {
     el.style.width = el.dataset.width + '%';
 });
+
+// ---------- Hide/show sensitive amounts (dashboard Income + Net) ----------
+// One toggle masks both at once; the real formatted amount is kept in
+// data-amount so un-hiding doesn't need a round trip to the server.
+// State persists in localStorage, same pattern as the theme, so it stays
+// hidden across page loads/navigation instead of resetting every visit.
+const HIDE_AMOUNTS_KEY = 'expense-tracker-hide-amounts';
+const amountToggle = document.getElementById('amountToggle');
+const amountToggleIcon = document.getElementById('amountToggleIcon');
+const hideableAmounts = document.querySelectorAll('.hideable-amount');
+
+function applyAmountVisibility(hidden) {
+    hideableAmounts.forEach((el) => {
+        el.textContent = hidden ? '$••••' : el.dataset.amount;
+    });
+    if (amountToggleIcon) amountToggleIcon.textContent = hidden ? '🙈' : '👁️';
+}
+
+function getStoredHideAmounts() {
+    try {
+        return localStorage.getItem(HIDE_AMOUNTS_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+
+let amountsHidden = getStoredHideAmounts();
+if (hideableAmounts.length) applyAmountVisibility(amountsHidden);
+
+if (amountToggle) {
+    amountToggle.addEventListener('click', () => {
+        amountsHidden = !amountsHidden;
+        applyAmountVisibility(amountsHidden);
+        try { localStorage.setItem(HIDE_AMOUNTS_KEY, amountsHidden ? '1' : '0'); } catch (e) {}
+    });
+}

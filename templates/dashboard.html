@@ -14,10 +14,22 @@
 </div>
 
 <!-- KPI cards -->
+<div class="flex items-center justify-between mb-3">
+    <h3 class="text-sm font-semibold text-muted">Overview</h3>
+    <!-- Toggles Income/Net together (not Expenses) - the real amount is
+         kept in data-amount so the JS toggle has something to restore
+         when un-hiding, without a round trip to the server. State
+         persists in localStorage so it stays hidden across page loads. -->
+    <button id="amountToggle" type="button"
+            class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
+            aria-label="Show or hide income and net amounts">
+        <span id="amountToggleIcon">👁️</span>
+    </button>
+</div>
 <div class="grid grid-cols-3 gap-3 mb-5">
     <div class="kpi-card kpi-income rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
-        <p class="text-xl font-extrabold">{{ total_income | money }}</p>
+        <p class="text-xl font-extrabold hideable-amount" data-amount="{{ total_income | money }}">{{ total_income | money }}</p>
     </div>
     <div class="kpi-card kpi-expense rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
@@ -25,7 +37,7 @@
     </div>
     <div class="kpi-card kpi-net rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Net</p>
-        <p class="text-xl font-extrabold">{{ net | money }}</p>
+        <p class="text-xl font-extrabold hideable-amount" data-amount="{{ net | money }}">{{ net | money }}</p>
     </div>
 </div>
 
