@@ -2,6 +2,14 @@
 {% block title %}Transactions - Expense Tracker{% endblock %}
 {% block content %}
 
+<div class="flex items-center justify-between mb-4">
+    <h2 class="font-bold text-lg">Transactions</h2>
+    <a href="{{ url_for('add_transaction') }}"
+       class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2 rounded-xl text-sm shadow-lg shadow-indigo-500/20">
+        + Add
+    </a>
+</div>
+
 <div class="glass-card rounded-2xl p-4 mb-4">
     <form method="get" class="flex flex-wrap gap-2">
         <input type="month" name="month" value="{{ month }}" class="input py-2 px-3 rounded-xl text-sm">

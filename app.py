@@ -172,7 +172,7 @@ def add_transaction():
         conn.commit()
         conn.close()
         flash("Transaction added", "success")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("transactions"))
 
     categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
     conn.close()
