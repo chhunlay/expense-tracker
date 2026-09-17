@@ -84,6 +84,7 @@ body {
     border: 1px solid var(--input-border);
 }
 .progress-bar {
+    width: 0;
     background: linear-gradient(90deg, #6366f1, #ec4899);
     transition: width 0.4s ease;
 }

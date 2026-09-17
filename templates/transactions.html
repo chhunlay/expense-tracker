@@ -41,7 +41,7 @@
                     <td class="py-2 pr-3 whitespace-nowrap">{{ r.date }}</td>
                     <td class="py-2 pr-3">
                         <span class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full" style="background:{{ r.category_color or '#94a3b8' }}"></span>
+                            <span class="w-2 h-2 rounded-full" data-color="{{ r.category_color or '#94a3b8' }}"></span>
                             {{ r.category_name or 'Uncategorized' }}
                         </span>
                     </td>

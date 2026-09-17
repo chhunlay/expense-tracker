@@ -19,7 +19,7 @@
             {% for c in top_categories %}
             <div class="flex items-center justify-between text-sm">
                 <span class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full" style="background:{{ c.color }}"></span>
+                    <span class="w-2.5 h-2.5 rounded-full" data-color="{{ c.color }}"></span>
                     {{ c.name }}
                 </span>
                 <span class="text-muted font-medium">{{ c.total | money }}</span>

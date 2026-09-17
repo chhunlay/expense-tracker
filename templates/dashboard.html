@@ -53,7 +53,7 @@
                 {% for b in breakdown %}
                 <div class="flex items-center justify-between text-sm">
                     <span class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full" style="background:{{ b.color }}"></span>
+                        <span class="w-2.5 h-2.5 rounded-full" data-color="{{ b.color }}"></span>
                         {{ b.name }}
                     </span>
                     <span class="text-muted">{{ b.amount | money }}</span>
@@ -77,7 +77,7 @@
                         <span class="text-muted">{{ b.spent | money }} / {{ b.limit | money }}</span>
                     </div>
                     <div class="progress-track w-full rounded-full h-2 overflow-hidden">
-                        <div class="progress-bar h-full rounded-full {{ 'over' if b.over }}" style="width:{{ b.pct }}%"></div>
+                        <div class="progress-bar h-full rounded-full {{ 'over' if b.over }}" data-width="{{ b.pct }}"></div>
                     </div>
                 </div>
                 {% endfor %}
@@ -99,7 +99,7 @@
             {% for r in recent %}
             <div class="flex items-center justify-between text-sm py-1.5">
                 <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ r.category_color or '#94a3b8' }}"></span>
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ r.category_color or '#94a3b8' }}"></span>
                     <div class="min-w-0">
                         <p class="truncate">{{ r.note or r.category_name or 'Uncategorized' }}</p>
                         <p class="text-xs text-faint">{{ r.date }} &middot; {{ r.category_name or 'Uncategorized' }}</p>
