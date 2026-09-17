@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.4.0] - 2026-09-17
+### Added
+- CSV export/import for transactions (`csv_io.py`), so data can move
+  between devices - `data/expenses.db` is gitignored and never synced
+  anywhere on its own. "Export CSV" and "Import CSV" buttons added to
+  the Transactions page header. A category name in an imported CSV
+  that doesn't exist yet is created automatically; malformed rows (bad
+  date, type, or amount) are skipped rather than aborting the import.
+- Show/hide toggle for the dashboard's Income and Net amounts (not
+  Expenses) - blurs the real numbers in place via a CSS filter, styled
+  after a banking app's balance-privacy toggle, with the hidden state
+  persisted in localStorage across page loads.
+
 ## [0.3.0] - 2026-09-17
 ### Changed
 - Redesigned the layout around a persistent sidebar (desktop) / pill nav

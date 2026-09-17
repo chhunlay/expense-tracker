@@ -8,14 +8,15 @@ import sqlite3
 from collections import defaultdict
 from datetime import date, datetime
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, Response, flash, redirect, render_template, request, url_for
 
+from csv_io import export_transactions_csv, import_transactions_csv
 from dates import month_bounds, shift_month
 from db import get_db, get_monthly_totals, init_db
 from quick_add import parse_quick_add
 
 # Bump this alongside a new CHANGELOG.md entry.
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -246,6 +247,42 @@ def transactions():
     return render_template(
         "transactions.html", rows=rows, categories=categories, month=month, category_id=category_id
     )
+
+
+@app.route("/export/csv")
+def export_csv():
+    conn = get_db()
+    csv_text = export_transactions_csv(conn)
+    conn.close()
+    filename = f"expenses-export-{date.today().isoformat()}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.route("/import/csv", methods=["GET", "POST"])
+def import_csv():
+    if request.method == "POST":
+        file = request.files.get("file")
+        if not file or not file.filename:
+            flash("Choose a CSV file first", "error")
+            return redirect(url_for("import_csv"))
+
+        conn = get_db()
+        imported, skipped, created = import_transactions_csv(conn, file.read())
+        conn.close()
+
+        parts = [f"Imported {imported} transaction{'s' if imported != 1 else ''}"]
+        if created:
+            parts.append(f"created {created} new categor{'y' if created == 1 else 'ies'}")
+        if skipped:
+            parts.append(f"skipped {skipped} invalid row{'s' if skipped != 1 else ''}")
+        flash(", ".join(parts), "success" if imported else "error")
+        return redirect(url_for("transactions"))
+
+    return render_template("import.html")
 
 
 @app.route("/categories", methods=["GET", "POST"])
