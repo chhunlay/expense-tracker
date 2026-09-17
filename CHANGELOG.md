@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.8.0] - 2026-09-17
+### Removed
+- The standalone `/add` page - adding a transaction now only happens
+  through the popup on the Transactions page. `/add` is POST-only going
+  forward (a GET now returns 405 instead of rendering a page).
+
+### Changed
+- The `_transaction_fields.html` partial shared between that old page
+  and the popup is gone too - the popup's form fields are self-
+  contained again (duplicated by hand instead of shared via include).
+
 ## [0.7.0] - 2026-09-17
 ### Added
 - "+ Add" on the Categories page now opens the add-category form as a
