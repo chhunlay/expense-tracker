@@ -46,8 +46,15 @@
      partial, submitted to the same /add route, so a real page
      navigation still happens on success (server redirects to this page
      with the flash message) - just no extra page visited to get there. -->
-<dialog id="addModal">
-    <div class="glass-card rounded-2xl p-5 w-full max-w-md">
+<!-- Width goes on the <dialog> itself, not just the inner card - a
+     <dialog> has no width of its own by default (shrink-to-fit its
+     content), so a w-full div inside it doesn't actually make the
+     dialog 448px wide, it makes the div 100% of whatever narrower width
+     the dialog shrank to. calc(100%-2rem) keeps a safe gutter on a
+     narrow phone screen; max-w-md caps it at the same width as the
+     standalone /add page's card. -->
+<dialog id="addModal" class="w-[calc(100%-2rem)] max-w-md">
+    <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-lg">Add transaction</h2>
             <button type="button" onclick="document.getElementById('addModal').close()"
