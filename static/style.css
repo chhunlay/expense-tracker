@@ -163,12 +163,29 @@ table.txn-table td, table.txn-table th {
 
 /* Native <dialog> default UA style is a white boxed panel - strip that
    so the inner .glass-card div (in transactions.html) supplies all the
-   actual visuals, matching every other card in the app. */
+   actual visuals, matching every other card in the app. color-scheme is
+   redeclared here (not just relying on inheritance from :root/html) -
+   an open <dialog> renders in the browser's "top layer", where some
+   browsers don't reliably inherit color-scheme the normal way, which is
+   why native controls like the date-input calendar popup could still
+   render in the wrong theme even though color-scheme was already
+   correct on the document. */
 dialog {
     background: transparent;
     border: none;
     padding: 0;
     color: var(--text-main);
+    color-scheme: inherit;
+}
+/* The card's usual translucent background (--card-bg) plus its
+   backdrop-filter blur picks up whatever's rendered behind it - inside
+   a dialog that's this ::backdrop overlay, so a dark backdrop bled
+   through and tinted an intended-white light-theme card muddy gray.
+   Solid --bg-3 (the theme's own brightest/purest surface color - pure
+   white in light mode, near-black in dark) sidesteps that entirely. */
+dialog .glass-card {
+    background: var(--bg-3);
+    backdrop-filter: none;
 }
 dialog::backdrop {
     background: rgba(0, 0, 0, 0.6);
