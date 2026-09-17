@@ -34,7 +34,20 @@
 
         <div>
             <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Date</label>
-            <input type="date" name="date" value="{{ txn.date }}" required class="input w-full py-2.5 px-3 rounded-xl">
+            <!-- Custom picker (script.js), not native <input type="date">
+                 - see the comment above initDatePicker() in script.js for
+                 why. -->
+            <div class="relative" data-datepicker>
+                <button type="button" data-dp-trigger
+                        class="input w-full py-2.5 px-3 rounded-xl text-left flex items-center justify-between gap-2">
+                    <span data-dp-display></span>
+                    <span class="text-muted">📅</span>
+                </button>
+                <!-- type="text" + .hidden, not type="hidden" - see the
+                     comment on this same input in transactions.html for why. -->
+                <input type="text" class="hidden" name="date" required data-dp-value value="{{ txn.date }}">
+                <div data-dp-panel class="hidden absolute z-20 mt-2 rounded-xl p-3"></div>
+            </div>
         </div>
 
         <div>

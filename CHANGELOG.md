@@ -3,6 +3,34 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.9.0] - 2026-09-18
+### Changed
+- Replaced the native `<input type="date">` with a custom-built date
+  picker (plain themed DOM/CSS, no library) everywhere a date field
+  appears (the Add-transaction popup, the Edit-transaction page). The
+  native browser calendar overlay could ignore the page's theme
+  entirely on some browsers/versions - it appears to follow the OS-level
+  system appearance for that specific widget rather than the page's own
+  `color-scheme`, a real limitation outside our CSS's control. The new
+  picker is fully themed and always matches.
+
+### Fixed
+- Along the way, caught and fixed a real bug in the picker's own first
+  version: Prev/Next month navigation re-renders the calendar's HTML,
+  which replaced the very button that was just clicked - the "close on
+  outside click" listener then saw that (now-detached) click target as
+  no longer inside the picker and closed it immediately on every
+  Prev/Next click. Fixed via one delegated click listener on the picker
+  panel with `stopPropagation()`, instead of one listener per (soon-to-
+  be-replaced) button.
+- Also caught: the picker's hidden field was a real
+  `<input type="hidden">`, which has no "dirty value" tracking in the
+  HTML spec - once JS set its value, that silently became the new
+  default too, making the Cancel-then-reopen flow's `form.reset()` a
+  no-op on it (reopening after Cancel kept showing the previously-picked
+  date instead of resetting to today). Switched to a `type="text"` input
+  hidden via CSS instead, which supports normal reset semantics.
+
 ## [0.8.0] - 2026-09-17
 ### Removed
 - The standalone `/add` page - adding a transaction now only happens

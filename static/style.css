@@ -194,3 +194,47 @@ dialog::backdrop {
 dialog[open] {
     animation: fadeUp 0.2s ease;
 }
+
+/* ---------- Custom date picker ---------- */
+[data-dp-panel] {
+    width: 16rem;
+    background: var(--bg-3);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.4);
+}
+.dp-day {
+    padding: 0.4rem 0;
+    border-radius: 0.5rem;
+    color: var(--text-main);
+    transition: background 0.15s ease;
+}
+.dp-day:hover { background: var(--input-bg); }
+.dp-day-selected {
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    color: #fff;
+    font-weight: 600;
+}
+.dp-day-today:not(.dp-day-selected) {
+    border: 1px solid rgba(99, 102, 241, 0.5);
+}
+.dp-nav {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    color: var(--text-muted);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.dp-nav:hover { background: var(--input-bg); color: var(--text-main); }
+.dp-today-btn {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.dp-today-btn:hover { color: var(--text-main); }
