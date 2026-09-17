@@ -121,14 +121,22 @@
 {% block scripts %}
 {% if breakdown %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+<!-- Templated data lives in its own application/json tag, not inline in
+     the JS below - keeps the <script> that follows plain, valid
+     JavaScript with no template output in it, so an editor's JS/TS
+     checker (which has no idea what Jinja is) doesn't misparse the
+     template syntax and throw false-positive errors on it. -->
+<script type="application/json" id="breakdown-data">{{ breakdown | tojson }}</script>
 <script>
+const breakdown = JSON.parse(document.getElementById('breakdown-data').textContent);
+
 new Chart(document.getElementById('breakdownChart'), {
     type: 'doughnut',
     data: {
-        labels: {{ breakdown | map(attribute='name') | list | tojson }},
+        labels: breakdown.map(b => b.name),
         datasets: [{
-            data: {{ breakdown | map(attribute='amount') | list | tojson }},
-            backgroundColor: {{ breakdown | map(attribute='color') | list | tojson }},
+            data: breakdown.map(b => b.amount),
+            backgroundColor: breakdown.map(b => b.color),
             borderWidth: 0,
         }]
     },

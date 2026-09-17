@@ -35,9 +35,16 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+<!-- Templated data lives in its own application/json tag, not inline in
+     the JS below - keeps the <script> that follows plain, valid
+     JavaScript with no template output in it, so an editor's JS/TS
+     checker (which has no idea what Jinja is) doesn't misparse the
+     template syntax and throw false-positive errors on it. -->
+<script type="application/json" id="monthly-totals-data">{{ monthly_totals | tojson }}</script>
 <script>
-const months = {{ monthly_totals | map(attribute='month') | list | tojson }};
-const netValues = {{ monthly_totals | map(attribute='net') | list | tojson }};
+const monthlyTotals = JSON.parse(document.getElementById('monthly-totals-data').textContent);
+const months = monthlyTotals.map(m => m.month);
+const netValues = monthlyTotals.map(m => m.net);
 
 new Chart(document.getElementById('netTrendChart'), {
     type: 'line',
@@ -68,8 +75,8 @@ new Chart(document.getElementById('trendChart'), {
     data: {
         labels: months,
         datasets: [
-            { label: 'Income', data: {{ monthly_totals | map(attribute='income') | list | tojson }}, backgroundColor: '#34d399', borderRadius: 6 },
-            { label: 'Expenses', data: {{ monthly_totals | map(attribute='expense') | list | tojson }}, backgroundColor: '#f87171', borderRadius: 6 },
+            { label: 'Income', data: monthlyTotals.map(m => m.income), backgroundColor: '#34d399', borderRadius: 6 },
+            { label: 'Expenses', data: monthlyTotals.map(m => m.expense), backgroundColor: '#f87171', borderRadius: 6 },
         ]
     },
     options: {

@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "templates/**/*.html": "html",
+        "*.html": "html"
+    },
+    "html.validate.scripts": false,
+    "html.validate.styles": false
+}
