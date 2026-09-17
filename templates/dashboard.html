@@ -2,6 +2,33 @@
 {% block title %}Dashboard - Expense Tracker{% endblock %}
 {% block content %}
 
+<!-- Month nav -->
+<div class="flex items-center justify-between mb-4">
+    <a href="{{ url_for('dashboard', month=prev_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; Prev</a>
+    <h2 class="font-bold text-lg">{{ month_str | monthlabel }}</h2>
+    {% if is_current_month %}
+        <span class="px-3 py-1.5 text-sm text-faint">Next &rarr;</span>
+    {% else %}
+        <a href="{{ url_for('dashboard', month=next_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">Next &rarr;</a>
+    {% endif %}
+</div>
+
+<!-- KPI cards -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="kpi-card kpi-income rounded-2xl p-4">
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
+        <p class="text-xl font-extrabold">{{ total_income | money }}</p>
+    </div>
+    <div class="kpi-card kpi-expense rounded-2xl p-4">
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
+        <p class="text-xl font-extrabold">{{ total_expense | money }}</p>
+    </div>
+    <div class="kpi-card kpi-net rounded-2xl p-4">
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Net</p>
+        <p class="text-xl font-extrabold">{{ net | money }}</p>
+    </div>
+</div>
+
 <!-- Quick add -->
 <form action="{{ url_for('quick_add') }}" method="post" class="glass-card rounded-2xl p-4 mb-5">
     <input type="hidden" name="month" value="{{ month_str }}">
@@ -16,47 +43,25 @@
     <p class="text-xs text-faint mt-1.5">Amount + optional category name anywhere in the text. Prefix the amount with "+" for income.</p>
 </form>
 
-<!-- Month nav -->
-<div class="flex items-center justify-between mb-4">
-    <a href="{{ url_for('dashboard', month=prev_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; Prev</a>
-    <h2 class="font-bold text-lg">{{ month_str | monthlabel }}</h2>
-    {% if is_current_month %}
-        <span class="px-3 py-1.5 text-sm text-faint">Next &rarr;</span>
-    {% else %}
-        <a href="{{ url_for('dashboard', month=next_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">Next &rarr;</a>
-    {% endif %}
-</div>
+<!-- Trend + breakdown -->
+<div class="grid lg:grid-cols-3 gap-5 mb-5">
+    <div class="lg:col-span-2 glass-card rounded-2xl p-5">
+        <h3 class="font-bold mb-3">Net trend (last 6 months)</h3>
+        <canvas id="miniTrendChart" height="140"></canvas>
+    </div>
 
-<!-- Totals -->
-<div class="grid grid-cols-3 gap-2.5 mb-5">
-    <div class="glass-card rounded-2xl p-4 text-center">
-        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Income</p>
-        <p class="text-lg font-bold text-pos">{{ total_income | money }}</p>
-    </div>
-    <div class="glass-card rounded-2xl p-4 text-center">
-        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Expenses</p>
-        <p class="text-lg font-bold text-neg">{{ total_expense | money }}</p>
-    </div>
-    <div class="glass-card rounded-2xl p-4 text-center">
-        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Net</p>
-        <p class="text-lg font-bold {{ 'text-pos' if net >= 0 else 'text-neg' }}">{{ net | money }}</p>
-    </div>
-</div>
-
-<div class="grid sm:grid-cols-2 gap-5 mb-5">
-    <!-- Category breakdown -->
     <div class="glass-card rounded-2xl p-5">
         <h3 class="font-bold mb-3">Where it went</h3>
         {% if breakdown %}
-            <canvas id="breakdownChart" height="200"></canvas>
+            <canvas id="breakdownChart" height="160"></canvas>
             <div class="mt-3 space-y-1.5">
                 {% for b in breakdown %}
                 <div class="flex items-center justify-between text-sm">
-                    <span class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full" data-color="{{ b.color }}"></span>
-                        {{ b.name }}
+                    <span class="flex items-center gap-2 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ b.color }}"></span>
+                        <span class="truncate">{{ b.name }}</span>
                     </span>
-                    <span class="text-muted">{{ b.amount | money }}</span>
+                    <span class="text-muted flex-shrink-0 ml-2">{{ b.amount | money }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -64,8 +69,10 @@
             <p class="text-sm text-faint">No expenses logged this month yet.</p>
         {% endif %}
     </div>
+</div>
 
-    <!-- Budgets -->
+<!-- Budgets + Recent -->
+<div class="grid sm:grid-cols-2 gap-5">
     <div class="glass-card rounded-2xl p-5">
         <h3 class="font-bold mb-3">Budgets</h3>
         {% if budget_progress %}
@@ -86,46 +93,74 @@
             <p class="text-sm text-faint">No budgets set yet. Add a limit on the <a href="{{ url_for('categories_view') }}" class="underline">Categories</a> page.</p>
         {% endif %}
     </div>
-</div>
 
-<!-- Recent transactions -->
-<div class="glass-card rounded-2xl p-5">
-    <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold">Recent</h3>
-        <a href="{{ url_for('transactions') }}" class="text-sm text-indigo-400 font-medium">View all &rarr;</a>
-    </div>
-    {% if recent %}
-        <div class="space-y-2">
-            {% for r in recent %}
-            <div class="flex items-center justify-between text-sm py-1.5">
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ r.category_color or '#94a3b8' }}"></span>
-                    <div class="min-w-0">
-                        <p class="truncate">{{ r.note or r.category_name or 'Uncategorized' }}</p>
-                        <p class="text-xs text-faint">{{ r.date }} &middot; {{ r.category_name or 'Uncategorized' }}</p>
-                    </div>
-                </div>
-                <span class="font-semibold {{ 'text-pos' if r.type == 'income' else 'text-neg' }} flex-shrink-0 ml-2">
-                    {{ '+' if r.type == 'income' else '-' }}{{ r.amount | money }}
-                </span>
-            </div>
-            {% endfor %}
+    <div class="glass-card rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold">Recent</h3>
+            <a href="{{ url_for('transactions') }}" class="text-sm text-indigo-400 font-medium">View all &rarr;</a>
         </div>
-    {% else %}
-        <p class="text-sm text-faint">Nothing logged this month yet.</p>
-    {% endif %}
+        {% if recent %}
+            <div class="space-y-2">
+                {% for r in recent %}
+                <div class="flex items-center justify-between text-sm py-1.5">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ r.category_color or '#94a3b8' }}"></span>
+                        <div class="min-w-0">
+                            <p class="truncate">{{ r.note or r.category_name or 'Uncategorized' }}</p>
+                            <p class="text-xs text-faint">{{ r.date }} &middot; {{ r.category_name or 'Uncategorized' }}</p>
+                        </div>
+                    </div>
+                    <span class="font-semibold {{ 'text-pos' if r.type == 'income' else 'text-neg' }} flex-shrink-0 ml-2">
+                        {{ '+' if r.type == 'income' else '-' }}{{ r.amount | money }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-sm text-faint">Nothing logged this month yet.</p>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-{% if breakdown %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 <!-- Templated data lives in its own application/json tag, not inline in
      the JS below - keeps the <script> that follows plain, valid
      JavaScript with no template output in it, so an editor's JS/TS
      checker (which has no idea what Jinja is) doesn't misparse the
      template syntax and throw false-positive errors on it. -->
+<script type="application/json" id="mini-trend-data">{{ mini_trend | tojson }}</script>
+<script>
+const miniTrend = JSON.parse(document.getElementById('mini-trend-data').textContent);
+
+new Chart(document.getElementById('miniTrendChart'), {
+    type: 'line',
+    data: {
+        labels: miniTrend.map(m => m.month),
+        datasets: [{
+            label: 'Net',
+            data: miniTrend.map(m => m.net),
+            borderColor: '#818cf8',
+            backgroundColor: 'rgba(129, 140, 248, 0.15)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: miniTrend.map(m => m.net >= 0 ? '#34d399' : '#f87171'),
+        }]
+    },
+    options: {
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(148,163,184,0.15)' } },
+        },
+        plugins: { legend: { display: false } },
+    }
+});
+</script>
+
+{% if breakdown %}
 <script type="application/json" id="breakdown-data">{{ breakdown | tojson }}</script>
 <script>
 const breakdown = JSON.parse(document.getElementById('breakdown-data').textContent);

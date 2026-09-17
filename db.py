@@ -65,3 +65,28 @@ def init_db():
         )
     conn.commit()
     conn.close()
+
+
+def get_monthly_totals(conn, months):
+    """
+    income/expense/net for each "YYYY-MM" string in `months`, in that
+    order. Shared by the dashboard's mini trend chart and the full
+    Reports page so the two stay consistent with a single query shape.
+    """
+    totals = []
+    for ms in months:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense, "
+            "COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income "
+            "FROM transactions WHERE date LIKE ?",
+            (f"{ms}%",),
+        ).fetchone()
+        totals.append(
+            {
+                "month": ms,
+                "expense": row["expense"],
+                "income": row["income"],
+                "net": row["income"] - row["expense"],
+            }
+        )
+    return totals

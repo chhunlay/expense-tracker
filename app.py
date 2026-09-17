@@ -11,11 +11,11 @@ from datetime import date, datetime
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from dates import month_bounds, shift_month
-from db import get_db, init_db
+from db import get_db, get_monthly_totals, init_db
 from quick_add import parse_quick_add
 
 # Bump this alongside a new CHANGELOG.md entry.
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -90,6 +90,16 @@ def dashboard():
             }
         )
 
+    # A compact 6-month trend for the dashboard's headline chart - the
+    # full 12-month version with its own income/expense breakdown lives
+    # on the Reports page.
+    mini_months = []
+    y, m = date.today().year, date.today().month
+    for i in range(5, -1, -1):
+        yy, mm = shift_month(y, m, -i)
+        mini_months.append("%04d-%02d" % (yy, mm))
+    mini_trend = get_monthly_totals(conn, mini_months)
+
     conn.close()
     return render_template(
         "dashboard.html",
@@ -100,6 +110,7 @@ def dashboard():
         total_expense=total_expense,
         total_income=total_income,
         net=total_income - total_expense,
+        mini_trend=mini_trend,
         breakdown=breakdown,
         budget_progress=budget_progress,
         recent=rows[:8],
@@ -309,22 +320,7 @@ def reports():
         yy, mm = shift_month(y, m, -i)
         months.append("%04d-%02d" % (yy, mm))
 
-    monthly_totals = []
-    for ms in months:
-        row = conn.execute(
-            "SELECT COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense, "
-            "COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income "
-            "FROM transactions WHERE date LIKE ?",
-            (f"{ms}%",),
-        ).fetchone()
-        monthly_totals.append(
-            {
-                "month": ms,
-                "expense": row["expense"],
-                "income": row["income"],
-                "net": row["income"] - row["expense"],
-            }
-        )
+    monthly_totals = get_monthly_totals(conn, months)
 
     top_categories = conn.execute(
         """

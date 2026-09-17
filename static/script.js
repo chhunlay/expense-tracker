@@ -1,16 +1,15 @@
 // ---------- Theme (same scheme as video-downloader, its own key) ----------
+// Two toggle buttons exist (sidebar for md+, header for mobile - only one
+// is ever visible at a time via CSS), so every icon/id pair gets updated
+// and listened to together.
 const THEME_KEY = 'expense-tracker-theme';
 const html = document.documentElement;
-const themeIcon = document.getElementById('themeIcon');
+const themeIcons = [document.getElementById('themeIcon'), document.getElementById('themeIconMobile')].filter(Boolean);
 
 function applyTheme(theme) {
-    if (theme === 'light') {
-        html.setAttribute('data-theme', 'light');
-        if (themeIcon) themeIcon.textContent = '☀️';
-    } else {
-        html.setAttribute('data-theme', 'dark');
-        if (themeIcon) themeIcon.textContent = '🌙';
-    }
+    const isLight = theme === 'light';
+    html.setAttribute('data-theme', isLight ? 'light' : 'dark');
+    themeIcons.forEach((icon) => { icon.textContent = isLight ? '☀️' : '🌙'; });
 }
 
 function getStoredTheme() {
@@ -24,14 +23,13 @@ function getStoredTheme() {
 const systemPrefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
 applyTheme(getStoredTheme() || (systemPrefersLight ? 'light' : 'dark'));
 
-const themeToggle = document.getElementById('themeToggle');
-if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
+[document.getElementById('themeToggle'), document.getElementById('themeToggleMobile')].filter(Boolean).forEach((btn) => {
+    btn.addEventListener('click', () => {
         const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
         applyTheme(next);
         try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
     });
-}
+});
 
 // ---------- Flash messages auto-dismiss ----------
 document.querySelectorAll('.flash').forEach((el) => {

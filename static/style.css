@@ -4,6 +4,8 @@
     --bg-3: #05070d;
     --card-bg: rgba(255, 255, 255, 0.04);
     --card-border: rgba(255, 255, 255, 0.08);
+    --sidebar-bg: rgba(5, 7, 13, 0.5);
+    --sidebar-border: rgba(255, 255, 255, 0.06);
     --text-main: #f1f5f9;
     --text-muted: #94a3b8;
     --text-faint: #475569;
@@ -19,6 +21,8 @@ html[data-theme="light"] {
     --bg-3: #ffffff;
     --card-bg: rgba(255, 255, 255, 0.75);
     --card-border: rgba(15, 23, 42, 0.08);
+    --sidebar-bg: rgba(255, 255, 255, 0.6);
+    --sidebar-border: rgba(15, 23, 42, 0.08);
     --text-main: #0f172a;
     --text-muted: #64748b;
     --text-faint: #94a3b8;
@@ -74,6 +78,36 @@ body {
     color: var(--text-main);
     background: var(--input-bg);
 }
+
+/* ---------- Sidebar (desktop nav) ---------- */
+.sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    backdrop-filter: blur(20px);
+}
+.sidebar-link {
+    color: var(--text-muted);
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.sidebar-link:hover {
+    color: var(--text-main);
+    background: var(--input-bg);
+}
+.sidebar-link.active {
+    color: #fff;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+/* ---------- KPI cards (gradient stat tiles) ---------- */
+.kpi-card {
+    color: #fff;
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+}
+.kpi-income { background: linear-gradient(135deg, #10b981, #0ea5a4); }
+.kpi-expense { background: linear-gradient(135deg, #f43f5e, #ec4899); }
+.kpi-net { background: linear-gradient(135deg, #6366f1, #a855f7); }
+.kpi-card .kpi-label { color: rgba(255, 255, 255, 0.75); }
 
 .action-btn { transition: transform 0.15s ease, opacity 0.15s ease; }
 .action-btn:hover { transform: translateY(-2px); }

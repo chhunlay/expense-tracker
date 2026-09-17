@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [0.3.0] - 2026-09-17
+### Changed
+- Redesigned the layout around a persistent sidebar (desktop) / pill nav
+  (mobile) instead of a centered top nav bar, and gradient KPI cards for
+  Income/Expenses/Net on the dashboard.
+- Dashboard now includes its own 6-month net trend line chart alongside
+  the category breakdown doughnut, matching the fuller trend view on
+  the Reports page (which reuses the same `get_monthly_totals` query
+  helper in `db.py` instead of duplicating it).
+- Category-color dots and budget-bar widths moved from inline
+  `style="...{{ }}"` attributes to `data-color`/`data-width` attributes
+  applied by `script.js` at runtime - same rendered result, but no
+  template syntax inside a `style` attribute for an editor's embedded
+  CSS checker to misparse.
+
 ## [0.2.0] - 2026-09-17
 ### Added
 - Net trend line chart on the Reports page (income minus expenses per

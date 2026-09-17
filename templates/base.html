@@ -10,47 +10,90 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="min-h-screen p-4 sm:p-6">
+<body class="min-h-screen">
 
-<div class="max-w-4xl mx-auto">
+{% set nav_items = [
+    ('dashboard', url_for('dashboard'), '📊', 'Dashboard'),
+    ('add_transaction', url_for('add_transaction'), '➕', 'Add'),
+    ('transactions', url_for('transactions'), '📋', 'Transactions'),
+    ('categories_view', url_for('categories_view'), '🏷️', 'Categories'),
+    ('reports', url_for('reports'), '📈', 'Reports'),
+] %}
 
-    <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-2">
+<div class="flex min-h-screen">
+
+    <!-- Sidebar - desktop only (md+); mobile gets the pill nav below instead,
+         since a fixed 240px rail eats too much of a phone screen. -->
+    <aside class="sidebar hidden md:flex flex-col w-60 flex-shrink-0 p-5">
+        <div class="flex items-center gap-2 mb-8">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <span class="text-lg">💰</span>
             </div>
-            <h1 class="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
+            <h1 class="text-base font-extrabold tracking-tight">Expense Tracker</h1>
         </div>
-        <button id="themeToggle" type="button"
-                class="theme-toggle w-10 h-10 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
-                aria-label="Toggle theme">
-            <span id="themeIcon">🌙</span>
-        </button>
-    </div>
 
-    <nav class="glass-card rounded-2xl p-1.5 flex gap-1 mb-6 overflow-x-auto">
-        <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'dashboard' }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Dashboard</a>
-        <a href="{{ url_for('add_transaction') }}" class="nav-link {{ 'active' if request.endpoint == 'add_transaction' }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Add</a>
-        <a href="{{ url_for('transactions') }}" class="nav-link {{ 'active' if request.endpoint == 'transactions' }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Transactions</a>
-        <a href="{{ url_for('categories_view') }}" class="nav-link {{ 'active' if request.endpoint == 'categories_view' }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Categories</a>
-        <a href="{{ url_for('reports') }}" class="nav-link {{ 'active' if request.endpoint == 'reports' }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Reports</a>
-    </nav>
+        <nav class="flex flex-col gap-1">
+            {% for endpoint, href, icon, label in nav_items %}
+            <a href="{{ href }}" class="sidebar-link {{ 'active' if request.endpoint == endpoint }} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
+                <span>{{ icon }}</span> {{ label }}
+            </a>
+            {% endfor %}
+        </nav>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="mb-4 space-y-2">
-                {% for category, message in messages %}
-                    <div class="flash glass-card rounded-xl px-4 py-2.5 text-sm font-medium {{ 'text-neg' if category == 'error' else 'text-pos' }}">
-                        {{ message }}
+        <div class="mt-auto flex items-center justify-between pt-5">
+            <span class="text-xs text-faint">v{{ app_version }}</span>
+            <button id="themeToggle" type="button"
+                    class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
+                    aria-label="Toggle theme">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-8">
+        <div class="max-w-5xl mx-auto">
+
+            <!-- Mobile header + pill nav - hidden from md up, where the
+                 sidebar takes over. -->
+            <div class="md:hidden mb-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <span class="text-lg">💰</span>
+                        </div>
+                        <h1 class="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
                     </div>
-                {% endfor %}
+                    <button id="themeToggleMobile" type="button"
+                            class="theme-toggle w-10 h-10 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
+                            aria-label="Toggle theme">
+                        <span id="themeIconMobile">🌙</span>
+                    </button>
+                </div>
+                <nav class="glass-card rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
+                    {% for endpoint, href, icon, label in nav_items %}
+                    <a href="{{ href }}" class="nav-link {{ 'active' if request.endpoint == endpoint }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">{{ label }}</a>
+                    {% endfor %}
+                </nav>
             </div>
-        {% endif %}
-    {% endwith %}
 
-    {% block content %}{% endblock %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-4 space-y-2">
+                        {% for category, message in messages %}
+                            <div class="flash glass-card rounded-xl px-4 py-2.5 text-sm font-medium {{ 'text-neg' if category == 'error' else 'text-pos' }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
 
-    <p class="text-center text-xs text-faint mt-6">v{{ app_version }}</p>
+            {% block content %}{% endblock %}
+
+            <p class="md:hidden text-center text-xs text-faint mt-6">v{{ app_version }}</p>
+
+        </div>
+    </main>
 
 </div>
 
