@@ -30,7 +30,11 @@
 
     <!-- Sidebar - desktop only (md+); mobile gets the pill nav below instead,
          since a fixed 240px rail eats too much of a phone screen. -->
-    <aside class="sidebar hidden md:flex flex-col w-60 flex-shrink-0 p-5">
+    <!-- sticky + h-screen pins the sidebar to the viewport regardless of
+         how tall the main content gets, so the theme toggle/version at
+         its bottom (mt-auto below) stay visible instead of scrolling
+         away with the page. -->
+    <aside class="sidebar hidden md:flex flex-col w-60 flex-shrink-0 p-5 md:sticky md:top-0 md:h-screen md:self-start">
         <div class="flex items-center gap-2 mb-8">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <span class="text-lg">💰</span>
