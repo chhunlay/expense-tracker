@@ -1,4 +1,11 @@
 :root {
+    /* Tells the browser to paint its own native UI chrome (number-input
+       spinner arrows, the date-input calendar icon and popup, checkbox/
+       radio defaults, scrollbars) in a dark-appropriate style - without
+       this the browser falls back to its OS default regardless of our
+       CSS variables, which is why the spinner rendered as a stray white
+       box and the date picker looked wrong on the wrong theme. */
+    color-scheme: dark;
     --bg-1: #1e2a4a;
     --bg-2: #0b0f1c;
     --bg-3: #05070d;
@@ -16,6 +23,7 @@
     --neg: #f87171;
 }
 html[data-theme="light"] {
+    color-scheme: light;
     --bg-1: #eef2ff;
     --bg-2: #f8fafc;
     --bg-3: #ffffff;
