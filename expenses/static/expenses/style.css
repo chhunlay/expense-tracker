@@ -41,18 +41,19 @@ html[data-theme="light"] {
     --neg: #dc2626;
 }
 /* Warm cream -> yellow -> orange -> coral palette, scoped to the
-   login/register pages only (auth_base.html adds "auth-page" to
-   <html>) - everywhere else in the app keeps the indigo/white light
-   theme above. --accent/--accent-2 drive the buttons/links on those
-   two pages; see the "warm-palette overrides" block below for how
-   they remap the plain Tailwind indigo classes baked into
-   login.html/register.html. */
-html.auth-page[data-theme="light"] {
-    --bg-1: #fdecc0;
-    --bg-2: #fef8ea;
-    --bg-3: #fffdf8;
-    --card-bg: rgba(255, 253, 248, 0.75);
-    --card-border: rgba(120, 53, 15, 0.1);
+   login/register CARD only (auth_base.html adds "auth-page" to
+   <html>, and this attaches to .glass-card specifically, not the
+   page background) - the page background, heading, and icon outside
+   the card keep the plain indigo/white light theme above.
+   --accent/--accent-2 drive the buttons/links inside that card; see
+   the "warm-palette overrides" block below for how they remap the
+   plain Tailwind indigo classes baked into login.html/register.html.
+   CSS variables cascade to descendants, so every element inside
+   .glass-card (inputs, labels, links, the submit button) picks these
+   up without needing its own selector. */
+html.auth-page[data-theme="light"] .glass-card {
+    --card-bg: rgba(255, 253, 248, 0.9);
+    --card-border: rgba(120, 53, 15, 0.15);
     --text-main: #57350f;
     --text-muted: #92653a;
     --text-faint: #c9a374;
