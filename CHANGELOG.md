@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [1.2.0] - 2026-09-18
+### Added
+- **JSON API** under `/api/` (Django REST Framework, not FastAPI - kept
+  in the same process/app so it shares the existing models, auth, and
+  DB instead of standing up a second service). CRUD endpoints for
+  Categories, Transactions, and Assets, each scoped to the
+  authenticated user in `get_queryset`/`perform_create` the same way
+  the web views are - one account can't read or write another's rows
+  even by guessing an id. Two auth options: the existing session
+  cookie for browser use, or `POST /api/token/` for a token
+  (`TokenAuthentication`) for scripts/mobile clients.
+- New `expenses/api/` subpackage (`serializers.py`, `views.py`,
+  `urls.py`) keeps the API's code separate from the web UI's
+  `views.py`/`urls.py` rather than mixing the two.
+
 ## [1.1.0] - 2026-09-18
 ### Added
 - **Real user accounts.** Register/log in/log out (`django.contrib.auth`);

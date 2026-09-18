@@ -7,7 +7,7 @@ the way Jinja can) and its inject_version() context processor.
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 # (section label or None, [(url_name, icon, label, [url_names that
 # should also highlight this item], ...]) - Add/Edit live under the
