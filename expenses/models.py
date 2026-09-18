@@ -1,20 +1,27 @@
 """
-Same two-table shape as the Flask version's db.py, expressed as Django
-models instead of raw SQL - this is the ORM doing what db.py's
-get_db()/init_db() did by hand (schema definition, and Django's
-migrations replace the manual CREATE TABLE IF NOT EXISTS).
+Category/Transaction are the same two tables as before, now scoped to a
+user (each user manages their own - added for real accounts). Profile
+extends Django's built-in User with the extra per-account preferences
+the Settings page needs (profile picture, theme, language) that don't
+belong on User itself. Asset is the new Accounting feature - net-worth
+items (bank accounts, cash, investments, property, ...) a user owns.
 """
+from django.conf import settings
 from django.db import models
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="categories")
+    name = models.CharField(max_length=100)
     color = models.CharField(max_length=7, default="#6366f1")
     budget_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "categories"
+        # Unique per-user, not globally - two different users can both
+        # have a "Rent" category without colliding.
+        constraints = [models.UniqueConstraint(fields=["user", "name"], name="unique_category_name_per_user")]
 
     def __str__(self):
         return self.name
@@ -25,6 +32,7 @@ class Transaction(models.Model):
     INCOME = "income"
     TYPE_CHOICES = [(EXPENSE, "Expense"), (INCOME, "Income")]
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
     date = models.DateField()
     type = models.CharField(max_length=7, choices=TYPE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -40,3 +48,51 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.date} {self.type} {self.amount}"
+
+
+class Profile(models.Model):
+    LIGHT = "light"
+    DARK = "dark"
+    THEME_CHOICES = [(DARK, "Dark"), (LIGHT, "Light")]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    picture = models.ImageField(upload_to="profile_pictures/", blank=True, null=True)
+    theme = models.CharField(max_length=5, choices=THEME_CHOICES, default=DARK)
+    # Mirrors settings.LANGUAGES' codes ("en"/"km") - kept as a plain
+    # CharField rather than validated against LANGUAGES directly so a
+    # future added language doesn't need a migration.
+    language = models.CharField(max_length=10, default="en")
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
+
+
+class Asset(models.Model):
+    BANK = "bank"
+    CASH = "cash"
+    INVESTMENT = "investment"
+    PROPERTY = "property"
+    VEHICLE = "vehicle"
+    OTHER = "other"
+    TYPE_CHOICES = [
+        (BANK, "Bank account"),
+        (CASH, "Cash"),
+        (INVESTMENT, "Investment"),
+        (PROPERTY, "Property"),
+        (VEHICLE, "Vehicle"),
+        (OTHER, "Other"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assets")
+    name = models.CharField(max_length=150)
+    asset_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default=OTHER)
+    value = models.DecimalField(max_digits=12, decimal_places=2)
+    note = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-value"]
+
+    def __str__(self):
+        return self.name

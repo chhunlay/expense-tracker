@@ -1,67 +1,73 @@
 {% extends "expenses/base.html" %}
 {% load expenses_extras %}
-{% block title %}Dashboard - Expense Tracker{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Dashboard" %} - Expense Tracker{% endblock %}
 {% block content %}
 
 <!-- Month nav -->
 <div class="flex items-center justify-between mb-4">
-    <a href="{% url 'dashboard' %}?month={{ prev_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; Prev</a>
+    <a href="{% url 'dashboard' %}?month={{ prev_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; {% translate "Prev" %}</a>
     <h2 class="font-bold text-lg">{{ month_str|monthlabel }}</h2>
     {% if is_current_month %}
-        <span class="px-3 py-1.5 text-sm text-faint">Next &rarr;</span>
+        <span class="px-3 py-1.5 text-sm text-faint">{% translate "Next" %} &rarr;</span>
     {% else %}
-        <a href="{% url 'dashboard' %}?month={{ next_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">Next &rarr;</a>
+        <a href="{% url 'dashboard' %}?month={{ next_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">{% translate "Next" %} &rarr;</a>
     {% endif %}
 </div>
 
 <!-- KPI cards -->
 <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-muted">Overview</h3>
+    <h3 class="text-sm font-semibold text-muted">{% translate "Overview" %}</h3>
     <button id="amountToggle" type="button"
             class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
-            aria-label="Show or hide income and net amounts">
+            aria-label="{% translate 'Show or hide income and net amounts' %}">
         <span id="amountToggleIcon"></span>
     </button>
 </div>
 <div class="grid grid-cols-3 gap-3 mb-5">
     <div class="kpi-card kpi-income rounded-2xl p-4">
-        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">{% translate "Income" %}</p>
         <p class="text-xl font-extrabold hideable-amount">{{ total_income|money }}</p>
     </div>
     <div class="kpi-card kpi-expense rounded-2xl p-4">
-        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">{% translate "Expenses" %}</p>
         <p class="text-xl font-extrabold">{{ total_expense|money }}</p>
     </div>
     <div class="kpi-card kpi-net rounded-2xl p-4">
-        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Net</p>
+        <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">{% translate "Net" %}</p>
         <p class="text-xl font-extrabold hideable-amount">{{ net|money }}</p>
     </div>
 </div>
+
+<a href="{% url 'assets' %}" class="glass-card rounded-2xl p-4 mb-5 flex items-center justify-between hover:opacity-90 transition-opacity">
+    <span class="flex items-center gap-2 text-sm font-semibold text-muted">💼 {% translate "Net worth" %}</span>
+    <span class="text-lg font-extrabold hideable-amount">{{ net_worth|money }}</span>
+</a>
 
 <!-- Quick add -->
 <form action="{% url 'quick_add' %}" method="post" class="glass-card rounded-2xl p-4 mb-5">
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ month_str }}">
-    <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Quick add</label>
+    <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">{% translate "Quick add" %}</label>
     <div class="flex gap-2">
-        <input type="text" name="text" placeholder='e.g. "Lunch 5.50 Food" or "+500 Salary"' autocomplete="off"
+        <input type="text" name="text" placeholder='{% translate 'e.g. "Lunch 5.50 Food" or "+500 Salary"' %}' autocomplete="off"
                class="input flex-1 py-2.5 px-3 rounded-xl text-sm">
         <button type="submit" class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 rounded-xl shadow-lg shadow-indigo-500/20">
-            Add
+            {% translate "Add" %}
         </button>
     </div>
-    <p class="text-xs text-faint mt-1.5">Amount + optional category name anywhere in the text. Prefix the amount with "+" for income.</p>
+    <p class="text-xs text-faint mt-1.5">{% translate 'Amount + optional category name anywhere in the text. Prefix the amount with "+" for income.' %}</p>
 </form>
 
 <!-- Trend + breakdown -->
 <div class="grid lg:grid-cols-3 gap-5 mb-5">
     <div class="lg:col-span-2 glass-card rounded-2xl p-5">
-        <h3 class="font-bold mb-3">Net trend (last 6 months)</h3>
+        <h3 class="font-bold mb-3">{% translate "Net trend (last 6 months)" %}</h3>
         <canvas id="miniTrendChart" height="140"></canvas>
     </div>
 
     <div class="glass-card rounded-2xl p-5">
-        <h3 class="font-bold mb-3">Where it went</h3>
+        <h3 class="font-bold mb-3">{% translate "Where it went" %}</h3>
         {% if breakdown %}
             <canvas id="breakdownChart" height="160"></canvas>
             <div class="mt-3 space-y-1.5">
@@ -76,7 +82,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-sm text-faint">No expenses logged this month yet.</p>
+            <p class="text-sm text-faint">{% translate "No expenses logged this month yet." %}</p>
         {% endif %}
     </div>
 </div>
@@ -84,7 +90,7 @@
 <!-- Budgets + Recent -->
 <div class="grid sm:grid-cols-2 gap-5">
     <div class="glass-card rounded-2xl p-5">
-        <h3 class="font-bold mb-3">Budgets</h3>
+        <h3 class="font-bold mb-3">{% translate "Budgets" %}</h3>
         {% if budget_progress %}
             <div class="space-y-3">
                 {% for b in budget_progress %}
@@ -100,14 +106,15 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-sm text-faint">No budgets set yet. Add a limit on the <a href="{% url 'categories' %}" class="underline">Categories</a> page.</p>
+            {% url 'categories' as categories_url %}
+            <p class="text-sm text-faint">{% blocktranslate %}No budgets set yet. Add a limit on the <a href="{{ categories_url }}" class="underline">Categories</a> page.{% endblocktranslate %}</p>
         {% endif %}
     </div>
 
     <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-3">
-            <h3 class="font-bold">Recent</h3>
-            <a href="{% url 'transactions' %}" class="text-sm text-indigo-400 font-medium">View all &rarr;</a>
+            <h3 class="font-bold">{% translate "Recent" %}</h3>
+            <a href="{% url 'transactions' %}" class="text-sm text-indigo-400 font-medium">{% translate "View all" %} &rarr;</a>
         </div>
         {% if recent %}
             <div class="space-y-2">
@@ -116,8 +123,8 @@
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{% if r.category %}{{ r.category.color }}{% else %}#94a3b8{% endif %}"></span>
                         <div class="min-w-0">
-                            <p class="truncate">{{ r.note|default:"" }}{% if not r.note %}{% if r.category %}{{ r.category.name }}{% else %}Uncategorized{% endif %}{% endif %}</p>
-                            <p class="text-xs text-faint">{{ r.date }} &middot; {% if r.category %}{{ r.category.name }}{% else %}Uncategorized{% endif %}</p>
+                            <p class="truncate">{{ r.note|default:"" }}{% if not r.note %}{% if r.category %}{{ r.category.name }}{% else %}{% translate "Uncategorized" %}{% endif %}{% endif %}</p>
+                            <p class="text-xs text-faint">{{ r.date }} &middot; {% if r.category %}{{ r.category.name }}{% else %}{% translate "Uncategorized" %}{% endif %}</p>
                         </div>
                     </div>
                     <span class="font-semibold {% if r.type == 'income' %}text-pos{% else %}text-neg{% endif %} flex-shrink-0 ml-2">
@@ -127,7 +134,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-sm text-faint">Nothing logged this month yet.</p>
+            <p class="text-sm text-faint">{% translate "Nothing logged this month yet." %}</p>
         {% endif %}
     </div>
 </div>

@@ -3,6 +3,35 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [1.1.0] - 2026-09-18
+### Added
+- **Real user accounts.** Register/log in/log out (`django.contrib.auth`);
+  every category, transaction, and asset now belongs to a `user` FK,
+  scoped so each account only ever sees and touches its own data.
+  Registering seeds the same 10 default categories the app always
+  shipped with. Every view is `@login_required`.
+- **Settings page** - change color theme (persisted per-user on a new
+  `Profile` model), change language, and upload a profile picture
+  (`Pillow`/`ImageField`, served from `/media/` in `DEBUG`). The
+  picture and username now show at the bottom of the sidebar, with a
+  logout button next to the theme toggle.
+- **Accounting → Assets** - a new nav section and page for tracking
+  net-worth items (bank accounts, cash, investments, property,
+  vehicles, etc.): name, type, current value, optional note, same
+  add/edit/delete popup pattern as Categories. Total net worth is
+  shown on the Assets page and as a link-through card on the
+  Dashboard.
+- **Khmer (ភាសាខ្មែរ) translation** - full UI coverage via Django's
+  i18n framework (`{% translate %}`/`{% blocktranslate %}` in every
+  template, `gettext` in views), switchable from Settings. Language
+  choice is stored per-user on `Profile` and applied via a cookie
+  (`LocaleMiddleware`/`django_language`, the mechanism Django 6
+  replaced session-based language storage with).
+### Changed
+- Nav is now grouped into sections (`nav_sections` context processor)
+  so "Accounting" can header the Assets link without being clickable
+  itself.
+
 ## [1.0.0] - 2026-09-18
 ### Changed
 - **Migrated the whole app from Flask to Django**, on the

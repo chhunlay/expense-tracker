@@ -1,20 +1,21 @@
 {% extends "expenses/base.html" %}
 {% load expenses_extras %}
-{% block title %}Reports - Expense Tracker{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Reports" %} - Expense Tracker{% endblock %}
 {% block content %}
 
 <div class="glass-card rounded-2xl p-5 mb-5">
-    <h3 class="font-bold mb-3">Net trend (last 12 months)</h3>
+    <h3 class="font-bold mb-3">{% translate "Net trend (last 12 months)" %}</h3>
     <canvas id="netTrendChart" height="180"></canvas>
 </div>
 
 <div class="glass-card rounded-2xl p-5 mb-5">
-    <h3 class="font-bold mb-3">Income vs. expenses (last 12 months)</h3>
+    <h3 class="font-bold mb-3">{% translate "Income vs. expenses (last 12 months)" %}</h3>
     <canvas id="trendChart" height="180"></canvas>
 </div>
 
 <div class="glass-card rounded-2xl p-5">
-    <h3 class="font-bold mb-3">Top categories (last 12 months)</h3>
+    <h3 class="font-bold mb-3">{% translate "Top categories (last 12 months)" %}</h3>
     {% if top_categories %}
         <div class="space-y-2">
             {% for c in top_categories %}
@@ -28,7 +29,7 @@
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-sm text-faint">No expenses in this window yet.</p>
+        <p class="text-sm text-faint">{% translate "No expenses in this window yet." %}</p>
     {% endif %}
 </div>
 
