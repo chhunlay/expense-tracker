@@ -40,6 +40,30 @@ html[data-theme="light"] {
     --pos: #059669;
     --neg: #dc2626;
 }
+/* Warm cream -> yellow -> orange -> coral palette, scoped to the
+   login/register CARD only (auth_base.html adds "auth-page" to
+   <html>, and this attaches to .glass-card specifically, not the
+   page background) - the page background, heading, and icon outside
+   the card keep the plain indigo/white light theme above.
+   --accent/--accent-2 drive the buttons/links inside that card; see
+   the "warm-palette overrides" block below for how they remap the
+   plain Tailwind indigo classes baked into login.html/register.html.
+   CSS variables cascade to descendants, so every element inside
+   .glass-card (inputs, labels, links, the submit button) picks these
+   up without needing its own selector. */
+html.auth-page[data-theme="light"] .glass-card {
+    --card-bg: rgba(255, 253, 248, 0.9);
+    --card-border: rgba(120, 53, 15, 0.15);
+    --text-main: #57350f;
+    --text-muted: #92653a;
+    --text-faint: #c9a374;
+    --input-bg: rgba(120, 53, 15, 0.04);
+    --input-border: rgba(120, 53, 15, 0.12);
+    --neg: #dc2626;
+    --accent: #ea7f7f;
+    --accent-2: #f0a165;
+    --accent-text: #c2513f;
+}
 
 body {
     font-family: 'Inter', system-ui, sans-serif;
@@ -70,11 +94,71 @@ body {
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
     outline: none;
 }
+html.auth-page[data-theme="light"] .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(234, 127, 127, 0.18);
+}
+
+/* ---------- Show/hide password toggle (login/register) ---------- */
+.password-field { position: relative; }
+.password-field input {
+    width: 100%;
+    padding-right: 2.5rem;
+    box-sizing: border-box;
+}
+.password-toggle-btn {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+.password-toggle-btn:hover { color: var(--text-main); }
 
 .theme-toggle {
     background: var(--input-bg);
     border: 1px solid var(--input-border);
     color: var(--text-main);
+}
+
+/* ---------- Theme toggle (pill switch, moon <-> sun) ---------- */
+.theme-switch {
+    flex-shrink: 0;
+    width: 52px;
+    height: 28px;
+    padding: 3px;
+    border: none;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    background: #3f4a63;
+    transition: background 0.25s ease;
+}
+html[data-theme="light"] .theme-switch {
+    background: #cbd2e0;
+}
+.theme-switch-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+}
+html[data-theme="light"] .theme-switch-thumb {
+    transform: translateX(24px);
 }
 
 .nav-link {
@@ -194,4 +278,29 @@ dialog::backdrop {
 dialog[open] {
     animation: fadeUp 0.2s ease;
 }
+
+/* ---------- Warm-palette overrides (login/register, light theme only) ----------
+   The primary/accent color on these two pages is mostly plain
+   Tailwind utility classes baked into the templates (bg-indigo-500,
+   etc.), not a CSS variable - remapping every one would be a bigger
+   change than the palette itself, so instead these selectors override
+   just those specific classes when <html> has both "auth-page" and
+   data-theme="light", using --accent/--accent-2 from the block above.
+   Scoped to .auth-page so the rest of the app keeps its indigo/white
+   light theme. Source order (this file loads after Tailwind's
+   injected <style>) is what lets same-specificity class selectors win
+   here. */
+html.auth-page[data-theme="light"] .bg-indigo-500 { background-color: var(--accent) !important; }
+html.auth-page[data-theme="light"] .hover\:bg-indigo-400:hover { background-color: var(--accent-2) !important; }
+html.auth-page[data-theme="light"] .text-indigo-400 { color: var(--accent-text) !important; }
+html.auth-page[data-theme="light"] .from-indigo-500 {
+    --tw-gradient-from: var(--accent-2) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(240 161 101 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html.auth-page[data-theme="light"] .to-pink-500 { --tw-gradient-to: var(--accent) var(--tw-gradient-to-position) !important; }
+html.auth-page[data-theme="light"] .shadow-indigo-500\/20 { --tw-shadow-color: rgb(234 127 127 / 0.25) !important; }
+html.auth-page[data-theme="light"] .accent-indigo-500 { accent-color: var(--accent) !important; }
+html.auth-page[data-theme="light"] .has-\[\:checked\]\:border-indigo-400:has(:checked) { border-color: var(--accent) !important; }
+html.auth-page[data-theme="light"] .file\:bg-indigo-500::file-selector-button { background-color: var(--accent) !important; }
 
