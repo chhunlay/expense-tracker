@@ -1,7 +1,6 @@
 """
-Small pure date-math helpers shared by the dashboard (month navigation)
-and the reports page (rolling N-month windows). Kept dependency-free and
-separate from app.py so they're trivially unit-testable on their own.
+Same pure date-math helpers as the Flask version's dates.py, unchanged -
+no Flask/Django dependency either way, so this ports over verbatim.
 """
 
 

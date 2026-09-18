@@ -1,26 +1,22 @@
-{% extends "base.html" %}
+{% extends "expenses/base.html" %}
+{% load expenses_extras %}
 {% block title %}Dashboard - Expense Tracker{% endblock %}
 {% block content %}
 
 <!-- Month nav -->
 <div class="flex items-center justify-between mb-4">
-    <a href="{{ url_for('dashboard', month=prev_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; Prev</a>
-    <h2 class="font-bold text-lg">{{ month_str | monthlabel }}</h2>
+    <a href="{% url 'dashboard' %}?month={{ prev_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">&larr; Prev</a>
+    <h2 class="font-bold text-lg">{{ month_str|monthlabel }}</h2>
     {% if is_current_month %}
         <span class="px-3 py-1.5 text-sm text-faint">Next &rarr;</span>
     {% else %}
-        <a href="{{ url_for('dashboard', month=next_month) }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">Next &rarr;</a>
+        <a href="{% url 'dashboard' %}?month={{ next_month }}" class="nav-link px-3 py-1.5 rounded-lg text-sm font-medium">Next &rarr;</a>
     {% endif %}
 </div>
 
 <!-- KPI cards -->
 <div class="flex items-center justify-between mb-3">
     <h3 class="text-sm font-semibold text-muted">Overview</h3>
-    <!-- Toggles Income/Net together (not Expenses) - blurs the real
-         numbers in place (like a banking app's balance-privacy toggle)
-         rather than swapping in placeholder text, so no separate
-         "hidden value" needs to be templated at all. State persists in
-         localStorage so it stays hidden across page loads. -->
     <button id="amountToggle" type="button"
             class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
             aria-label="Show or hide income and net amounts">
@@ -30,20 +26,21 @@
 <div class="grid grid-cols-3 gap-3 mb-5">
     <div class="kpi-card kpi-income rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
-        <p class="text-xl font-extrabold hideable-amount">{{ total_income | money }}</p>
+        <p class="text-xl font-extrabold hideable-amount">{{ total_income|money }}</p>
     </div>
     <div class="kpi-card kpi-expense rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
-        <p class="text-xl font-extrabold">{{ total_expense | money }}</p>
+        <p class="text-xl font-extrabold">{{ total_expense|money }}</p>
     </div>
     <div class="kpi-card kpi-net rounded-2xl p-4">
         <p class="kpi-label text-xs uppercase tracking-wider font-semibold mb-1">Net</p>
-        <p class="text-xl font-extrabold hideable-amount">{{ net | money }}</p>
+        <p class="text-xl font-extrabold hideable-amount">{{ net|money }}</p>
     </div>
 </div>
 
 <!-- Quick add -->
-<form action="{{ url_for('quick_add') }}" method="post" class="glass-card rounded-2xl p-4 mb-5">
+<form action="{% url 'quick_add' %}" method="post" class="glass-card rounded-2xl p-4 mb-5">
+    {% csrf_token %}
     <input type="hidden" name="month" value="{{ month_str }}">
     <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Quick add</label>
     <div class="flex gap-2">
@@ -74,7 +71,7 @@
                         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ b.color }}"></span>
                         <span class="truncate">{{ b.name }}</span>
                     </span>
-                    <span class="text-muted flex-shrink-0 ml-2">{{ b.amount | money }}</span>
+                    <span class="text-muted flex-shrink-0 ml-2">{{ b.amount|money }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -94,37 +91,37 @@
                 <div>
                     <div class="flex justify-between text-sm mb-1">
                         <span>{{ b.name }}</span>
-                        <span class="text-muted">{{ b.spent | money }} / {{ b.limit | money }}</span>
+                        <span class="text-muted">{{ b.spent|money }} / {{ b.limit|money }}</span>
                     </div>
                     <div class="progress-track w-full rounded-full h-2 overflow-hidden">
-                        <div class="progress-bar h-full rounded-full {{ 'over' if b.over }}" data-width="{{ b.pct }}"></div>
+                        <div class="progress-bar h-full rounded-full {% if b.over %}over{% endif %}" data-width="{{ b.pct }}"></div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-sm text-faint">No budgets set yet. Add a limit on the <a href="{{ url_for('categories_view') }}" class="underline">Categories</a> page.</p>
+            <p class="text-sm text-faint">No budgets set yet. Add a limit on the <a href="{% url 'categories' %}" class="underline">Categories</a> page.</p>
         {% endif %}
     </div>
 
     <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-3">
             <h3 class="font-bold">Recent</h3>
-            <a href="{{ url_for('transactions') }}" class="text-sm text-indigo-400 font-medium">View all &rarr;</a>
+            <a href="{% url 'transactions' %}" class="text-sm text-indigo-400 font-medium">View all &rarr;</a>
         </div>
         {% if recent %}
             <div class="space-y-2">
                 {% for r in recent %}
                 <div class="flex items-center justify-between text-sm py-1.5">
                     <div class="flex items-center gap-2 min-w-0">
-                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{{ r.category_color or '#94a3b8' }}"></span>
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" data-color="{% if r.category %}{{ r.category.color }}{% else %}#94a3b8{% endif %}"></span>
                         <div class="min-w-0">
-                            <p class="truncate">{{ r.note or r.category_name or 'Uncategorized' }}</p>
-                            <p class="text-xs text-faint">{{ r.date }} &middot; {{ r.category_name or 'Uncategorized' }}</p>
+                            <p class="truncate">{{ r.note|default:"" }}{% if not r.note %}{% if r.category %}{{ r.category.name }}{% else %}Uncategorized{% endif %}{% endif %}</p>
+                            <p class="text-xs text-faint">{{ r.date }} &middot; {% if r.category %}{{ r.category.name }}{% else %}Uncategorized{% endif %}</p>
                         </div>
                     </div>
-                    <span class="font-semibold {{ 'text-pos' if r.type == 'income' else 'text-neg' }} flex-shrink-0 ml-2">
-                        {{ '+' if r.type == 'income' else '-' }}{{ r.amount | money }}
+                    <span class="font-semibold {% if r.type == 'income' %}text-pos{% else %}text-neg{% endif %} flex-shrink-0 ml-2">
+                        {% if r.type == 'income' %}+{% else %}-{% endif %}{{ r.amount|money }}
                     </span>
                 </div>
                 {% endfor %}
@@ -139,12 +136,11 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
-<!-- Templated data lives in its own application/json tag, not inline in
-     the JS below - keeps the <script> that follows plain, valid
-     JavaScript with no template output in it, so an editor's JS/TS
-     checker (which has no idea what Jinja is) doesn't misparse the
-     template syntax and throw false-positive errors on it. -->
-<script type="application/json" id="mini-trend-data">{{ mini_trend | tojson }}</script>
+<!-- json_script (Django built-in) - equivalent to the Flask version's
+     own hand-rolled JSON-data-script-tag pattern, for the same reason:
+     keeps the actual chart-building <script> below
+     as plain, valid JavaScript with no template output inside it. -->
+{{ mini_trend|json_script:"mini-trend-data" }}
 <script>
 const miniTrend = JSON.parse(document.getElementById('mini-trend-data').textContent);
 
@@ -174,7 +170,7 @@ new Chart(document.getElementById('miniTrendChart'), {
 </script>
 
 {% if breakdown %}
-<script type="application/json" id="breakdown-data">{{ breakdown | tojson }}</script>
+{{ breakdown|json_script:"breakdown-data" }}
 <script>
 const breakdown = JSON.parse(document.getElementById('breakdown-data').textContent);
 

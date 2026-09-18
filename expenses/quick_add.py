@@ -1,7 +1,8 @@
 """
-Parsing for the dashboard's one-line "quick add" text box. Kept separate
-from app.py since it's pure text-processing logic with no Flask or DB
-dependency of its own (it's handed an already-fetched category list).
+Same parsing logic as the Flask version's quick_add.py. Only difference:
+`categories` here is an iterable of Category model instances (`.name`,
+`.id`) instead of sqlite3.Row dicts (`["name"]`) - the parsing itself is
+identical, framework-agnostic text processing either way.
 """
 import re
 
@@ -32,8 +33,8 @@ def parse_quick_add(text, categories):
     remainder = re.sub(r"\s+", " ", remainder)
 
     matched_category = None
-    for cat in sorted(categories, key=lambda c: -len(c["name"])):
-        pattern = r"(?i)\b" + re.escape(cat["name"]) + r"\b"
+    for cat in sorted(categories, key=lambda c: -len(c.name)):
+        pattern = r"(?i)\b" + re.escape(cat.name) + r"\b"
         if re.search(pattern, remainder):
             matched_category = cat
             remainder = re.sub(pattern, "", remainder, count=1, flags=re.IGNORECASE)
@@ -43,6 +44,6 @@ def parse_quick_add(text, categories):
     return {
         "amount": amount,
         "type": txn_type,
-        "category_id": matched_category["id"] if matched_category else None,
+        "category_id": matched_category.id if matched_category else None,
         "note": remainder or None,
     }
