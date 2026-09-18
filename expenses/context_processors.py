@@ -16,18 +16,20 @@ __version__ = "1.2.0"
 # leaving the sidebar blank. Section labels group related items visually
 # (e.g. "Accounting") without being clickable themselves.
 def _nav_sections():
+    # icon is a slug looked up by the icon_svg template filter
+    # (expenses_extras.py) - plain monochrome outline icons, not emoji.
     return [
         (None, [
-            ("dashboard", "📊", _("Dashboard"), []),
-            ("transactions", "📋", _("Transactions"), ["add_transaction", "edit_transaction"]),
-            ("categories", "🏷️", _("Categories"), []),
-            ("reports", "📈", _("Reports"), []),
+            ("dashboard", "dashboard", _("Dashboard"), []),
+            ("transactions", "transactions", _("Transactions"), ["add_transaction", "edit_transaction"]),
+            ("categories", "categories", _("Categories"), []),
+            ("reports", "reports", _("Reports"), []),
         ]),
         (_("Accounting"), [
-            ("assets", "💼", _("Assets"), []),
+            ("assets", "assets", _("Assets"), []),
         ]),
         (None, [
-            ("settings", "⚙️", _("Settings"), []),
+            ("settings", "settings", _("Settings"), []),
         ]),
     ]
 

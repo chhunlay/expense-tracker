@@ -1,5 +1,6 @@
 {% load static %}
 {% load i18n %}
+{% load expenses_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,7 +37,7 @@
                 {% endif %}
                 {% for item in section.items %}
                 <a href="{{ item.url }}" class="sidebar-link {% if item.active %}active{% endif %} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
-                    <span>{{ item.icon }}</span> {{ item.label }}
+                    {{ item.icon|icon_svg }} {{ item.label }}
                 </a>
                 {% endfor %}
             {% endfor %}
@@ -60,7 +61,7 @@
                     <form method="post" action="{% url 'logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity" aria-label="{% translate 'Log out' %}" title="{% translate 'Log out' %}">
-                            <span>🚪</span>
+                            {{ "logout"|icon_svg }}
                         </button>
                     </form>
                     {% endif %}
@@ -102,7 +103,7 @@
                     {% if user.is_authenticated %}
                     <form method="post" action="{% url 'logout' %}" class="flex-shrink-0">
                         {% csrf_token %}
-                        <button type="submit" class="nav-link px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">🚪 {% translate "Log out" %}</button>
+                        <button type="submit" class="nav-link px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5">{{ "logout"|icon_svg }} {% translate "Log out" %}</button>
                     </form>
                     {% endif %}
                 </nav>
