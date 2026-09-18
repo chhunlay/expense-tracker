@@ -93,6 +93,18 @@ if (amountToggle) {
     });
 }
 
+// ---------- Show/hide password (login/register) ----------
+document.querySelectorAll('[data-toggle-password]').forEach((btn) => {
+    const input = btn.previousElementSibling;
+    if (!input) return;
+    btn.innerHTML = EYE_ICON;
+    btn.addEventListener('click', () => {
+        const nowShowing = input.type === 'password';
+        input.type = nowShowing ? 'text' : 'password';
+        btn.innerHTML = nowShowing ? EYE_OFF_ICON : EYE_ICON;
+    });
+});
+
 // ---------- Export dropdown (Transactions page) ----------
 // Hover-to-open is pure CSS (#exportMenuWrap:hover in style.css, which
 // out-specificities the .hidden class below regardless of its state).

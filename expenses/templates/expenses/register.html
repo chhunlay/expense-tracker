@@ -13,11 +13,17 @@
         </div>
         <div>
             <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">{% translate "Password" %}</label>
-            {{ form.password1 }}
+            <div class="password-field">
+                {{ form.password1 }}
+                <button type="button" class="password-toggle-btn" data-toggle-password aria-label="{% translate 'Show password' %}"></button>
+            </div>
         </div>
         <div>
             <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">{% translate "Confirm password" %}</label>
-            {{ form.password2 }}
+            <div class="password-field">
+                {{ form.password2 }}
+                <button type="button" class="password-toggle-btn" data-toggle-password aria-label="{% translate 'Show password' %}"></button>
+            </div>
         </div>
         {% if form.errors %}
             <ul class="text-neg text-sm space-y-1">
