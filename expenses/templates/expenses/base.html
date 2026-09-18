@@ -1,4 +1,6 @@
 {% load static %}
+{% load i18n %}
+{% load expenses_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,20 +31,47 @@
         </div>
 
         <nav class="flex flex-col gap-1">
-            {% for item in nav_items %}
-            <a href="{{ item.url }}" class="sidebar-link {% if item.active %}active{% endif %} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
-                <span>{{ item.icon }}</span> {{ item.label }}
-            </a>
+            {% for section in nav_sections %}
+                {% if section.label %}
+                    <p class="px-3 mt-4 mb-1 text-[0.7rem] font-bold uppercase tracking-wider text-faint first:mt-0">{{ section.label }}</p>
+                {% endif %}
+                {% for item in section.items %}
+                <a href="{{ item.url }}" class="sidebar-link {% if item.active %}active{% endif %} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
+                    {{ item.icon|icon_svg }} {{ item.label }}
+                </a>
+                {% endfor %}
             {% endfor %}
         </nav>
 
-        <div class="mt-auto flex items-center justify-between pt-5">
-            <span class="text-xs text-faint">v{{ app_version }}</span>
-            <button id="themeToggle" type="button"
-                    class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
-                    aria-label="Toggle theme">
-                <span id="themeIcon">🌙</span>
-            </button>
+        <div class="mt-auto pt-5">
+            {% if user.is_authenticated %}
+            <a href="{% url 'settings' %}" class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold mb-2">
+                {% if user.profile.picture %}
+                    <img src="{{ user.profile.picture.url }}" alt="" class="w-7 h-7 rounded-full object-cover">
+                {% else %}
+                    <span class="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">{{ user.username|first|upper }}</span>
+                {% endif %}
+                <span class="truncate">{{ user.username }}</span>
+            </a>
+            {% endif %}
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-faint">v{{ app_version }}</span>
+                <div class="flex items-center gap-1">
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity" aria-label="{% translate 'Log out' %}" title="{% translate 'Log out' %}">
+                            {{ "logout"|icon_svg }}
+                        </button>
+                    </form>
+                    {% endif %}
+                    <button id="themeToggle" type="button"
+                            class="theme-toggle w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
+                            aria-label="Toggle theme">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -66,9 +95,17 @@
                     </button>
                 </div>
                 <nav class="glass-card rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
-                    {% for item in nav_items %}
-                    <a href="{{ item.url }}" class="nav-link {% if item.active %}active{% endif %} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">{{ item.label }}</a>
+                    {% for section in nav_sections %}
+                        {% for item in section.items %}
+                        <a href="{{ item.url }}" class="nav-link {% if item.active %}active{% endif %} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">{{ item.label }}</a>
+                        {% endfor %}
                     {% endfor %}
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'logout' %}" class="flex-shrink-0">
+                        {% csrf_token %}
+                        <button type="submit" class="nav-link px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5">{{ "logout"|icon_svg }} {% translate "Log out" %}</button>
+                    </form>
+                    {% endif %}
                 </nav>
             </div>
 

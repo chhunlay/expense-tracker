@@ -18,9 +18,9 @@ HEADERS = ["Date", "Type", "Amount", "Category", "Note"]
 COLUMN_WIDTHS = [12, 10, 12, 20, 30]
 
 
-def export_transactions_xlsx():
-    """Returns the full transaction history as .xlsx file bytes."""
-    rows = Transaction.objects.select_related("category").order_by("date", "id")
+def export_transactions_xlsx(user):
+    """Returns `user`'s full transaction history as .xlsx file bytes."""
+    rows = Transaction.objects.filter(user=user).select_related("category").order_by("date", "id")
 
     wb = Workbook()
     ws = wb.active
@@ -39,7 +39,7 @@ def export_transactions_xlsx():
     return buffer.getvalue()
 
 
-def import_transactions_xlsx(file_bytes):
+def import_transactions_xlsx(user, file_bytes):
     """
     Reads the first sheet of an .xlsx file with the header matched
     case-insensitively regardless of column order. Returns
@@ -60,7 +60,7 @@ def import_transactions_xlsx(file_bytes):
         idx = col_index.get(key)
         return row[idx] if idx is not None and idx < len(row) else None
 
-    categories = {c.name.lower(): c for c in Category.objects.all()}
+    categories = {c.name.lower(): c for c in Category.objects.filter(user=user)}
 
     imported = skipped = created_categories = 0
     for row in rows_iter:
@@ -89,14 +89,16 @@ def import_transactions_xlsx(file_bytes):
         if category_name:
             key = category_name.lower()
             if key not in categories:
-                categories[key] = Category.objects.create(name=category_name, color="#6366f1")
+                categories[key] = Category.objects.create(user=user, name=category_name, color="#6366f1")
                 created_categories += 1
             category = categories[key]
 
         note = get(row, "note")
         note = str(note).strip() or None if note is not None else None
 
-        Transaction.objects.create(date=txn_date, type=txn_type, amount=amount, category=category, note=note)
+        Transaction.objects.create(
+            user=user, date=txn_date, type=txn_type, amount=amount, category=category, note=note
+        )
         imported += 1
 
     return imported, skipped, created_categories

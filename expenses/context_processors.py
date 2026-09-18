@@ -5,25 +5,42 @@ base.html (Django templates can't build a list-of-tuples literal inline
 the way Jinja can) and its inject_version() context processor.
 """
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 
-# (url_name, icon, label, [url_names that should also highlight this nav
-# item when active]) - Add/Edit live under the Transactions page (its
-# own "+ Add" button), not as separate nav entries, so their views still
-# highlight "Transactions" instead of leaving the sidebar blank.
-NAV_ITEMS = [
-    ("dashboard", "📊", "Dashboard", []),
-    ("transactions", "📋", "Transactions", ["add_transaction", "edit_transaction"]),
-    ("categories", "🏷️", "Categories", []),
-    ("reports", "📈", "Reports", []),
-]
+# (section label or None, [(url_name, icon, label, [url_names that
+# should also highlight this item], ...]) - Add/Edit live under the
+# Transactions page (its own "+ Add" button), not as separate nav
+# entries, so their views still highlight "Transactions" instead of
+# leaving the sidebar blank. Section labels group related items visually
+# (e.g. "Accounting") without being clickable themselves.
+def _nav_sections():
+    # icon is a slug looked up by the icon_svg template filter
+    # (expenses_extras.py) - plain monochrome outline icons, not emoji.
+    return [
+        (None, [
+            ("dashboard", "dashboard", _("Dashboard"), []),
+            ("transactions", "transactions", _("Transactions"), ["add_transaction", "edit_transaction"]),
+            ("categories", "categories", _("Categories"), []),
+            ("reports", "reports", _("Reports"), []),
+        ]),
+        (_("Accounting"), [
+            ("assets", "assets", _("Assets"), []),
+        ]),
+        (None, [
+            ("settings", "settings", _("Settings"), []),
+        ]),
+    ]
 
 
 def nav(request):
     current = getattr(request.resolver_match, "url_name", None)
-    items = []
-    for url_name, icon, label, also_active_for in NAV_ITEMS:
-        active = current == url_name or current in also_active_for
-        items.append({"url": reverse(url_name), "icon": icon, "label": label, "active": active})
-    return {"nav_items": items, "app_version": __version__}
+    sections = []
+    for label, entries in _nav_sections():
+        items = []
+        for url_name, icon, item_label, also_active_for in entries:
+            active = current == url_name or current in also_active_for
+            items.append({"url": reverse(url_name), "icon": icon, "label": item_label, "active": active})
+        sections.append({"label": label, "items": items})
+    return {"nav_sections": sections, "app_version": __version__}

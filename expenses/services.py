@@ -9,11 +9,13 @@ from django.db.models import Case, DecimalField, Sum, When
 from .models import Transaction
 
 
-def get_monthly_totals(months):
-    """income/expense/net for each 'YYYY-MM' string in `months`, in order."""
+def get_monthly_totals(user, months):
+    """income/expense/net for each 'YYYY-MM' string in `months`, in order - scoped to `user`'s own transactions."""
     totals = []
     for ms in months:
-        agg = Transaction.objects.filter(date__year=int(ms[:4]), date__month=int(ms[5:7])).aggregate(
+        agg = Transaction.objects.filter(
+            user=user, date__year=int(ms[:4]), date__month=int(ms[5:7])
+        ).aggregate(
             income=Sum(
                 Case(When(type=Transaction.INCOME, then="amount"), default=0, output_field=DecimalField())
             ),

@@ -1,3 +1,4 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
@@ -13,5 +14,10 @@ urlpatterns = [
     path("export/xlsx", views.export_xlsx, name="export_xlsx"),
     path("import", views.import_transactions, name="import_transactions"),
     path("categories", views.categories_view, name="categories"),
+    path("assets", views.assets_view, name="assets"),
     path("reports", views.reports, name="reports"),
+    path("settings", views.settings_view, name="settings"),
+    path("register", views.register, name="register"),
+    path("login", auth_views.LoginView.as_view(template_name="expenses/login.html"), name="login"),
+    path("logout", auth_views.LogoutView.as_view(), name="logout"),
 ]

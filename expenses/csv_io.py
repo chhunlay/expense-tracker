@@ -2,7 +2,8 @@
 CSV export/import for transactions - same purpose and CSV shape as the
 Flask version's csv_io.py (date, type, amount, category, note), ported
 to query/write through the Django ORM instead of a raw sqlite3
-connection, since Django manages its own DB connection.
+connection. Scoped to a single `user` throughout - with real accounts,
+export/import should only ever touch that user's own data.
 """
 import csv
 import io
@@ -13,9 +14,9 @@ from .models import Category, Transaction
 EXPORT_FIELDS = ["date", "type", "amount", "category", "note"]
 
 
-def export_transactions_csv():
-    """Returns the full transaction history as CSV text."""
-    rows = Transaction.objects.select_related("category").order_by("date", "id")
+def export_transactions_csv(user):
+    """Returns `user`'s full transaction history as CSV text."""
+    rows = Transaction.objects.filter(user=user).select_related("category").order_by("date", "id")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -25,21 +26,22 @@ def export_transactions_csv():
     return buffer.getvalue()
 
 
-def import_transactions_csv(file_bytes):
+def import_transactions_csv(user, file_bytes):
     """
     Inserts transactions from CSV bytes in the same shape
-    export_transactions_csv produces (date, type, amount, category, note).
+    export_transactions_csv produces (date, type, amount, category, note),
+    all owned by `user`.
 
-    A category name that doesn't already exist is created automatically
-    (default color, no budget) rather than silently falling back to
-    "Other" - this is meant for a full backup/restore round trip, so a
-    category from the source device should survive intact. Rows with a
-    missing/invalid date, type, or amount are skipped rather than
-    aborting the whole import.
+    A category name that doesn't already exist (for this user) is
+    created automatically (default color, no budget) rather than
+    silently falling back to "Other" - this is meant for a full
+    backup/restore round trip, so a category from the source device
+    should survive intact. Rows with a missing/invalid date, type, or
+    amount are skipped rather than aborting the whole import.
 
     Returns (imported_count, skipped_count, created_category_count).
     """
-    categories = {c.name.lower(): c for c in Category.objects.all()}
+    categories = {c.name.lower(): c for c in Category.objects.filter(user=user)}
 
     stream = io.StringIO(file_bytes.decode("utf-8-sig"), newline=None)
     reader = csv.DictReader(stream)
@@ -65,11 +67,12 @@ def import_transactions_csv(file_bytes):
         if category_name:
             key = category_name.lower()
             if key not in categories:
-                categories[key] = Category.objects.create(name=category_name, color="#6366f1")
+                categories[key] = Category.objects.create(user=user, name=category_name, color="#6366f1")
                 created_categories += 1
             category = categories[key]
 
         Transaction.objects.create(
+            user=user,
             date=txn_date,
             type=txn_type,
             amount=amount,

@@ -28,13 +28,18 @@ Shopping, Entertainment, Other) via a data migration
 them freely from the Categories page afterward.
 
 ## Features
+- **Accounts** (`/register`, `/login`, `/logout`) - every account gets its
+  own categories, transactions, and assets; nobody can see or edit
+  another account's data. Registering seeds the default category set
+  automatically.
 - **Quick add** on the dashboard - type something like `Lunch 5.50 Food` or
   `+500 Salary` and it's parsed into an amount, category (if the name is
   found in the text), and note. Prefix the amount with `+` for income.
 - **Dashboard** - monthly income/expense/net totals, a category breakdown
-  doughnut chart, budget progress bars, and recent transactions. Navigate
-  between months with Prev/Next. An eye-icon toggle blurs Income/Net in
-  place for looking at the app around other people.
+  doughnut chart, budget progress bars, recent transactions, and a
+  net-worth card linking to Assets. Navigate between months with
+  Prev/Next. An eye-icon toggle blurs Income/Net in place for looking at
+  the app around other people.
 - **Transactions list** (`/transactions`) - filterable by month and
   category, with inline edit/delete. "+ Add" opens a popup for precise
   entry (type, amount, category, date, note); "+ Add" on Categories works
@@ -42,13 +47,49 @@ them freely from the Categories page afterward.
 - **Categories** (`/categories`) - add, rename, recolor, delete, and set a
   monthly budget limit per category. Deleting a category does not delete
   its past transactions - they fall back to "Uncategorized".
+- **Accounting → Assets** (`/assets`) - track net-worth items (bank
+  accounts, cash, investments, property, vehicles, ...): name, type,
+  current value, optional note. Total net worth shows on this page and
+  on the Dashboard.
+- **Settings** (`/settings`) - change color theme, change language
+  (English / Khmer), upload a profile picture.
 - **Reports** (`/reports`) - a 12-month net trend line, an income vs.
   expense bar chart, and a ranked list of top-spending categories.
 - **CSV/XLSX export/import** (`/export/csv`, `/export/xlsx`, `/import`,
   linked from the Transactions page) - moves data between devices, since
   `data/expenses.db` is gitignored and never synced anywhere on its own.
-- **Admin panel** (`/admin/`) - full CRUD over both models, courtesy of
+- **JSON API** (`/api/`) - see [API](#api) below.
+- **Admin panel** (`/admin/`) - full CRUD over every model, courtesy of
   Django, no extra code required.
+
+## API
+A read/write JSON API lives under `/api/`, built with Django REST
+Framework, scoped to the authenticated user exactly like the web UI (one
+account can never read or write another's rows, by id-guessing or
+otherwise).
+
+| Endpoint | Methods |
+| --- | --- |
+| `/api/categories/`, `/api/categories/<id>/` | GET, POST, PUT, PATCH, DELETE |
+| `/api/transactions/`, `/api/transactions/<id>/` | GET, POST, PUT, PATCH, DELETE |
+| `/api/assets/`, `/api/assets/<id>/` | GET, POST, PUT, PATCH, DELETE |
+| `/api/token/` | POST `{"username", "password"}` → `{"token": "..."}` |
+
+Two ways to authenticate:
+- **Browser** - already logged in via `/login`? The session cookie just
+  works (`SessionAuthentication`).
+- **Scripts/mobile** - `POST /api/token/` with your username/password to
+  get a token, then send `Authorization: Token <token>` on every request
+  (`TokenAuthentication`).
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"username": "you", "password": "..."}' \
+  http://localhost:5051/api/token/
+# => {"token": "abc123..."}
+
+curl -H "Authorization: Token abc123..." http://localhost:5051/api/assets/
+```
 
 ## What changed from the Flask version
 - **Django ORM instead of raw SQL** - `expenses/models.py` defines
@@ -72,35 +113,52 @@ them freely from the Categories page afterward.
   way).
 
 ## Project structure
+Grouped by concern rather than one flat folder, so a given kind of change
+(a new page, a new API endpoint, a new background rule) has one obvious
+place to go:
+
 ```
 expense-tracker/
 ├── manage.py
-├── config/                # Django project (settings, root urls.py)
-├── expenses/               # The one Django app
-│   ├── models.py            # Category, Transaction
-│   ├── views.py              # One function per route
-│   ├── urls.py                 # Maps routes to views
-│   ├── admin.py                 # Registers both models with /admin/
-│   ├── context_processors.py     # Sidebar nav items + version, on every page
-│   ├── services.py                 # get_monthly_totals() - shared by
-│   │                                  dashboard + reports
-│   ├── dates.py                       # Pure month-arithmetic helpers
-│   ├── quick_add.py                    # Quick-add text parsing
-│   ├── csv_io.py / xlsx_io.py            # Export/import, via the ORM
+├── config/                     # Django project - settings, root urls.py,
+│                                  nothing app-specific lives here
+├── expenses/                   # The one Django app
+│   ├── models.py                 # Category, Transaction, Profile, Asset
+│   ├── views.py                   # Web UI - one function per page/route
+│   ├── urls.py                     # Maps web routes to views.py
+│   ├── admin.py                     # Registers every model with /admin/
+│   ├── signals.py                    # post_save(User) -> auto-create Profile
+│   ├── constants.py                   # DEFAULT_CATEGORIES seeded on register
+│   ├── context_processors.py           # Sidebar nav sections + version,
+│   │                                      injected into every template
+│   ├── services.py                      # get_monthly_totals() - shared by
+│   │                                       dashboard + reports
+│   ├── dates.py                          # Pure month-arithmetic helpers
+│   ├── quick_add.py                       # Quick-add text parsing
+│   ├── csv_io.py / xlsx_io.py              # Export/import, via the ORM
+│   │
+│   ├── api/                                # JSON API - separate from the
+│   │   ├── serializers.py                    web UI above so neither gets
+│   │   ├── views.py                          tangled up in the other's
+│   │   └── urls.py                           concerns (see API section)
+│   │
 │   ├── templatetags/expenses_extras.py     # money / monthlabel filters
-│   ├── templates/expenses/                   # One template per view + base.html
+│   ├── templates/expenses/                   # One template per page + base.html
 │   ├── static/expenses/                        # style.css + script.js
-│   └── migrations/                                # Schema + the category-seeding
-│                                                      data migration
-├── data/                    # SQLite database file (gitignored)
+│   └── migrations/                                # Schema history, including
+│                                                      the category-seeding and
+│                                                      user-backfill data migrations
+├── locale/km/LC_MESSAGES/       # Khmer translation (django.po/.mo)
+├── data/                        # SQLite database file (gitignored)
+├── media/                       # Uploaded profile pictures (gitignored)
 ├── requirements.txt
 ├── CHANGELOG.md
 └── README.md
 ```
 
 ## Notes
-- Single-user, no real auth on the app itself - meant to run on localhost
-  or your home LAN, not exposed to the internet as-is. `/admin/` does
-  require login (the superuser created above).
-- Runs on port 5051 by default so it can run alongside video-downloader
-  (port 5050) on the same machine.
+- Real accounts, each scoped to its own data - see Accounts above.
+  `/admin/` requires a superuser (`createsuperuser`, above) and can see
+  every account's data, same as any Django admin.
+- Meant to run on localhost or your home LAN, not exposed to the
+  internet as-is (`ALLOWED_HOSTS = ["*"]`, `DEBUG = True`).

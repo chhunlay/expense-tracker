@@ -1,13 +1,14 @@
 {% extends "expenses/base.html" %}
 {% load expenses_extras %}
-{% block title %}Categories - Expense Tracker{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Categories" %} - Expense Tracker{% endblock %}
 {% block content %}
 
 <div class="flex items-center justify-between mb-4">
-    <h2 class="font-bold text-lg">Categories</h2>
+    <h2 class="font-bold text-lg">{% translate "Categories" %}</h2>
     <button type="button" onclick="openModal('addCategoryModal')"
             class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2 rounded-xl text-sm shadow-lg shadow-indigo-500/20">
-        + Add
+        + {% translate "Add" %}
     </button>
 </div>
 
@@ -21,7 +22,7 @@
                     {{ c.name }}
                 </span>
                 <span class="text-muted text-xs">
-                    {{ c.spent_this_month|money }}{% if c.budget_limit %} / {{ c.budget_limit|money }}{% endif %} this month
+                    {{ c.spent_this_month|money }}{% if c.budget_limit %} / {{ c.budget_limit|money }}{% endif %} {% translate "this month" %}
                 </span>
             </summary>
             <!-- Save and Delete are two separate <form>s (different
@@ -37,19 +38,19 @@
                     <input type="text" name="name" value="{{ c.name }}" class="input py-2 px-3 rounded-lg text-sm">
                 </div>
                 <input type="number" step="0.01" min="0" name="budget_limit" value="{{ c.budget_limit|default:'' }}"
-                       placeholder="Monthly budget (optional)" class="input w-full py-2 px-3 rounded-lg text-sm">
+                       placeholder="{% translate 'Monthly budget (optional)' %}" class="input w-full py-2 px-3 rounded-lg text-sm">
             </form>
-            <form method="post" onsubmit="return confirm('Delete this category? Its past transactions become Uncategorized.')" id="delete-form-{{ c.id }}">
+            <form method="post" onsubmit="return confirm('{% translate "Delete this category? Its past transactions become Uncategorized." %}')" id="delete-form-{{ c.id }}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="{{ c.id }}">
             </form>
             <div class="flex justify-end gap-2 mt-2">
                 <button type="submit" form="delete-form-{{ c.id }}" class="action-btn bg-white/10 hover:bg-rose-500/20 text-rose-400 font-semibold px-3 py-1.5 rounded-lg text-xs">
-                    Delete
+                    {% translate "Delete" %}
                 </button>
                 <button type="submit" form="update-form-{{ c.id }}" class="action-btn bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-1.5 rounded-lg text-xs">
-                    Save
+                    {% translate "Save" %}
                 </button>
             </div>
         </details>
@@ -60,7 +61,7 @@
 <dialog id="addCategoryModal" class="w-[calc(100%-2rem)] max-w-md">
     <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-lg">Add a category</h2>
+            <h2 class="font-bold text-lg">{% translate "Add a category" %}</h2>
             <button type="button" onclick="document.getElementById('addCategoryModal').close()"
                     class="text-muted hover:text-main text-xl leading-none" aria-label="Close">&times;</button>
         </div>
@@ -68,24 +69,24 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="add">
             <div>
-                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Name &amp; color</label>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">{% translate "Name &amp; color" %}</label>
                 <div class="grid grid-cols-[auto_1fr] gap-2">
                     <input type="color" name="color" value="#6366f1" class="w-10 h-10 rounded-lg border-0 bg-transparent">
-                    <input type="text" name="name" placeholder="Category name" required class="input py-2.5 px-3 rounded-xl text-sm">
+                    <input type="text" name="name" placeholder="{% translate 'Category name' %}" required class="input py-2.5 px-3 rounded-xl text-sm">
                 </div>
             </div>
             <div>
-                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Monthly budget (optional)</label>
+                <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">{% translate "Monthly budget (optional)" %}</label>
                 <input type="number" step="0.01" min="0" name="budget_limit" placeholder="0.00"
                        class="input w-full py-2.5 px-3 rounded-xl text-sm">
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('addCategoryModal').close()"
                         class="action-btn flex-1 bg-white/10 hover:bg-white/15 text-muted font-semibold py-3 rounded-xl">
-                    Cancel
+                    {% translate "Cancel" %}
                 </button>
                 <button type="submit" class="action-btn flex-1 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-500/20">
-                    Add category
+                    {% translate "Add category" %}
                 </button>
             </div>
         </form>

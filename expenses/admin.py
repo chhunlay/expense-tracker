@@ -1,17 +1,30 @@
 from django.contrib import admin
 
-from .models import Category, Transaction
+from .models import Asset, Category, Profile, Transaction
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "color", "budget_limit")
+    list_display = ("name", "user", "color", "budget_limit")
+    list_filter = ("user",)
     search_fields = ("name",)
 
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ("date", "type", "amount", "category", "note")
-    list_filter = ("type", "category", "date")
+    list_display = ("date", "user", "type", "amount", "category", "note")
+    list_filter = ("type", "category", "user", "date")
     search_fields = ("note",)
     date_hierarchy = "date"
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "theme", "language")
+
+
+@admin.register(Asset)
+class AssetAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "asset_type", "value")
+    list_filter = ("asset_type", "user")
+    search_fields = ("name",)
