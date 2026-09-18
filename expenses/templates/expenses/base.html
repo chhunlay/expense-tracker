@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,32 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
 </head>
 <body class="min-h-screen">
-
-{# Add/Edit live under the Transactions page (its own "+ Add" button),
-   not as separate nav entries - their endpoints still highlight
-   "Transactions" as active so the sidebar doesn't go blank while on
-   either of them. #}
-{% set nav_items = [
-    ('dashboard', url_for('dashboard'), '📊', 'Dashboard'),
-    ('transactions', url_for('transactions'), '📋', 'Transactions'),
-    ('categories_view', url_for('categories_view'), '🏷️', 'Categories'),
-    ('reports', url_for('reports'), '📈', 'Reports'),
-] %}
-{% set nav_active_endpoints = {
-    'transactions': ['transactions', 'add_transaction', 'edit_transaction'],
-} %}
 
 <div class="flex min-h-screen">
 
     <!-- Sidebar - desktop only (md+); mobile gets the pill nav below instead,
-         since a fixed 240px rail eats too much of a phone screen. -->
-    <!-- sticky + h-screen pins the sidebar to the viewport regardless of
-         how tall the main content gets, so the theme toggle/version at
-         its bottom (mt-auto below) stay visible instead of scrolling
-         away with the page. -->
+         since a fixed 240px rail eats too much of a phone screen.
+         sticky + h-screen pins it to the viewport regardless of how tall
+         the main content gets, so the theme toggle/version at its bottom
+         (mt-auto below) stay visible instead of scrolling away. -->
     <aside class="sidebar hidden md:flex flex-col w-60 flex-shrink-0 p-5 md:sticky md:top-0 md:h-screen md:self-start">
         <div class="flex items-center gap-2 mb-8">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -43,9 +29,9 @@
         </div>
 
         <nav class="flex flex-col gap-1">
-            {% for endpoint, href, icon, label in nav_items %}
-            <a href="{{ href }}" class="sidebar-link {{ 'active' if request.endpoint in nav_active_endpoints.get(endpoint, [endpoint]) }} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
-                <span>{{ icon }}</span> {{ label }}
+            {% for item in nav_items %}
+            <a href="{{ item.url }}" class="sidebar-link {% if item.active %}active{% endif %} flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold">
+                <span>{{ item.icon }}</span> {{ item.label }}
             </a>
             {% endfor %}
         </nav>
@@ -80,23 +66,21 @@
                     </button>
                 </div>
                 <nav class="glass-card rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
-                    {% for endpoint, href, icon, label in nav_items %}
-                    <a href="{{ href }}" class="nav-link {{ 'active' if request.endpoint in nav_active_endpoints.get(endpoint, [endpoint]) }} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">{{ label }}</a>
+                    {% for item in nav_items %}
+                    <a href="{{ item.url }}" class="nav-link {% if item.active %}active{% endif %} px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">{{ item.label }}</a>
                     {% endfor %}
                 </nav>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="mb-4 space-y-2">
-                        {% for category, message in messages %}
-                            <div class="flash glass-card rounded-xl px-4 py-2.5 text-sm font-medium {{ 'text-neg' if category == 'error' else 'text-pos' }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            {% if messages %}
+                <div class="mb-4 space-y-2">
+                    {% for message in messages %}
+                        <div class="flash glass-card rounded-xl px-4 py-2.5 text-sm font-medium {% if message.tags == 'error' %}text-neg{% else %}text-pos{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
             {% block content %}{% endblock %}
 
@@ -107,7 +91,7 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script src="{% static 'expenses/script.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

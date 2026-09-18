@@ -1,4 +1,5 @@
-{% extends "base.html" %}
+{% extends "expenses/base.html" %}
+{% load expenses_extras %}
 {% block title %}Categories - Expense Tracker{% endblock %}
 {% block content %}
 
@@ -20,7 +21,7 @@
                     {{ c.name }}
                 </span>
                 <span class="text-muted text-xs">
-                    {{ c.spent_this_month | money }}{% if c.budget_limit %} / {{ c.budget_limit | money }}{% endif %} this month
+                    {{ c.spent_this_month|money }}{% if c.budget_limit %} / {{ c.budget_limit|money }}{% endif %} this month
                 </span>
             </summary>
             <!-- Save and Delete are two separate <form>s (different
@@ -28,16 +29,18 @@
                  the HTML5 form="..." attribute, which lets a button
                  outside its <form> still submit it. -->
             <form method="post" class="mt-3 space-y-2" id="update-form-{{ c.id }}">
+                {% csrf_token %}
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" value="{{ c.id }}">
                 <div class="grid grid-cols-[auto_1fr] gap-2 items-center">
                     <input type="color" name="color" value="{{ c.color }}" class="w-10 h-9 rounded-lg border-0 bg-transparent">
                     <input type="text" name="name" value="{{ c.name }}" class="input py-2 px-3 rounded-lg text-sm">
                 </div>
-                <input type="number" step="0.01" min="0" name="budget_limit" value="{{ c.budget_limit or '' }}"
+                <input type="number" step="0.01" min="0" name="budget_limit" value="{{ c.budget_limit|default:'' }}"
                        placeholder="Monthly budget (optional)" class="input w-full py-2 px-3 rounded-lg text-sm">
             </form>
             <form method="post" onsubmit="return confirm('Delete this category? Its past transactions become Uncategorized.')" id="delete-form-{{ c.id }}">
+                {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="{{ c.id }}">
             </form>
@@ -54,10 +57,6 @@
     </div>
 </div>
 
-<!-- Popup instead of the inline "Add a category" card at the bottom of
-     the page - same pattern as the Add-transaction modal on
-     transactions.html (width on the <dialog> itself, not just the
-     inner card - see that file's comment for why). -->
 <dialog id="addCategoryModal" class="w-[calc(100%-2rem)] max-w-md">
     <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-4">
@@ -66,6 +65,7 @@
                     class="text-muted hover:text-main text-xl leading-none" aria-label="Close">&times;</button>
         </div>
         <form method="post" class="space-y-4">
+            {% csrf_token %}
             <input type="hidden" name="action" value="add">
             <div>
                 <label class="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Name &amp; color</label>

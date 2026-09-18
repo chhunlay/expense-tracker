@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "expenses/base.html" %}
 {% block title %}Import - Expense Tracker{% endblock %}
 {% block content %}
 
@@ -8,13 +8,14 @@
         Upload a <code>.csv</code> or <code>.xlsx</code> file with columns
         <code>date, type, amount, category, note</code> (column order and
         capitalization don't matter) - the same shape
-        <a href="{{ url_for('export_csv') }}" class="underline">Export CSV</a> or
-        <a href="{{ url_for('export_xlsx') }}" class="underline">Export XLSX</a> produces.
+        <a href="{% url 'export_csv' %}" class="underline">Export CSV</a> or
+        <a href="{% url 'export_xlsx' %}" class="underline">Export XLSX</a> produces.
         <code>date</code> must be <code>YYYY-MM-DD</code> and <code>type</code> must be
         <code>expense</code> or <code>income</code>; a category name that doesn't exist
         yet is created automatically.
     </p>
     <form method="post" enctype="multipart/form-data" class="space-y-3">
+        {% csrf_token %}
         <input type="file" name="file" accept=".csv,.xlsx" required class="input w-full py-2.5 px-3 rounded-xl text-sm">
         <button type="submit" class="action-btn w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-2.5 rounded-xl text-sm">
             Import

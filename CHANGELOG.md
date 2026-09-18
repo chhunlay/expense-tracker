@@ -3,6 +3,30 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [1.0.0] - 2026-09-18
+### Changed
+- **Migrated the whole app from Flask to Django**, on the
+  `django-migration` branch, as a learning exercise using code already
+  familiar from the Flask version. Same features, same look (Tailwind,
+  `style.css`/`script.js` carried over unchanged), same SQLite file
+  convention (`data/expenses.db`) - different framework underneath:
+  - Raw SQL (`db.py`) → Django ORM models (`expenses/models.py`),
+    migrations replacing the hand-written schema.
+  - Flask routes (`app.py`) → one view per route in `expenses/views.py`.
+  - Jinja2 templates → Django templates (`{% url %}`, `json_script`,
+    real `{% if %}` blocks instead of inline ternaries).
+  - `flash()` → `django.contrib.messages`.
+  - No CSRF protection → Django's built-in `CsrfViewMiddleware` on
+    every POST form.
+  - New: `/admin/` - a full CRUD panel over both models, free from
+    Django, with zero extra code.
+  - `dates.py` and `quick_add.py` carried over near-verbatim (pure
+    Python, no framework dependency either way); `csv_io.py`/
+    `xlsx_io.py` ported to query through the ORM instead of a raw
+    `sqlite3` connection.
+  - Default port 5051 (unchanged) - `python manage.py runserver
+    0.0.0.0:5051` instead of `python app.py`.
+
 ## [0.10.0] - 2026-09-18
 ### Reverted
 - Reverted the custom date picker (0.9.0-0.9.1) back to the native
