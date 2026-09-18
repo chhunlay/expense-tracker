@@ -24,21 +24,30 @@
 }
 html[data-theme="light"] {
     color-scheme: light;
-    --bg-1: #eef2ff;
-    --bg-2: #f8fafc;
-    --bg-3: #ffffff;
-    --card-bg: rgba(255, 255, 255, 0.75);
-    --card-border: rgba(15, 23, 42, 0.08);
-    --sidebar-bg: rgba(255, 255, 255, 0.6);
-    --sidebar-border: rgba(15, 23, 42, 0.08);
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --text-faint: #94a3b8;
-    --input-bg: rgba(15, 23, 42, 0.03);
-    --input-border: rgba(15, 23, 42, 0.1);
-    --track-bg: rgba(15, 23, 42, 0.06);
-    --pos: #059669;
+    /* Warm cream -> yellow -> orange -> coral palette (requested
+       reference image), replacing the old indigo/white light theme.
+       --accent/--accent-2 drive the buttons/links/active-states that
+       used to be hardcoded Tailwind indigo classes - see the
+       "warm-palette overrides" block below, which remaps those
+       specific classes to these two colors in light mode only. */
+    --bg-1: #fdecc0;
+    --bg-2: #fef8ea;
+    --bg-3: #fffdf8;
+    --card-bg: rgba(255, 253, 248, 0.75);
+    --card-border: rgba(120, 53, 15, 0.1);
+    --sidebar-bg: rgba(253, 236, 192, 0.45);
+    --sidebar-border: rgba(120, 53, 15, 0.1);
+    --text-main: #57350f;
+    --text-muted: #92653a;
+    --text-faint: #c9a374;
+    --input-bg: rgba(120, 53, 15, 0.04);
+    --input-border: rgba(120, 53, 15, 0.12);
+    --track-bg: rgba(120, 53, 15, 0.08);
+    --pos: #16794f;
     --neg: #dc2626;
+    --accent: #ea7f7f;
+    --accent-2: #f0a165;
+    --accent-text: #c2513f;
 }
 
 body {
@@ -69,6 +78,10 @@ body {
     border-color: rgba(129, 140, 248, 0.6);
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
     outline: none;
+}
+html[data-theme="light"] .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(234, 127, 127, 0.18);
 }
 
 .theme-toggle {
@@ -106,6 +119,10 @@ body {
     background: linear-gradient(90deg, #6366f1, #a855f7);
     box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
 }
+html[data-theme="light"] .sidebar-link.active {
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+    box-shadow: 0 4px 14px rgba(234, 127, 127, 0.35);
+}
 
 /* ---------- KPI cards (gradient stat tiles) ---------- */
 .kpi-card {
@@ -116,6 +133,7 @@ body {
 .kpi-expense { background: linear-gradient(135deg, #f43f5e, #ec4899); }
 .kpi-net { background: linear-gradient(135deg, #6366f1, #a855f7); }
 .kpi-card .kpi-label { color: rgba(255, 255, 255, 0.75); }
+html[data-theme="light"] .kpi-net { background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
 
 .hideable-amount {
     transition: filter 0.2s ease;
@@ -141,6 +159,8 @@ body {
 .progress-bar.over {
     background: linear-gradient(90deg, #f87171, #ef4444);
 }
+html[data-theme="light"] .progress-bar { background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+html[data-theme="light"] .progress-bar.over { background: linear-gradient(90deg, #ef4444, #b91c1c); }
 
 .flash {
     animation: fadeUp 0.25s ease;
@@ -194,4 +214,27 @@ dialog::backdrop {
 dialog[open] {
     animation: fadeUp 0.2s ease;
 }
+
+/* ---------- Warm-palette overrides (light theme only) ----------
+   The primary/accent color across the app is mostly plain Tailwind
+   utility classes baked into the templates (bg-indigo-500, etc.), not
+   a CSS variable - remapping every one of those in every template
+   would be a much bigger change than the palette itself, so instead
+   these selectors override just those specific classes when
+   data-theme="light", using --accent/--accent-2 from the block above.
+   Source order (this file loads after Tailwind's injected <style>)
+   is what lets same-specificity class selectors win here. */
+html[data-theme="light"] .bg-indigo-500 { background-color: var(--accent) !important; }
+html[data-theme="light"] .hover\:bg-indigo-400:hover { background-color: var(--accent-2) !important; }
+html[data-theme="light"] .text-indigo-400 { color: var(--accent-text) !important; }
+html[data-theme="light"] .from-indigo-500 {
+    --tw-gradient-from: var(--accent-2) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(240 161 101 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html[data-theme="light"] .to-pink-500 { --tw-gradient-to: var(--accent) var(--tw-gradient-to-position) !important; }
+html[data-theme="light"] .shadow-indigo-500\/20 { --tw-shadow-color: rgb(234 127 127 / 0.25) !important; }
+html[data-theme="light"] .accent-indigo-500 { accent-color: var(--accent) !important; }
+html[data-theme="light"] .has-\[\:checked\]\:border-indigo-400:has(:checked) { border-color: var(--accent) !important; }
+html[data-theme="light"] .file\:bg-indigo-500::file-selector-button { background-color: var(--accent) !important; }
 
