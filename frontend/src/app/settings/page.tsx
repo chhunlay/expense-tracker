@@ -5,8 +5,22 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import { MailIcon, PhoneIcon } from "@/components/icons";
-import { applyAccent, DEFAULT_ACCENT, getStoredAccent, setStoredAccent } from "@/lib/theme";
+import { broadcastProfileUpdate } from "@/lib/profile";
+import {
+  applyAccent,
+  DEFAULT_ACCENT,
+  getStoredAccent,
+  getStoredSidebarHeaderStyle,
+  setStoredAccent,
+  setStoredSidebarHeaderStyle,
+  SidebarHeaderStyle,
+} from "@/lib/theme";
 import { Profile } from "@/types";
+
+const SIDEBAR_HEADER_OPTIONS: { value: SidebarHeaderStyle; label: string; description: string }[] = [
+  { value: "app", label: "App name", description: '"Expense Tracker" with your username underneath.' },
+  { value: "user", label: "User greeting", description: 'Your avatar with "Welcome" and your username instead.' },
+];
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -24,6 +38,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
+  const [sidebarHeaderStyle, setSidebarHeaderStyle] = useState<SidebarHeaderStyle>("app");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -42,12 +57,18 @@ export default function SettingsPage() {
     // SSR - see AppShell's auth-check effect for the same pattern.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAccentColor(getStoredAccent() || DEFAULT_ACCENT);
+    setSidebarHeaderStyle(getStoredSidebarHeaderStyle());
   }, []);
 
   function handleAccentColorChange(color: string) {
     setAccentColor(color);
     applyAccent(color);
     setStoredAccent(color);
+  }
+
+  function handleSidebarHeaderStyleChange(style: SidebarHeaderStyle) {
+    setSidebarHeaderStyle(style);
+    setStoredSidebarHeaderStyle(style);
   }
 
   async function handleThemeChange(theme: Profile["theme"]) {
@@ -58,6 +79,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ theme }),
       });
       setProfile(updated);
+      broadcastProfileUpdate(updated);
       setMessage("Theme updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update theme");
@@ -72,6 +94,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ language }),
       });
       setProfile(updated);
+      broadcastProfileUpdate(updated);
       setMessage("Language updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update language");
@@ -89,6 +112,7 @@ export default function SettingsPage() {
       formData.append("picture", picked);
       const updated = await apiFetch<Profile>("/api/profile/picture", { method: "POST", body: formData });
       setProfile(updated);
+      broadcastProfileUpdate(updated);
       setMessage("Profile picture updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't upload picture");
@@ -106,6 +130,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ full_name: fullName, email, phone }),
       });
       setProfile(updated);
+      broadcastProfileUpdate(updated);
       setMessage("Profile updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update your profile");
@@ -233,6 +258,28 @@ export default function SettingsPage() {
               </label>
             </div>
             <p className="text-faint mt-2.5 text-xs">Used for the active sidebar item and other highlights.</p>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Sidebar header</h3>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {SIDEBAR_HEADER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSidebarHeaderStyleChange(opt.value)}
+                  className="input rounded-xl px-3 py-2.5 text-left text-sm"
+                  style={
+                    sidebarHeaderStyle === opt.value
+                      ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" }
+                      : undefined
+                  }
+                >
+                  <span className="font-semibold">{opt.label}</span>
+                  <span className="text-faint mt-0.5 block text-xs">{opt.description}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="glass-card rounded-2xl p-5">
