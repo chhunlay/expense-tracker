@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { register } from "@/lib/auth";
+import PasswordField from "@/components/PasswordField";
+import { WalletIcon } from "@/components/icons";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,20 +36,20 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
+    <main className="flex min-h-screen items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-pink-500 text-2xl">
-            💰
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15">
+            <WalletIcon />
           </div>
           <h1 className="text-xl font-extrabold tracking-tight">Expense Tracker</h1>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="glass-card rounded-2xl p-6">
           <h2 className="mb-4 text-lg font-bold">Create account</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
                 Username
               </label>
               <input
@@ -56,44 +58,31 @@ export default function RegisterPage() {
                 autoFocus
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                className="input w-full rounded-xl px-3 py-2.5"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
-              />
+              <PasswordField value={password} onChange={setPassword} minLength={8} />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
                 Confirm password
               </label>
-              <input
-                type="password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
-              />
+              <PasswordField value={confirm} onChange={setConfirm} />
             </div>
-            {error && <p className="text-sm text-rose-400">{error}</p>}
+            {error && <p className="text-neg text-sm">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 transition-opacity hover:bg-indigo-400 disabled:opacity-60"
+              className="action-btn w-full rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
-          <p className="mt-4 text-center text-sm text-slate-400">
+          <p className="text-faint mt-4 text-center text-sm">
             Already have an account?{" "}
             <Link href="/login" className="text-indigo-400 underline">
               Log in

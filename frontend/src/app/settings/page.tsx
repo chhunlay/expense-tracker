@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { apiFetch, ApiError, API_BASE_URL } from "@/lib/api";
-import Header from "@/components/Header";
-import RequireAuth from "@/components/RequireAuth";
+import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
+import AppShell from "@/components/AppShell";
 import { Profile } from "@/types";
 
 const LANGUAGES = [
@@ -12,7 +11,7 @@ const LANGUAGES = [
   { code: "km", label: "ភាសាខ្មែរ" },
 ];
 
-function SettingsContent() {
+export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,84 +72,73 @@ function SettingsContent() {
   }
 
   return (
-    <>
-      <Header />
-      <main className="mx-auto max-w-5xl p-4 sm:p-6">
-        <h2 className="mb-4 text-lg font-bold">Settings</h2>
+    <AppShell>
+      <h2 className="mb-4 text-lg font-bold">Settings</h2>
 
-        {message && <p className="mb-3 text-sm text-emerald-400">{message}</p>}
-        {error && <p className="mb-3 text-sm text-rose-400">{error}</p>}
+      {message && <p className="text-pos mb-3 text-sm">{message}</p>}
+      {error && <p className="text-neg mb-3 text-sm">{error}</p>}
 
-        {profile && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-              <h3 className="mb-3 text-sm font-semibold">Profile picture</h3>
-              <form onSubmit={handleUpload} className="flex items-center gap-4">
-                {profile.picture ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`${API_BASE_URL}${profile.picture}`}
-                    alt=""
-                    className="h-14 w-14 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-lg font-bold text-white">
-                    {profile.username[0]?.toUpperCase()}
-                  </span>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="flex-1 rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm"
+      {profile && (
+        <div className="space-y-4">
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Profile picture</h3>
+            <form onSubmit={handleUpload} className="flex items-center gap-4">
+              {profile.picture ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`${API_BASE_URL}${profile.picture}`}
+                  alt=""
+                  className="h-14 w-14 rounded-full object-cover"
                 />
-                <button
-                  type="submit"
-                  disabled={!file || saving}
-                  className="flex-shrink-0 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
-                >
-                  Upload
-                </button>
-              </form>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-              <h3 className="mb-3 text-sm font-semibold">Color theme</h3>
-              <select
-                value={profile.theme}
-                onChange={(e) => handleThemeChange(e.target.value as Profile["theme"])}
-                className="rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm"
+              ) : (
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-lg font-bold text-white">
+                  {profile.username[0]?.toUpperCase()}
+                </span>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="input flex-1 rounded-xl px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={!file || saving}
+                className="action-btn flex-shrink-0 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
               >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-              </select>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-              <h3 className="mb-3 text-sm font-semibold">Language</h3>
-              <select
-                value={profile.language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                className="rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm"
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Upload
+              </button>
+            </form>
           </div>
-        )}
-      </main>
-    </>
-  );
-}
 
-export default function SettingsPage() {
-  return (
-    <RequireAuth>
-      <SettingsContent />
-    </RequireAuth>
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Color theme</h3>
+            <select
+              value={profile.theme}
+              onChange={(e) => handleThemeChange(e.target.value as Profile["theme"])}
+              className="input rounded-xl px-3 py-2 text-sm"
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Language</h3>
+            <select
+              value={profile.language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="input rounded-xl px-3 py-2 text-sm"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }
