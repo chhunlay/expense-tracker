@@ -23,42 +23,47 @@ import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
 
+// Which trend-chart point is "today" - can't be inferred from the
+// label text alone now that This Week (Mon-Sun) and This Month (1st
+// through the last day) both run past today into the future, so the
+// last point is no longer necessarily "now". Mirrors the exact
+// bucketing api.py's summary() endpoint uses for each range.
+function getTodayIndexForRange(trendRange: string): number {
+  const today = new Date();
+  if (trendRange === "this_week") return (today.getDay() + 6) % 7; // Mon=0 .. Sun=6
+  if (trendRange === "this_month") return Math.ceil(today.getDate() / 7) - 1; // 7-day buckets from the 1st
+  return -1; // month-based ranges always end on the current month - last point is "today"
+}
+
 // Marks today's point on the trend chart, matching the dashed "Today"
 // divider from the reference forecast-chart screenshot the user
-// shared. Labels are "YYYY-MM" (month ranges), "YYYY-MM-DD" (This
-// Week's daily range), or "Week N" (This Month's weekly buckets) -
-// This Week runs Monday through Sunday, so today isn't always the
-// last label (e.g. on a Wednesday, Thu-Sun are still upcoming); This
-// Month's weekly buckets and every month-based range are instead
-// always built to end on today, so the last point works as a fallback
-// whenever the label isn't a recognizable date.
-const todayLinePlugin: Plugin<"line"> = {
-  id: "todayLine",
-  afterDraw(chart) {
-    const labels = chart.data.labels as string[] | undefined;
-    if (!labels || labels.length < 2) return;
-    const todayIso = new Date().toISOString().slice(0, 10);
-    let index = labels.indexOf(labels[0].length > 7 ? todayIso : todayIso.slice(0, 7));
-    if (index === -1 && !labels[0].includes("-")) index = labels.length - 1;
-    if (index === -1) return;
-    const x = chart.scales.x.getPixelForValue(index);
-    const { ctx, chartArea } = chart;
-    ctx.save();
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
-    ctx.setLineDash([4, 4]);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x, chartArea.top);
-    ctx.lineTo(x, chartArea.bottom);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "600 10px system-ui, sans-serif";
-    ctx.textAlign = x > chartArea.right - 40 ? "right" : "left";
-    ctx.fillText("Today", x + (ctx.textAlign === "right" ? -6 : 6), chartArea.top + 12);
-    ctx.restore();
-  },
-};
+// shared.
+function createTodayLinePlugin(todayIndex: number): Plugin<"line"> {
+  return {
+    id: "todayLine",
+    afterDraw(chart) {
+      const labels = chart.data.labels as string[] | undefined;
+      if (!labels || labels.length < 2) return;
+      const index = todayIndex >= 0 && todayIndex < labels.length ? todayIndex : labels.length - 1;
+      const x = chart.scales.x.getPixelForValue(index);
+      const { ctx, chartArea } = chart;
+      ctx.save();
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 10px system-ui, sans-serif";
+      ctx.textAlign = x > chartArea.right - 40 ? "right" : "left";
+      ctx.fillText("Today", x + (ctx.textAlign === "right" ? -6 : 6), chartArea.top + 12);
+      ctx.restore();
+    },
+  };
+}
 
 function money(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -84,7 +89,7 @@ const TREND_RANGES = [
 
 export default function DashboardPage() {
   const [monthStr, setMonthStr] = useState(currentMonth);
-  const [trendRange, setTrendRange] = useState<string>("last_3_months");
+  const [trendRange, setTrendRange] = useState<string>("this_month");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -271,6 +276,13 @@ export default function DashboardPage() {
                   // so the chart reads as an extension of them, not a
                   // separate palette. Net is listed last so it draws
                   // on top of (and legends after) Income/Expense.
+                  // cubicInterpolationMode: "monotone" instead of a
+                  // fixed tension - a tension-based (Catmull-Rom)
+                  // curve overshoots past flat/zero stretches of data
+                  // to stay smooth everywhere, which reads as the line
+                  // "curving" even where nothing changed. Monotone
+                  // interpolation stays flat where the data is flat
+                  // and only curves where there's an actual change.
                   datasets: [
                     {
                       label: "Income",
@@ -278,7 +290,7 @@ export default function DashboardPage() {
                       borderColor: "#10b981",
                       backgroundColor: "rgba(16, 185, 129, 0.08)",
                       fill: false,
-                      tension: 0.3,
+                      cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#10b981",
                     },
@@ -288,7 +300,7 @@ export default function DashboardPage() {
                       borderColor: "#f43f5e",
                       backgroundColor: "rgba(244, 63, 94, 0.08)",
                       fill: false,
-                      tension: 0.3,
+                      cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#f43f5e",
                     },
@@ -298,7 +310,7 @@ export default function DashboardPage() {
                       borderColor: "#6366f1",
                       backgroundColor: "rgba(99, 102, 241, 0.15)",
                       fill: true,
-                      tension: 0.3,
+                      cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#6366f1",
                     },
@@ -312,7 +324,7 @@ export default function DashboardPage() {
                   },
                   plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true } } },
                 }}
-                plugins={[todayLinePlugin]}
+                plugins={[createTodayLinePlugin(getTodayIndexForRange(trendRange))]}
                 height={140}
               />
             </div>

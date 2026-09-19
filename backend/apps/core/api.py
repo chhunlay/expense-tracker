@@ -290,7 +290,7 @@ def trend_months(trend_range: str) -> list[str]:
 
 
 @router.get("/summary", response=SummaryOut, auth=auth)
-def summary(request, month: str = None, trend_range: str = "last_3_months"):
+def summary(request, month: str = None, trend_range: str = "this_month"):
     """Everything the Dashboard renders for one month - the same
     numbers the old Django dashboard view computed (income/expense/
     net, net worth, the category breakdown, budget progress bars, and
@@ -338,11 +338,16 @@ def summary(request, month: str = None, trend_range: str = "last_3_months"):
         mini_trend = get_daily_totals(request.auth, days)
     elif trend_range == "this_month":
         today = date.today()
+        # Runs through the month's last day (like "this_week" running
+        # through Sunday), not just up to today - future weeks report
+        # zero until transactions land in them.
+        _, next_month_start = month_bounds(today.strftime("%Y-%m"))
+        month_end = date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
         buckets = []
         cursor = date(today.year, today.month, 1)
         week_num = 1
-        while cursor <= today:
-            bucket_end = min(cursor + timedelta(days=6), today)
+        while cursor <= month_end:
+            bucket_end = min(cursor + timedelta(days=6), month_end)
             buckets.append((f"Week {week_num}", cursor.isoformat(), bucket_end.isoformat()))
             cursor = bucket_end + timedelta(days=1)
             week_num += 1
