@@ -36,3 +36,37 @@ export interface Summary {
   net: number;
   net_worth: number;
 }
+
+export interface Profile {
+  username: string;
+  picture: string | null;
+  theme: "dark" | "light";
+  language: string;
+}
+
+export interface MonthlyTotal {
+  month: string;
+  income: number;
+  expense: number;
+  net: number;
+}
+
+export interface TopCategory {
+  name: string;
+  color: string;
+  total: number;
+}
+
+export interface ReportsData {
+  monthly_totals: MonthlyTotal[];
+  top_categories: TopCategory[];
+}
+
+export const ASSET_TYPES: { value: Asset["asset_type"]; label: string }[] = [
+  { value: "bank", label: "Bank account" },
+  { value: "cash", label: "Cash" },
+  { value: "investment", label: "Investment" },
+  { value: "property", label: "Property" },
+  { value: "vehicle", label: "Vehicle" },
+  { value: "other", label: "Other" },
+];

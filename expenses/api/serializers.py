@@ -5,11 +5,12 @@ these: it's always set from request.user in the viewset
 (perform_create), never trusted from client input, so one account can
 never write data into another account by guessing an id.
 """
+from django.conf import settings as django_settings
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from expenses.models import Asset, Category, Transaction
+from expenses.models import Asset, Category, Profile, Transaction
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -63,3 +64,21 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ["username", "picture", "theme", "language"]
+
+    def validate_theme(self, theme):
+        if theme not in dict(Profile.THEME_CHOICES):
+            raise serializers.ValidationError("Not a valid theme.")
+        return theme
+
+    def validate_language(self, language):
+        if language not in dict(django_settings.LANGUAGES):
+            raise serializers.ValidationError("Not a supported language.")
+        return language

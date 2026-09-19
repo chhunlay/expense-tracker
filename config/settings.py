@@ -61,9 +61,11 @@ CORS_ALLOWED_ORIGINS = [
 
 # https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
-    # SessionAuthentication covers the browser (already logged in via
-    # /login); TokenAuthentication covers scripts/mobile clients that
-    # POST to /api/token/ for a token instead of holding a cookie.
+    # TokenAuthentication is what the Next.js frontend actually uses
+    # (POST /api/token/ or /api/register/, then
+    # Authorization: Token ... on every request). SessionAuthentication
+    # stays only so the browsable API works for a superuser already
+    # logged into /admin/ - there's no other Django session login left.
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
@@ -78,10 +80,11 @@ MIDDLEWARE = [
     # As early as possible (CORS docs), definitely before CommonMiddleware.
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # Must come after SessionMiddleware, before CommonMiddleware - reads
-    # the active language from the session (set via the Settings page,
-    # see views.settings_view) on every request and activates it for
-    # that request's translations.
+    # Must come after SessionMiddleware, before CommonMiddleware -
+    # activates a request's language from the django_language cookie
+    # (there's no Django-rendered page left to read it from a session).
+    # Currently only relevant to /admin/, since the API itself doesn't
+    # translate anything yet.
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,10 +102,11 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                # Only /admin/ renders templates now - these are the
+                # defaults its own templates expect.
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'expenses.context_processors.nav',
             ],
         },
     },
@@ -171,14 +175,6 @@ STATIC_URL = 'static/'
 # (that's for the app's own CSS/JS, not user content).
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-
-# Auth
-# https://docs.djangoproject.com/en/6.1/topics/auth/default/
-
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
 
 
 # Email

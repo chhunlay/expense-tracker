@@ -4,7 +4,7 @@
 // {"field": ["message"]} / {"detail": "..."} shapes) instead of a bare
 // "Failed to fetch" the caller would otherwise have to unpack itself.
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const TOKEN_KEY = "expense-tracker-token";
 
 export function getToken(): string | null {
@@ -62,7 +62,12 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  // A FormData body (profile picture upload) needs the browser to set
+  // its own multipart/form-data Content-Type with the boundary -
+  // setting it ourselves would break the upload.
+  if (!(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
   if (token) headers.set("Authorization", `Token ${token}`);
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });

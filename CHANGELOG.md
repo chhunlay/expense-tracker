@@ -3,6 +3,35 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [2.0.0] - 2026-09-19
+### Changed
+- **Django is now API + admin only.** Removed every Django-rendered
+  HTML page (`expenses/templates/`, `expenses/static/`,
+  `expenses/templatetags/`), `expenses/views.py`, `expenses/urls.py`,
+  and `expenses/context_processors.py` - the Next.js frontend
+  (`frontend/`) is the only UI now. `config/urls.py` no longer has an
+  HTML `"/"` route; `LOGIN_URL`/`LOGIN_REDIRECT_URL`/
+  `LOGOUT_REDIRECT_URL` (config/settings.py) are gone since nothing
+  uses Django's session-based `@login_required`/`LoginView` flow
+  anymore - the Next.js frontend authenticates entirely via API tokens.
+- Also removed `expenses/quick_add.py`, `expenses/csv_io.py`, and
+  `expenses/xlsx_io.py` - they only existed to support the
+  now-deleted HTML views (quick-add text parsing, CSV/XLSX
+  export/import) and have no API equivalent yet.
+### Added
+- Rounded out the Next.js frontend to full page parity with what the
+  Django templates used to cover: `/categories`, `/assets`,
+  `/reports`, `/settings` (theme, language, profile picture upload).
+- Three new API endpoints to support them: `GET`/`PATCH /api/profile/`
+  (a per-user singleton, supporting a multipart PATCH for the picture
+  upload), and `GET /api/reports/` (12-month totals + top spending
+  categories, the same numbers the old Reports page rendered).
+### Removed (not yet ported to the new split)
+- Quick-add text parsing, CSV/XLSX export/import, per-category budget
+  progress bars, and the Dashboard's trend/breakdown charts - these
+  existed in the Django-template version but have no API endpoint or
+  Next.js page yet. Re-adding any of them means building both.
+
 ## [1.4.0] - 2026-09-19
 ### Added
 - **Next.js frontend** (`frontend/`) - a separate TypeScript/App
