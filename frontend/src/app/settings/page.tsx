@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import { applyAccent, DEFAULT_ACCENT, getStoredAccent, setStoredAccent } from "@/lib/theme";
 import { Profile } from "@/types";
 
 const LANGUAGES = [
@@ -11,18 +12,34 @@ const LANGUAGES = [
   { code: "km", label: "ភាសាខ្មែរ" },
 ];
 
+// Preset swatches for the accent color picker - the active sidebar
+// item, active mobile nav tab, etc. (see globals.css's --accent) all
+// follow whichever of these (or a custom color) is picked below.
+const ACCENT_PRESETS = ["#f97316", "#6366f1", "#ec4899", "#10b981", "#06b6d4", "#eab308"];
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
 
   useEffect(() => {
     apiFetch<Profile>("/api/profile")
       .then(setProfile)
       .catch(() => setError("Couldn't load your profile"));
+    // Reads an external system (localStorage) not available during
+    // SSR - see AppShell's auth-check effect for the same pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAccentColor(getStoredAccent() || DEFAULT_ACCENT);
   }, []);
+
+  function handleAccentColorChange(color: string) {
+    setAccentColor(color);
+    applyAccent(color);
+    setStoredAccent(color);
+  }
 
   async function handleThemeChange(theme: Profile["theme"]) {
     setError(null);
@@ -121,6 +138,36 @@ export default function SettingsPage() {
               <option value="dark">Dark</option>
               <option value="light">Light</option>
             </select>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Accent color</h3>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {ACCENT_PRESETS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => handleAccentColorChange(color)}
+                  aria-label={`Use ${color} as the accent color`}
+                  className="h-8 w-8 flex-shrink-0 rounded-full transition-transform hover:scale-110"
+                  style={{
+                    background: color,
+                    outline: accentColor === color ? "2px solid var(--text-main)" : "none",
+                    outlineOffset: 2,
+                  }}
+                />
+              ))}
+              <label className="text-muted flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-current">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => handleAccentColorChange(e.target.value)}
+                  className="h-0 w-0 opacity-0"
+                />
+                +
+              </label>
+            </div>
+            <p className="text-faint mt-2.5 text-xs">Used for the active sidebar item and other highlights.</p>
           </div>
 
           <div className="glass-card rounded-2xl p-5">
