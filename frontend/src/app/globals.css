@@ -187,6 +187,11 @@ html[data-theme="light"] .theme-switch { background: #cbd2e0; }
   justify-content: center;
   font-size: 11px;
   line-height: 1;
+  /* Thumb background is always white regardless of theme, so the icon
+     needs a fixed dark color (not var(--text-main), which flips to a
+     near-white tone in dark mode and would vanish here) to stay
+     visible - matches the solid black moon/sun the user shared. */
+  color: #1e293b;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transform: translateX(0);
   transition: transform 0.25s ease;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MoonIcon, SunIcon } from "@/components/icons";
 import { onThemePreferenceChange, resolveTheme, ResolvedTheme, setThemePreference } from "@/lib/theme";
 
 /** Same pill switch as the old sidebar/mobile-header toggle - moon on a
@@ -33,7 +34,7 @@ export default function ThemeToggle() {
 
   return (
     <button type="button" onClick={toggle} className="theme-switch" aria-label="Toggle theme">
-      <span className="theme-switch-thumb">{theme === "light" ? "☀️" : "🌙"}</span>
+      <span className="theme-switch-thumb">{theme === "light" ? <SunIcon /> : <MoonIcon />}</span>
     </button>
   );
 }
