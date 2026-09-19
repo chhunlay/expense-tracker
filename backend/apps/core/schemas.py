@@ -5,8 +5,23 @@ Ninja equivalent of the old DRF serializers.py. Decimal fields
 Next.js frontend (which already treats these as strings, e.g.
 `parseFloat(a.value)`) sees no change in shape from the DRF version -
 Pydantic would otherwise serialize Decimal as a JSON number.
+
+`date` is imported as `DateType` (not the plain `date` its own type
+usually goes by) specifically so it can't collide with a field that's
+also named `date` (every transaction schema below has one). A field
+named the same as its own type, when that field also carries a
+default value (e.g. `date: Optional[date] = None`), makes Pydantic
+resolve the annotation against the class's own namespace - which by
+then holds `date = None` - instead of the imported class, so the
+field's real type silently becomes `None`. Caught via a PATCH
+/api/transactions/{id} call failing with a 422
+"Input should be None" on the date field even though a real date was
+sent - only TransactionPatch's `date` had a default value, which is
+why TransactionIn/TransactionOut's identically-named required `date`
+fields weren't affected.
 """
-from datetime import date, datetime
+from datetime import date as DateType
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -54,7 +69,7 @@ class TransactionOut(Schema):
     category: Optional[int] = None
     category_name: Optional[str] = None
     category_color: Optional[str] = None
-    date: date
+    date: DateType
     note: Optional[str] = None
 
     @staticmethod
@@ -78,7 +93,7 @@ class TransactionIn(Schema):
     type: str
     amount: Decimal
     category: Optional[int] = None
-    date: date
+    date: DateType
     note: Optional[str] = None
 
 
@@ -86,7 +101,7 @@ class TransactionPatch(Schema):
     type: Optional[str] = None
     amount: Optional[Decimal] = None
     category: Optional[int] = None
-    date: Optional[date] = None
+    date: Optional[DateType] = None
     note: Optional[str] = None
 
 

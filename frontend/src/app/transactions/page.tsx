@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
-import { DownloadIcon, UploadIcon } from "@/components/icons";
+import { DownloadIcon, EditIcon, UploadIcon } from "@/components/icons";
 import { Category, Transaction } from "@/types";
 
 function money(value: string): string {
@@ -25,8 +25,10 @@ export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [filterMonth, setFilterMonth] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
@@ -52,33 +54,64 @@ export default function TransactionsPage() {
 
   useEffect(loadData, [filterMonth, filterCategory]);
 
-  function openModal() {
+  function openAddModal() {
+    setEditingId(null);
     setForm({ ...emptyForm(), categoryId: categories[0] ? String(categories[0].id) : "" });
     setError(null);
     setModalOpen(true);
   }
 
-  async function handleAdd(e: React.FormEvent) {
+  function openEditModal(r: Transaction) {
+    setEditingId(r.id);
+    setForm({
+      type: r.type,
+      amount: r.amount,
+      categoryId: r.category ? String(r.category) : "",
+      date: r.date,
+      note: r.note || "",
+    });
+    setError(null);
+    setModalOpen(true);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSaving(true);
     try {
-      await apiFetch<Transaction>("/api/transactions", {
-        method: "POST",
-        body: JSON.stringify({
-          type: form.type,
-          amount: form.amount,
-          category: form.categoryId ? Number(form.categoryId) : null,
-          date: form.date,
-          note: form.note || null,
-        }),
+      const body = JSON.stringify({
+        type: form.type,
+        amount: form.amount,
+        category: form.categoryId ? Number(form.categoryId) : null,
+        date: form.date,
+        note: form.note || null,
       });
+      if (editingId) {
+        await apiFetch<Transaction>(`/api/transactions/${editingId}`, { method: "PATCH", body });
+      } else {
+        await apiFetch<Transaction>("/api/transactions", { method: "POST", body });
+      }
       setModalOpen(false);
       loadData();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't add transaction");
+      setError(err instanceof ApiError ? err.message : "Couldn't save transaction");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!editingId) return;
+    if (!confirm("Delete this transaction?")) return;
+    setDeleting(true);
+    try {
+      await apiFetch(`/api/transactions/${editingId}`, { method: "DELETE" });
+      setModalOpen(false);
+      loadData();
+    } catch {
+      setError("Couldn't delete transaction");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -156,7 +189,7 @@ export default function TransactionsPage() {
           <input ref={fileInputRef} type="file" accept=".csv,.xlsx" onChange={handleImport} className="hidden" />
           <button
             type="button"
-            onClick={openModal}
+            onClick={openAddModal}
             className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
           >
             + Add
@@ -164,8 +197,13 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <Modal id="addModal" open={modalOpen} onClose={() => setModalOpen(false)} title="Add transaction">
-        <form onSubmit={handleAdd} className="space-y-4">
+      <Modal
+        id="addModal"
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? "Edit transaction" : "Add transaction"}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Type</label>
             <div className="grid grid-cols-2 gap-2">
@@ -240,13 +278,24 @@ export default function TransactionsPage() {
           </div>
           {error && modalOpen && <p className="text-neg text-sm">{error}</p>}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
-            >
-              Cancel
-            </button>
+            {editingId ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="action-btn text-neg rounded-xl bg-white/10 px-4 py-3 font-semibold hover:bg-rose-500/20 disabled:opacity-60"
+              >
+                Delete
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="submit"
               disabled={saving}
@@ -306,6 +355,7 @@ export default function TransactionsPage() {
                   <th className="pb-2 pr-3">Category</th>
                   <th className="pb-2 pr-3">Note</th>
                   <th className="pb-2 pr-3 text-right">Amount</th>
+                  <th className="pb-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -329,6 +379,17 @@ export default function TransactionsPage() {
                     >
                       {r.type === "income" ? "+" : "-"}
                       {money(r.amount)}
+                    </td>
+                    <td className="whitespace-nowrap py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(r)}
+                        aria-label="Edit transaction"
+                        title="Edit"
+                        className="text-muted hover:text-main inline-flex rounded-lg p-1.5 transition-colors hover:bg-white/10"
+                      >
+                        <EditIcon />
+                      </button>
                     </td>
                   </tr>
                 ))}
