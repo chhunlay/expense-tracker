@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getToken } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { Profile } from "@/types";
 import ThemeToggle from "./ThemeToggle";
 import {
   AssetsIcon,
@@ -56,6 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // effect+setState pattern below entirely, but it broke re-checking
   // the token on a hard reload/direct URL visit - reverted.)
   const [checked, setChecked] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     // This effect exists specifically to read an external system
@@ -67,6 +69,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setChecked(true);
+    apiFetch<Profile>("/api/profile")
+      .then((p) => setUsername(p.username))
+      .catch(() => {
+        // Not worth surfacing an error banner for - the subtitle just
+        // stays off and the rest of the shell still works fine.
+      });
   }, [router]);
 
   if (!checked) return null;
@@ -83,7 +91,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
             💰
           </div>
-          <h1 className="mt-0.5 text-base font-extrabold tracking-tight">Expense Tracker</h1>
+          <div className="mt-0.5 min-w-0">
+            <h1 className="text-base font-extrabold tracking-tight">Expense Tracker</h1>
+            {username && <p className="text-faint truncate text-xs">{username}</p>}
+          </div>
         </div>
 
         <nav className="flex flex-col gap-1">
@@ -125,11 +136,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-5xl">
           <div className="mb-5 md:hidden">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
                   💰
                 </div>
-                <h1 className="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
+                <div className="min-w-0">
+                  <h1 className="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
+                  {username && <p className="text-faint truncate text-xs">{username}</p>}
+                </div>
               </div>
               <ThemeToggle />
             </div>
