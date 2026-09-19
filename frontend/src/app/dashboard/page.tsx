@@ -1,11 +1,25 @@
 "use client";
 
+import {
+  ArcElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+} from "chart.js";
 import { useEffect, useState } from "react";
+import { Doughnut, Line } from "react-chartjs-2";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import { EyeIcon, EyeOffIcon } from "@/components/icons";
 import { Summary, Transaction } from "@/types";
+
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
 
 function money(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,6 +40,9 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [quickAddText, setQuickAddText] = useState("");
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
+  const [quickAdding, setQuickAdding] = useState(false);
 
   useEffect(() => {
     // Reads an external system (localStorage) not available during
@@ -38,9 +55,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSummary(null);
+  function load() {
     Promise.all([
       apiFetch<Summary>(`/api/summary?month=${monthStr}`),
       apiFetch<Transaction[]>(`/api/transactions?month=${monthStr}&limit=8`),
@@ -50,6 +65,13 @@ export default function DashboardPage() {
         setRecent(txns);
       })
       .catch(() => setError("Couldn't load your summary"));
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSummary(null);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthStr]);
 
   function toggleHidden() {
@@ -59,6 +81,21 @@ export default function DashboardPage() {
       localStorage.setItem(HIDE_KEY, next ? "1" : "0");
     } catch {
       // ignore
+    }
+  }
+
+  async function handleQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setQuickAddError(null);
+    setQuickAdding(true);
+    try {
+      await apiFetch("/api/quick-add", { method: "POST", body: JSON.stringify({ text: quickAddText }) });
+      setQuickAddText("");
+      load();
+    } catch (err) {
+      setQuickAddError(err instanceof ApiError ? err.message : "Couldn't add that");
+    } finally {
+      setQuickAdding(false);
     }
   }
 
@@ -132,28 +169,153 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 font-bold">Recent</h3>
-            {recent.length === 0 ? (
-              <p className="text-faint text-sm">Nothing logged this month yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {recent.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate">{r.note || r.category_name || "Uncategorized"}</p>
-                      <p className="text-faint text-xs">
-                        {r.date} &middot; {r.category_name || "Uncategorized"}
-                      </p>
-                    </div>
-                    <span className={`ml-2 flex-shrink-0 font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}>
-                      {r.type === "income" ? "+" : "-"}$
-                      {parseFloat(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+          <form onSubmit={handleQuickAdd} className="glass-card mb-5 rounded-2xl p-4">
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              Quick add
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={quickAddText}
+                onChange={(e) => setQuickAddText(e.target.value)}
+                placeholder='e.g. "Lunch 5.50 Food" or "+500 Salary"'
+                autoComplete="off"
+                className="input flex-1 rounded-xl px-3 py-2.5 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={quickAdding || !quickAddText.trim()}
+                className="action-btn rounded-xl bg-indigo-500 px-4 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
+              >
+                Add
+              </button>
+            </div>
+            {quickAddError && <p className="text-neg mt-1.5 text-xs">{quickAddError}</p>}
+            <p className="text-faint mt-1.5 text-xs">
+              Amount + optional category name anywhere in the text. Prefix the amount with &quot;+&quot; for income.
+            </p>
+          </form>
+
+          <div className="mb-5 grid gap-5 lg:grid-cols-3">
+            <div className="glass-card rounded-2xl p-5 lg:col-span-2">
+              <h3 className="mb-3 font-bold">Net trend (last 6 months)</h3>
+              <Line
+                data={{
+                  labels: summary.mini_trend.map((m) => m.month),
+                  datasets: [
+                    {
+                      label: "Net",
+                      data: summary.mini_trend.map((m) => m.net),
+                      borderColor: "#818cf8",
+                      backgroundColor: "rgba(129, 140, 248, 0.15)",
+                      fill: true,
+                      tension: 0.3,
+                      pointRadius: 3,
+                      pointBackgroundColor: summary.mini_trend.map((m) => (m.net >= 0 ? "#34d399" : "#f87171")),
+                    },
+                  ],
+                }}
+                options={{
+                  scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { color: "rgba(148,163,184,0.15)" } },
+                  },
+                  plugins: { legend: { display: false } },
+                }}
+                height={140}
+              />
+            </div>
+
+            <div className="glass-card rounded-2xl p-5">
+              <h3 className="mb-3 font-bold">Where it went</h3>
+              {summary.breakdown.length === 0 ? (
+                <p className="text-faint text-sm">No expenses logged this month yet.</p>
+              ) : (
+                <>
+                  <Doughnut
+                    data={{
+                      labels: summary.breakdown.map((b) => b.name),
+                      datasets: [
+                        {
+                          data: summary.breakdown.map((b) => b.amount),
+                          backgroundColor: summary.breakdown.map((b) => b.color),
+                          borderWidth: 0,
+                        },
+                      ],
+                    }}
+                    options={{ plugins: { legend: { display: false } }, cutout: "65%" }}
+                    height={160}
+                  />
+                  <div className="mt-3 space-y-1.5">
+                    {summary.breakdown.map((b) => (
+                      <div key={b.name} className="flex items-center justify-between text-sm">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: b.color }} />
+                          <span className="truncate">{b.name}</span>
+                        </span>
+                        <span className="text-muted ml-2 flex-shrink-0">{money(b.amount)}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="glass-card rounded-2xl p-5">
+              <h3 className="mb-3 font-bold">Budgets</h3>
+              {summary.budget_progress.length === 0 ? (
+                <p className="text-faint text-sm">
+                  No budgets set yet. Add a limit on the Categories page.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {summary.budget_progress.map((b) => (
+                    <div key={b.name}>
+                      <div className="mb-1 flex justify-between text-sm">
+                        <span>{b.name}</span>
+                        <span className="text-muted">
+                          {money(b.spent)} / {money(b.limit)}
+                        </span>
+                      </div>
+                      <div className="progress-track h-2 w-full overflow-hidden rounded-full">
+                        <div
+                          className={`progress-bar h-full rounded-full ${b.over ? "over" : ""}`}
+                          style={{ width: `${b.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="glass-card rounded-2xl p-5">
+              <h3 className="mb-3 font-bold">Recent</h3>
+              {recent.length === 0 ? (
+                <p className="text-faint text-sm">Nothing logged this month yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recent.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate">{r.note || r.category_name || "Uncategorized"}</p>
+                        <p className="text-faint text-xs">
+                          {r.date} &middot; {r.category_name || "Uncategorized"}
+                        </p>
+                      </div>
+                      <span
+                        className={`ml-2 flex-shrink-0 font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}
+                      >
+                        {r.type === "income" ? "+" : "-"}
+                        {money(parseFloat(r.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

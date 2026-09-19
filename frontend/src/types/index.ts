@@ -1,6 +1,7 @@
-// Shapes returned by the Django REST Framework API (expense-tracker/expenses/api/).
-// Keep these in sync with expenses/api/serializers.py by hand - there's
-// no schema generation wired up (yet) to derive them automatically.
+// Shapes returned by the Django/Ninja API (backend/apps/core/api.py).
+// Keep these in sync with backend/apps/core/schemas.py by hand -
+// there's no schema generation wired up (yet) to derive them
+// automatically.
 
 export interface Category {
   id: number;
@@ -29,12 +30,30 @@ export interface Asset {
   updated_at: string;
 }
 
+export interface BreakdownItem {
+  name: string;
+  amount: number;
+  color: string;
+}
+
+export interface BudgetProgressItem {
+  name: string;
+  color: string;
+  spent: number;
+  limit: number;
+  pct: number;
+  over: boolean;
+}
+
 export interface Summary {
   month: string;
   income: number;
   expense: number;
   net: number;
   net_worth: number;
+  breakdown: BreakdownItem[];
+  budget_progress: BudgetProgressItem[];
+  mini_trend: MonthlyTotal[];
 }
 
 export interface Profile {

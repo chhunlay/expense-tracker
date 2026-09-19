@@ -57,7 +57,10 @@ already allows the Next.js dev server's origin.
   Entertainment, Other) automatically.
 - **Dashboard** - current month's income/expense/net totals, a net-worth
   card, Prev/Next month navigation, a hide/show toggle for sensitive
-  amounts, and a Recent-transactions list.
+  amounts, a quick-add box (type `Lunch 5.50 Food & Drink` or
+  `+500 Salary`), a 6-month net trend chart, a category-breakdown
+  doughnut chart, per-category budget progress bars, and a
+  Recent-transactions list.
 - **Transactions** - list, add (popup form), filter by month/category,
   CSV/XLSX export and import.
 - **Categories** - add, recolor, delete, and set a monthly budget limit
@@ -72,10 +75,6 @@ already allows the Next.js dev server's origin.
 - **Dark/light theme toggle**, same pill switch on every page.
 - **Admin panel** (`/admin/`) - full CRUD over every model across every
   account, courtesy of Django, no extra code required.
-
-Not yet ported: quick-add text parsing and per-category
-budget-progress/breakdown charts the original Django-template version
-had - see CHANGELOG.md.
 
 ## API
 A read/write JSON API lives under `/api/`, built with
@@ -94,7 +93,8 @@ trailing slash** (Ninja's convention, unlike the old DRF setup).
 | `/api/assets`, `/api/assets/{id}` | GET, POST, PATCH, DELETE |
 | `/api/profile` | GET, PATCH (theme, language) |
 | `/api/profile/picture` | POST (multipart, field `picture`) |
-| `/api/summary` | GET `?month=YYYY-MM` (defaults to current) - income/expense/net/net_worth |
+| `/api/summary` | GET `?month=YYYY-MM` (defaults to current) - income/expense/net/net_worth, category breakdown, budget progress, 6-month trend |
+| `/api/quick-add` | POST `{"text"}` - e.g. `"Lunch 5.50 Food & Drink"` or `"+500 Salary"` |
 | `/api/reports` | GET - 12-month totals + top spending categories |
 | `/api/export/csv`, `/api/export/xlsx` | GET - full transaction-history file download |
 | `/api/import` | POST (multipart, field `file`) - import a `.csv`/`.xlsx` |

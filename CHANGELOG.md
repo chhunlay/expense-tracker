@@ -3,6 +3,28 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.1.0] - 2026-09-19
+### Added
+- **Dashboard reaches full parity with the original Django-template
+  version**: a 6-month net trend line chart, a category-breakdown
+  doughnut chart (with a color-swatch legend), per-category budget
+  progress bars, and the quick-add box (`"Lunch 5.50 Food & Drink"` /
+  `"+500 Salary"`) - all previously called out as "not yet ported".
+  - Backend: `GET /api/summary` now also returns `breakdown`,
+    `budget_progress`, and `mini_trend` (the same computation
+    `views.dashboard` used to do, restored from git history) instead
+    of just the four top-line numbers; `POST /api/quick-add` is a new
+    endpoint wrapping the restored `apps/core/quick_add.py` parser
+    (unchanged text-parsing logic, just re-added).
+  - Frontend: added `chart.js` + `react-chartjs-2` for the two charts,
+    matching the exact chart config (colors, tension, cutout) the old
+    Chart.js-based templates used.
+- Diagnosed a "no default category in the Add transaction dropdown"
+  report: the `admin` superuser was created directly via
+  `createsuperuser`, bypassing `/api/register`'s category-seeding -
+  seeded it manually as a one-off fix (not a code bug - a normal
+  registered account was never affected).
+
 ## [3.0.0] - 2026-09-19
 ### Changed
 - **Restructured into a decoupled `backend/` + `frontend/` monorepo**

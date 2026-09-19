@@ -29,9 +29,12 @@ already allows `http://localhost:3000`.
 ## Pages
 - `/login`, `/register` - call `POST /api/token` / `POST /api/register`
   and store the returned token in `localStorage`.
-- `/dashboard` - current month's income/expense/net and net worth
-  (`GET /api/summary`), Prev/Next month navigation, a hide/show toggle
-  for sensitive amounts, and a Recent-transactions list.
+- `/dashboard` - current month's income/expense/net and net worth,
+  a 6-month net trend chart, a category-breakdown doughnut chart, and
+  budget progress bars (all from one `GET /api/summary` call, via
+  chart.js/react-chartjs-2), Prev/Next month navigation, a hide/show
+  toggle for sensitive amounts, a quick-add box (`POST /api/quick-add`),
+  and a Recent-transactions list.
 - `/transactions` - list + add (popup modal), filter by month/category,
   CSV/XLSX export and import, via `/api/transactions`, `/api/export/*`,
   `/api/import`.
@@ -43,9 +46,6 @@ already allows `http://localhost:3000`.
 - `/settings` - theme, language (`GET`/`PATCH /api/profile`), and
   profile picture upload (`POST /api/profile/picture`).
 
-Not built: the original Django-template version's quick-add text
-parsing and per-category budget-progress bars/charts - see the root
-CHANGELOG.md for what that version had.
 
 ## Project structure
 ```

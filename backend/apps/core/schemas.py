@@ -142,19 +142,37 @@ class ProfilePatch(Schema):
 
 
 # ---------- Dashboard / Reports ----------
+class MonthlyTotal(Schema):
+    month: str
+    income: float
+    expense: float
+    net: float
+
+
+class BreakdownItem(Schema):
+    name: str
+    amount: float
+    color: str
+
+
+class BudgetProgressItem(Schema):
+    name: str
+    color: str
+    spent: float
+    limit: float
+    pct: int
+    over: bool
+
+
 class SummaryOut(Schema):
     month: str
     income: float
     expense: float
     net: float
     net_worth: float
-
-
-class MonthlyTotal(Schema):
-    month: str
-    income: float
-    expense: float
-    net: float
+    breakdown: list[BreakdownItem]
+    budget_progress: list[BudgetProgressItem]
+    mini_trend: list[MonthlyTotal]
 
 
 class TopCategory(Schema):
@@ -172,6 +190,10 @@ class ImportResult(Schema):
     imported: int
     skipped: int
     created_categories: int
+
+
+class QuickAddIn(Schema):
+    text: str
 
 
 class ErrorOut(Schema):
