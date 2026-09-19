@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 import { LogoIcon, MailIcon, PhoneIcon } from "@/components/icons";
 import { broadcastProfileUpdate } from "@/lib/profile";
 import {
@@ -196,7 +195,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <h2 className="mb-4 text-lg font-bold">Settings</h2>
 
       {message && <p className="text-pos mb-3 text-sm">{message}</p>}
@@ -408,6 +407,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

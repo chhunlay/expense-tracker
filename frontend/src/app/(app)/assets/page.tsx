@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
 import { ASSET_TYPES, Asset } from "@/types";
 
@@ -167,7 +166,7 @@ export default function AssetsPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Assets</h2>
@@ -270,6 +269,6 @@ export default function AssetsPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

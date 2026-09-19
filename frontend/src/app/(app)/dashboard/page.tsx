@@ -17,7 +17,6 @@ import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { getStoredTrendHidden, setStoredTrendHidden } from "@/lib/theme";
@@ -201,7 +200,7 @@ export default function DashboardPage() {
   const isCurrentMonth = monthStr === currentMonth();
 
   return (
-    <AppShell>
+    <>
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -552,6 +551,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-    </AppShell>
+    </>
   );
 }

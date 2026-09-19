@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 import { ReportsData } from "@/types";
 
 function money(value: number): string {
@@ -21,7 +20,7 @@ export default function ReportsPage() {
   }, []);
 
   return (
-    <AppShell>
+    <>
       <h2 className="mb-4 text-lg font-bold">Reports</h2>
       {error && <p className="text-neg text-sm">{error}</p>}
 
@@ -65,6 +64,6 @@ export default function ReportsPage() {
           </div>
         </>
       )}
-    </AppShell>
+    </>
   );
 }
