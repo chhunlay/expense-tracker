@@ -22,7 +22,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
     setError(null);
     setSaving(true);
     try {
-      await apiFetch(`/api/categories/${category.id}/`, {
+      await apiFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
         body: JSON.stringify({ name, color, budget_limit: budget || null }),
       });
@@ -37,7 +37,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   async function handleDelete() {
     if (!confirm("Delete this category? Its past transactions become Uncategorized.")) return;
     try {
-      await apiFetch(`/api/categories/${category.id}/`, { method: "DELETE" });
+      await apiFetch(`/api/categories/${category.id}`, { method: "DELETE" });
       onDeleted();
     } catch {
       setError("Couldn't delete category");
@@ -112,7 +112,7 @@ export default function CategoriesPage() {
   const [saving, setSaving] = useState(false);
 
   function loadCategories() {
-    apiFetch<Category[]>("/api/categories/")
+    apiFetch<Category[]>("/api/categories")
       .then(setCategories)
       .catch(() => setError("Couldn't load categories"));
   }
@@ -132,7 +132,7 @@ export default function CategoriesPage() {
     setError(null);
     setSaving(true);
     try {
-      await apiFetch<Category>("/api/categories/", {
+      await apiFetch<Category>("/api/categories", {
         method: "POST",
         body: JSON.stringify({ name, color, budget_limit: budget || null }),
       });

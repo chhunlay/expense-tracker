@@ -42,8 +42,8 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSummary(null);
     Promise.all([
-      apiFetch<Summary>(`/api/summary/?month=${monthStr}`),
-      apiFetch<Transaction[]>(`/api/transactions/?month=${monthStr}&limit=8`),
+      apiFetch<Summary>(`/api/summary?month=${monthStr}`),
+      apiFetch<Transaction[]>(`/api/transactions?month=${monthStr}&limit=8`),
     ])
       .then(([s, txns]) => {
         setSummary(s);

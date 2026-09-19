@@ -1,0 +1,298 @@
+"""
+Ninja router - the whole JSON API in one place (the Ninja equivalent of
+the old DRF api/views.py + api/urls.py combined, since Ninja routes are
+declared right on the handler via decorators instead of a separate
+urls.py). Every authenticated endpoint takes `auth=TokenAuth()`
+(security.py) and reads the current user from `request.auth`; every
+queryset is filtered to that user so one account can never read or
+write another's rows, by id-guessing or otherwise - the same rule the
+DRF viewsets enforced via get_queryset().
+"""
+from datetime import date
+from typing import List
+
+from django.conf import settings as django_settings
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from ninja import File, Router, UploadedFile
+from ninja.errors import HttpError
+
+from .constants import DEFAULT_CATEGORIES
+from .csv_io import export_transactions_csv, import_transactions_csv
+from .dates import month_bounds, shift_month
+from .models import Asset, AuthToken, Category, Transaction
+from .schemas import (
+    AssetIn,
+    AssetOut,
+    AssetPatch,
+    CategoryIn,
+    CategoryOut,
+    CategoryPatch,
+    ImportResult,
+    LoginIn,
+    MonthlyTotal,
+    ProfileOut,
+    ProfilePatch,
+    RegisterIn,
+    ReportsOut,
+    SummaryOut,
+    TokenOut,
+    TopCategory,
+    TransactionIn,
+    TransactionOut,
+    TransactionPatch,
+)
+from .security import TokenAuth
+from .services import get_monthly_totals
+from .xlsx_io import export_transactions_xlsx, import_transactions_xlsx
+
+router = Router()
+auth = TokenAuth()
+
+
+# ---------- Auth ----------
+@router.post("/register", response={201: TokenOut}, auth=None)
+def register(request, payload: RegisterIn):
+    if len(payload.password) < 8:
+        raise HttpError(400, "Password must be at least 8 characters.")
+    if User.objects.filter(username=payload.username).exists():
+        raise HttpError(400, "That username is already taken.")
+    try:
+        validate_password(payload.password)
+    except DjangoValidationError as e:
+        raise HttpError(400, " ".join(e.messages))
+
+    user = User.objects.create_user(username=payload.username, password=payload.password)
+    Category.objects.bulk_create(
+        [Category(user=user, name=name, color=color) for name, color in DEFAULT_CATEGORIES]
+    )
+    token = AuthToken.objects.create(user=user)
+    return 201, {"token": token.key}
+
+
+@router.post("/token", response=TokenOut, auth=None)
+def login(request, payload: LoginIn):
+    user = authenticate(username=payload.username, password=payload.password)
+    if user is None:
+        raise HttpError(400, "Unable to log in with provided credentials.")
+    token, _ = AuthToken.objects.get_or_create(user=user)
+    return {"token": token.key}
+
+
+# ---------- Categories ----------
+@router.get("/categories", response=List[CategoryOut], auth=auth)
+def list_categories(request):
+    return Category.objects.filter(user=request.auth)
+
+
+@router.post("/categories", response={201: CategoryOut}, auth=auth)
+def create_category(request, payload: CategoryIn):
+    category = Category.objects.create(user=request.auth, **payload.dict())
+    return 201, category
+
+
+@router.patch("/categories/{category_id}", response=CategoryOut, auth=auth)
+def update_category(request, category_id: int, payload: CategoryPatch):
+    category = get_object_or_404(Category, id=category_id, user=request.auth)
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(category, field, value)
+    category.save()
+    return category
+
+
+@router.delete("/categories/{category_id}", response={204: None}, auth=auth)
+def delete_category(request, category_id: int):
+    category = get_object_or_404(Category, id=category_id, user=request.auth)
+    category.delete()
+    return 204, None
+
+
+# ---------- Transactions ----------
+@router.get("/transactions", response=List[TransactionOut], auth=auth)
+def list_transactions(request, month: str = None, category_id: int = None, limit: int = None):
+    qs = Transaction.objects.filter(user=request.auth).select_related("category")
+    if month:
+        start, end = month_bounds(month)
+        qs = qs.filter(date__gte=start, date__lt=end)
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+    if limit:
+        qs = qs[:limit]
+    return qs
+
+
+def _validated_category(user, category_id):
+    if category_id is None:
+        return None
+    category = get_object_or_404(Category, id=category_id, user=user)
+    return category
+
+
+@router.post("/transactions", response={201: TransactionOut}, auth=auth)
+def create_transaction(request, payload: TransactionIn):
+    category = _validated_category(request.auth, payload.category)
+    txn = Transaction.objects.create(
+        user=request.auth,
+        type=payload.type,
+        amount=payload.amount,
+        category=category,
+        date=payload.date,
+        note=payload.note,
+    )
+    return 201, txn
+
+
+@router.patch("/transactions/{transaction_id}", response=TransactionOut, auth=auth)
+def update_transaction(request, transaction_id: int, payload: TransactionPatch):
+    txn = get_object_or_404(Transaction, id=transaction_id, user=request.auth)
+    data = payload.dict(exclude_unset=True)
+    if "category" in data:
+        data["category"] = _validated_category(request.auth, data["category"])
+    for field, value in data.items():
+        setattr(txn, field, value)
+    txn.save()
+    return txn
+
+
+@router.delete("/transactions/{transaction_id}", response={204: None}, auth=auth)
+def delete_transaction(request, transaction_id: int):
+    txn = get_object_or_404(Transaction, id=transaction_id, user=request.auth)
+    txn.delete()
+    return 204, None
+
+
+# ---------- Assets ----------
+@router.get("/assets", response=List[AssetOut], auth=auth)
+def list_assets(request):
+    return Asset.objects.filter(user=request.auth)
+
+
+@router.post("/assets", response={201: AssetOut}, auth=auth)
+def create_asset(request, payload: AssetIn):
+    asset = Asset.objects.create(user=request.auth, **payload.dict())
+    return 201, asset
+
+
+@router.patch("/assets/{asset_id}", response=AssetOut, auth=auth)
+def update_asset(request, asset_id: int, payload: AssetPatch):
+    asset = get_object_or_404(Asset, id=asset_id, user=request.auth)
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(asset, field, value)
+    asset.save()
+    return asset
+
+
+@router.delete("/assets/{asset_id}", response={204: None}, auth=auth)
+def delete_asset(request, asset_id: int):
+    asset = get_object_or_404(Asset, id=asset_id, user=request.auth)
+    asset.delete()
+    return 204, None
+
+
+# ---------- Profile ----------
+@router.get("/profile", response=ProfileOut, auth=auth)
+def get_profile(request):
+    return request.auth.profile
+
+
+@router.patch("/profile", response=ProfileOut, auth=auth)
+def update_profile(request, payload: ProfilePatch):
+    profile = request.auth.profile
+    data = payload.dict(exclude_unset=True)
+    if "theme" in data and data["theme"] not in dict(profile.THEME_CHOICES):
+        raise HttpError(400, "Not a valid theme.")
+    if "language" in data and data["language"] not in dict(django_settings.LANGUAGES):
+        raise HttpError(400, "Not a supported language.")
+    for field, value in data.items():
+        setattr(profile, field, value)
+    profile.save()
+    return profile
+
+
+@router.post("/profile/picture", response=ProfileOut, auth=auth)
+def upload_profile_picture(request, picture: UploadedFile = File(...)):
+    profile = request.auth.profile
+    profile.picture = picture
+    profile.save()
+    return profile
+
+
+# ---------- Dashboard / Reports ----------
+@router.get("/summary", response=SummaryOut, auth=auth)
+def summary(request, month: str = None):
+    month_str = month or date.today().strftime("%Y-%m")
+    start, end = month_bounds(month_str)
+    rows = Transaction.objects.filter(user=request.auth, date__gte=start, date__lt=end)
+    income = float(rows.filter(type=Transaction.INCOME).aggregate(t=Sum("amount"))["t"] or 0)
+    expense = float(rows.filter(type=Transaction.EXPENSE).aggregate(t=Sum("amount"))["t"] or 0)
+    net_worth = float(Asset.objects.filter(user=request.auth).aggregate(t=Sum("value"))["t"] or 0)
+    return {
+        "month": month_str,
+        "income": income,
+        "expense": expense,
+        "net": income - expense,
+        "net_worth": net_worth,
+    }
+
+
+@router.get("/reports", response=ReportsOut, auth=auth)
+def reports(request):
+    months = []
+    y, m = date.today().year, date.today().month
+    for i in range(11, -1, -1):
+        yy, mm = shift_month(y, m, -i)
+        months.append("%04d-%02d" % (yy, mm))
+
+    monthly_totals = [MonthlyTotal(**mt) for mt in get_monthly_totals(request.auth, months)]
+
+    window_start = f"{months[0]}-01"
+    top_categories = []
+    for c in Category.objects.filter(user=request.auth):
+        total = (
+            Transaction.objects.filter(
+                user=request.auth, category=c, type=Transaction.EXPENSE, date__gte=window_start
+            ).aggregate(total=Sum("amount"))["total"]
+        )
+        total = float(total or 0)
+        if total > 0:
+            top_categories.append(TopCategory(name=c.name, color=c.color, total=total))
+    top_categories.sort(key=lambda c: -c.total)
+
+    return {"monthly_totals": monthly_totals, "top_categories": top_categories}
+
+
+# ---------- Export / Import ----------
+@router.get("/export/csv", auth=auth)
+def export_csv(request):
+    csv_text = export_transactions_csv(request.auth)
+    response = HttpResponse(csv_text, content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="transactions.csv"'
+    return response
+
+
+@router.get("/export/xlsx", auth=auth)
+def export_xlsx(request):
+    xlsx_bytes = export_transactions_xlsx(request.auth)
+    response = HttpResponse(
+        xlsx_bytes, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="transactions.xlsx"'
+    return response
+
+
+@router.post("/import", response=ImportResult, auth=auth)
+def import_transactions(request, file: UploadedFile = File(...)):
+    name = file.name.lower()
+    file_bytes = file.read()
+    if name.endswith(".csv"):
+        imported, skipped, created = import_transactions_csv(request.auth, file_bytes)
+    elif name.endswith(".xlsx"):
+        imported, skipped, created = import_transactions_xlsx(request.auth, file_bytes)
+    else:
+        raise HttpError(400, "Unsupported file type - upload a .csv or .xlsx file")
+    return {"imported": imported, "skipped": skipped, "created_categories": created}

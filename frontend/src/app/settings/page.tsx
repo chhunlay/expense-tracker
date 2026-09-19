@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    apiFetch<Profile>("/api/profile/")
+    apiFetch<Profile>("/api/profile")
       .then(setProfile)
       .catch(() => setError("Couldn't load your profile"));
   }, []);
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   async function handleThemeChange(theme: Profile["theme"]) {
     setError(null);
     try {
-      const updated = await apiFetch<Profile>("/api/profile/", {
+      const updated = await apiFetch<Profile>("/api/profile", {
         method: "PATCH",
         body: JSON.stringify({ theme }),
       });
@@ -41,7 +41,7 @@ export default function SettingsPage() {
   async function handleLanguageChange(language: string) {
     setError(null);
     try {
-      const updated = await apiFetch<Profile>("/api/profile/", {
+      const updated = await apiFetch<Profile>("/api/profile", {
         method: "PATCH",
         body: JSON.stringify({ language }),
       });
@@ -60,7 +60,7 @@ export default function SettingsPage() {
     try {
       const formData = new FormData();
       formData.append("picture", file);
-      const updated = await apiFetch<Profile>("/api/profile/", { method: "PATCH", body: formData });
+      const updated = await apiFetch<Profile>("/api/profile/picture", { method: "POST", body: formData });
       setProfile(updated);
       setFile(null);
       setMessage("Profile picture updated");

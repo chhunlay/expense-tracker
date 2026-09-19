@@ -27,7 +27,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
     setError(null);
     setSaving(true);
     try {
-      await apiFetch(`/api/assets/${asset.id}/`, {
+      await apiFetch(`/api/assets/${asset.id}`, {
         method: "PATCH",
         body: JSON.stringify({ name, asset_type: assetType, value, note: note || null }),
       });
@@ -42,7 +42,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
   async function handleDelete() {
     if (!confirm("Delete this asset?")) return;
     try {
-      await apiFetch(`/api/assets/${asset.id}/`, { method: "DELETE" });
+      await apiFetch(`/api/assets/${asset.id}`, { method: "DELETE" });
       onDeleted();
     } catch {
       setError("Couldn't delete asset");
@@ -128,7 +128,7 @@ export default function AssetsPage() {
   const [saving, setSaving] = useState(false);
 
   function loadAssets() {
-    apiFetch<Asset[]>("/api/assets/")
+    apiFetch<Asset[]>("/api/assets")
       .then(setAssets)
       .catch(() => setError("Couldn't load assets"));
   }
@@ -151,7 +151,7 @@ export default function AssetsPage() {
     setError(null);
     setSaving(true);
     try {
-      await apiFetch<Asset>("/api/assets/", {
+      await apiFetch<Asset>("/api/assets", {
         method: "POST",
         body: JSON.stringify({ name, asset_type: assetType, value, note: note || null }),
       });

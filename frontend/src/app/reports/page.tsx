@@ -15,7 +15,7 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<ReportsData>("/api/reports/")
+    apiFetch<ReportsData>("/api/reports")
       .then(setData)
       .catch(() => setError("Couldn't load reports"));
   }, []);

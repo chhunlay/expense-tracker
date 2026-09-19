@@ -40,8 +40,8 @@ export default function TransactionsPage() {
     if (filterCategory) params.set("category_id", filterCategory);
     const qs = params.toString();
     Promise.all([
-      apiFetch<Transaction[]>(`/api/transactions/${qs ? `?${qs}` : ""}`),
-      apiFetch<Category[]>("/api/categories/"),
+      apiFetch<Transaction[]>(`/api/transactions${qs ? `?${qs}` : ""}`),
+      apiFetch<Category[]>("/api/categories"),
     ])
       .then(([txns, cats]) => {
         setRows(txns);
@@ -63,7 +63,7 @@ export default function TransactionsPage() {
     setError(null);
     setSaving(true);
     try {
-      await apiFetch<Transaction>("/api/transactions/", {
+      await apiFetch<Transaction>("/api/transactions", {
         method: "POST",
         body: JSON.stringify({
           type: form.type,
@@ -85,7 +85,7 @@ export default function TransactionsPage() {
   async function handleExport(format: "csv" | "xlsx") {
     setExportMenuOpen(false);
     try {
-      await apiDownload(`/api/export/${format}/`, `transactions.${format}`);
+      await apiDownload(`/api/export/${format}`, `transactions.${format}`);
     } catch {
       setError("Couldn't export transactions");
     }
@@ -100,7 +100,7 @@ export default function TransactionsPage() {
       const formData = new FormData();
       formData.append("file", file);
       const result = await apiFetch<{ imported: number; skipped: number; created_categories: number }>(
-        "/api/import/",
+        "/api/import",
         { method: "POST", body: formData }
       );
       setImportMessage(
