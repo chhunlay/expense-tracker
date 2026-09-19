@@ -8,6 +8,10 @@ import { logout } from "@/lib/auth";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/transactions", label: "Transactions" },
+  { href: "/categories", label: "Categories" },
+  { href: "/reports", label: "Reports" },
+  { href: "/assets", label: "Assets" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function Header() {
@@ -16,14 +20,14 @@ export default function Header() {
 
   return (
     <header className="border-b border-slate-800 bg-slate-950/60 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-pink-500 text-sm">
             💰
           </div>
           <span className="font-bold tracking-tight">Expense Tracker</span>
         </div>
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 overflow-x-auto">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}

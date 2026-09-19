@@ -10,15 +10,23 @@ from datetime import date
 from django.db.models import Sum
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from expenses.constants import DEFAULT_CATEGORIES
-from expenses.dates import month_bounds
+from expenses.dates import month_bounds, shift_month
 from expenses.models import Asset, Category, Transaction
+from expenses.services import get_monthly_totals
 
-from .serializers import AssetSerializer, CategorySerializer, RegisterSerializer, TransactionSerializer
+from .serializers import (
+    AssetSerializer,
+    CategorySerializer,
+    ProfileSerializer,
+    RegisterSerializer,
+    TransactionSerializer,
+)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -91,3 +99,50 @@ def summary(request):
         "net": income - expense,
         "net_worth": net_worth,
     })
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+def profile(request):
+    """The signed-in user's own Profile - a singleton per user (no id in
+    the URL, unlike the ViewSets above), covering everything the
+    Settings page needs: theme, language, and the picture upload
+    (MultiPartParser so a multipart/form-data PATCH with a file works,
+    not just JSON)."""
+    prof = request.user.profile
+    if request.method == "PATCH":
+        serializer = ProfileSerializer(prof, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    return Response(ProfileSerializer(prof).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def reports(request):
+    """Same 12-month net trend + income/expense + top-spending-categories
+    numbers views.reports renders for the HTML Reports page."""
+    months = []
+    y, m = date.today().year, date.today().month
+    for i in range(11, -1, -1):
+        yy, mm = shift_month(y, m, -i)
+        months.append("%04d-%02d" % (yy, mm))
+
+    monthly_totals = get_monthly_totals(request.user, months)
+
+    window_start = f"{months[0]}-01"
+    top_categories = []
+    for c in Category.objects.filter(user=request.user):
+        total = (
+            Transaction.objects.filter(
+                user=request.user, category=c, type=Transaction.EXPENSE, date__gte=window_start
+            ).aggregate(total=Sum("amount"))["total"]
+        )
+        total = float(total or 0)
+        if total > 0:
+            top_categories.append({"name": c.name, "color": c.color, "total": total})
+    top_categories.sort(key=lambda c: -c["total"])
+
+    return Response({"monthly_totals": monthly_totals, "top_categories": top_categories})

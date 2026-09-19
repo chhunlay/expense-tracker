@@ -1,9 +1,9 @@
 # Expense Tracker - Next.js frontend
 
 A Next.js (App Router, TypeScript, Tailwind) frontend for the Django
-[expense-tracker](../) API, replacing the Django HTML templates for the
-pages it covers so far. The Django app (`../`) still runs as the
-backend/API - this doesn't replace it, it talks to it over HTTP.
+[expense-tracker](../) API. This is the **only** UI - the Django app
+(`../`) is API + admin only, with no HTML pages of its own beyond
+`/admin/`.
 
 ## Requirements
 - Node.js 20.9+
@@ -26,15 +26,23 @@ python manage.py runserver 0.0.0.0:8000
 Django's `CORS_ALLOWED_ORIGINS` (`config/settings.py`) already allows
 `http://localhost:3000`.
 
-## Pages implemented so far
+## Pages
 - `/login`, `/register` - call `POST /api/token/` / `POST /api/register/`
   and store the returned token in `localStorage`.
 - `/dashboard` - current month's income/expense/net and net worth, from
   `GET /api/summary/`.
 - `/transactions` - list + add, via `GET`/`POST /api/transactions/`.
+- `/categories` - list + add + delete, via `/api/categories/`.
+- `/assets` - list + add + delete + net worth total, via `/api/assets/`.
+- `/reports` - 12-month totals + top spending categories, from
+  `GET /api/reports/`.
+- `/settings` - theme, language, and profile picture upload, via
+  `GET`/`PATCH /api/profile/`.
 
-Not yet built: Categories, Assets, Reports, Settings (language/theme/
-profile picture) - the Django HTML pages still cover those.
+Not built: the original Django-template version's quick-add text
+parsing, CSV/XLSX export/import, per-category budget-progress bars,
+and the Dashboard's trend/breakdown charts - see the root
+CHANGELOG.md for what that version had.
 
 ## Project structure
 ```
@@ -46,7 +54,11 @@ frontend/
 │   │   ├── login/page.tsx
 │   │   ├── register/page.tsx
 │   │   ├── dashboard/page.tsx
-│   │   └── transactions/page.tsx
+│   │   ├── transactions/page.tsx
+│   │   ├── categories/page.tsx
+│   │   ├── assets/page.tsx
+│   │   ├── reports/page.tsx
+│   │   └── settings/page.tsx
 │   ├── components/
 │   │   ├── Header.tsx        # Nav bar + logout, shared by authenticated pages
 │   │   └── RequireAuth.tsx   # Client-side redirect-to-/login guard

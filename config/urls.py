@@ -20,9 +20,11 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    # Django is API + admin only - the UI lives entirely in frontend/
+    # (Next.js), which talks to /api/ over HTTP. There's no HTML "/"
+    # route here on purpose.
     path('admin/', admin.site.urls),
     path('api/', include('expenses.api.urls')),
-    path('', include('expenses.urls')),
 ]
 
 if settings.DEBUG:
