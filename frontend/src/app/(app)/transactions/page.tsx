@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
 import { DownloadIcon, EditIcon, UploadIcon } from "@/components/icons";
+import { useTranslation } from "@/lib/i18n";
 import { Category, Transaction } from "@/types";
 
 function money(value: string): string {
@@ -20,6 +21,7 @@ const emptyForm = () => ({
 });
 
 export default function TransactionsPage() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +103,7 @@ export default function TransactionsPage() {
 
   async function handleDelete() {
     if (!editingId) return;
-    if (!confirm("Delete this transaction?")) return;
+    if (!confirm(t("Delete this transaction?"))) return;
     setDeleting(true);
     try {
       await apiFetch(`/api/transactions/${editingId}`, { method: "DELETE" });
@@ -157,7 +159,7 @@ export default function TransactionsPage() {
               onClick={() => setExportMenuOpen((v) => !v)}
               className="action-btn text-muted flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
             >
-              <DownloadIcon /> Export
+              <DownloadIcon /> {t("Export")}
             </button>
             {exportMenuOpen && (
               <div className="glass-card absolute right-0 top-full z-10 mt-2 w-32 space-y-1 rounded-xl p-1.5">
@@ -183,7 +185,7 @@ export default function TransactionsPage() {
             onClick={() => fileInputRef.current?.click()}
             className="action-btn text-muted flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
           >
-            <UploadIcon /> Import
+            <UploadIcon /> {t("Import")}
           </button>
           <input ref={fileInputRef} type="file" accept=".csv,.xlsx" onChange={handleImport} className="hidden" />
           <button
@@ -191,7 +193,7 @@ export default function TransactionsPage() {
             onClick={openAddModal}
             className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
           >
-            + Add
+            + {t("Add")}
           </button>
         </div>
       </div>
@@ -200,7 +202,7 @@ export default function TransactionsPage() {
         id="addModal"
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingId ? "Edit transaction" : "Add transaction"}
+        title={editingId ? t("Edit transaction") : t("Add transaction")}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -213,7 +215,7 @@ export default function TransactionsPage() {
                   onChange={() => setForm({ ...form, type: "expense" })}
                   className="accent-indigo-500"
                 />{" "}
-                Expense
+                {t("Expense")}
               </label>
               <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
                 <input
@@ -222,12 +224,14 @@ export default function TransactionsPage() {
                   onChange={() => setForm({ ...form, type: "income" })}
                   className="accent-indigo-500"
                 />{" "}
-                Income
+                {t("Income")}
               </label>
             </div>
           </div>
           <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Amount</label>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              {t("Amount")}
+            </label>
             <input
               type="number"
               step="0.01"
@@ -240,7 +244,9 @@ export default function TransactionsPage() {
             />
           </div>
           <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Category</label>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              {t("Category")}
+            </label>
             <select
               value={form.categoryId}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
@@ -254,7 +260,7 @@ export default function TransactionsPage() {
             </select>
           </div>
           <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Date</label>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">{t("Date")}</label>
             <input
               type="date"
               required
@@ -265,11 +271,11 @@ export default function TransactionsPage() {
           </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              Note (optional)
+              {t("Note (optional)")}
             </label>
             <input
               type="text"
-              placeholder="What was it for?"
+              placeholder={t("What was it for?")}
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               className="input w-full rounded-xl px-3 py-2.5"
@@ -284,7 +290,7 @@ export default function TransactionsPage() {
                 disabled={deleting}
                 className="action-btn text-neg rounded-xl bg-white/10 px-4 py-3 font-semibold hover:bg-rose-500/20 disabled:opacity-60"
               >
-                Delete
+                {t("Delete")}
               </button>
             ) : (
               <button
@@ -292,7 +298,7 @@ export default function TransactionsPage() {
                 onClick={() => setModalOpen(false)}
                 className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
               >
-                Cancel
+                {t("Cancel")}
               </button>
             )}
             <button
@@ -300,7 +306,7 @@ export default function TransactionsPage() {
               disabled={saving}
               className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
-              Save
+              {t("Save")}
             </button>
           </div>
         </form>
@@ -318,7 +324,7 @@ export default function TransactionsPage() {
           onChange={(e) => setFilterCategory(e.target.value)}
           className="input rounded-xl px-3 py-2 text-sm"
         >
-          <option value="">All categories</option>
+          <option value="">{t("All categories")}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -334,7 +340,7 @@ export default function TransactionsPage() {
             }}
             className="action-btn text-muted rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
           >
-            Clear
+            {t("Clear")}
           </button>
         )}
       </div>
@@ -344,16 +350,16 @@ export default function TransactionsPage() {
 
       <div className="glass-card rounded-2xl p-5">
         {rows.length === 0 ? (
-          <p className="text-faint text-sm">No transactions match this filter.</p>
+          <p className="text-faint text-sm">{t("No transactions match this filter.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="txn-table w-full text-left text-sm">
               <thead>
                 <tr className="text-muted text-xs uppercase tracking-wider">
-                  <th className="pb-2 pr-3">Date</th>
-                  <th className="pb-2 pr-3">Category</th>
-                  <th className="pb-2 pr-3">Note</th>
-                  <th className="pb-2 pr-3 text-right">Amount</th>
+                  <th className="pb-2 pr-3">{t("Date")}</th>
+                  <th className="pb-2 pr-3">{t("Category")}</th>
+                  <th className="pb-2 pr-3">{t("Note")}</th>
+                  <th className="pb-2 pr-3 text-right">{t("Amount")}</th>
                   <th className="pb-2"></th>
                 </tr>
               </thead>
@@ -367,7 +373,7 @@ export default function TransactionsPage() {
                           className="h-2 w-2 flex-shrink-0 rounded-full"
                           style={{ background: r.category_color || "#94a3b8" }}
                         />
-                        {r.category_name || "Uncategorized"}
+                        {r.category_name || t("Uncategorized")}
                       </span>
                     </td>
                     <td className="text-muted py-2 pr-3">{r.note || ""}</td>
@@ -383,7 +389,7 @@ export default function TransactionsPage() {
                       <button
                         type="button"
                         onClick={() => openEditModal(r)}
-                        aria-label="Edit transaction"
+                        aria-label={t("Edit transaction")}
                         title="Edit"
                         className="text-muted inline-flex rounded-lg p-1.5 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
                       >

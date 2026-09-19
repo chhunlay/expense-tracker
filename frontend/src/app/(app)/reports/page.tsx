@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import { ReportsData } from "@/types";
 
 function money(value: number): string {
@@ -10,6 +11,7 @@ function money(value: number): string {
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<ReportsData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,13 +23,13 @@ export default function ReportsPage() {
 
   return (
     <>
-      <h2 className="mb-4 text-lg font-bold">Reports</h2>
+      <h2 className="mb-4 text-lg font-bold">{t("Reports")}</h2>
       {error && <p className="text-neg text-sm">{error}</p>}
 
       {data && (
         <>
           <div className="glass-card mb-5 rounded-2xl p-5">
-            <h3 className="mb-3 font-bold">Net trend (last 12 months)</h3>
+            <h3 className="mb-3 font-bold">{t("Net trend (last 12 months)")}</h3>
             <div className="space-y-1.5">
               {data.monthly_totals.map((m) => (
                 <div key={m.month} className="flex items-center justify-between text-sm">
@@ -45,9 +47,9 @@ export default function ReportsPage() {
           </div>
 
           <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 font-bold">Top categories (last 12 months)</h3>
+            <h3 className="mb-3 font-bold">{t("Top categories (last 12 months)")}</h3>
             {data.top_categories.length === 0 ? (
-              <p className="text-faint text-sm">No expenses in this window yet.</p>
+              <p className="text-faint text-sm">{t("No expenses in this window yet.")}</p>
             ) : (
               <div className="space-y-2">
                 {data.top_categories.map((c) => (

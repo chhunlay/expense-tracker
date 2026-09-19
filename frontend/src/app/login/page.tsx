@@ -8,8 +8,10 @@ import { ApiError } from "@/lib/api";
 import { login } from "@/lib/auth";
 import PasswordField from "@/components/PasswordField";
 import { WalletIcon } from "@/components/icons";
+import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -41,11 +43,11 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-card rounded-2xl p-6">
-          <h2 className="mb-4 text-lg font-bold">Log in</h2>
+          <h2 className="mb-4 text-lg font-bold">{t("Log in")}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-                Username
+                {t("Username")}
               </label>
               <input
                 type="text"
@@ -58,7 +60,7 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-                Password
+                {t("Password")}
               </label>
               <PasswordField value={password} onChange={setPassword} />
             </div>
@@ -68,13 +70,13 @@ export default function LoginPage() {
               disabled={loading}
               className="action-btn w-full rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
-              {loading ? "Logging in..." : "Log in"}
+              {loading ? "Logging in..." : t("Log in")}
             </button>
           </form>
           <p className="text-faint mt-4 text-center text-sm">
-            No account yet?{" "}
+            {t("No account yet?")}{" "}
             <Link href="/register" className="text-indigo-400 underline">
-              Create one
+              {t("Create one")}
             </Link>
           </p>
         </div>

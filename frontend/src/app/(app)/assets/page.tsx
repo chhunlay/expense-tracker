@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
+import { useTranslation } from "@/lib/i18n";
 import { ASSET_TYPES, Asset } from "@/types";
 
 function money(value: string): string {
@@ -22,6 +23,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  const { t } = useTranslation();
 
   async function handleSave() {
     setError(null);
@@ -41,7 +43,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this asset?")) return;
+    if (!confirm(t("Delete this asset?"))) return;
     try {
       await apiFetch(`/api/assets/${asset.id}`, { method: "DELETE" });
       onDeleted();
@@ -55,7 +57,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
       <summary className="flex cursor-pointer items-center justify-between text-sm">
         <span className="flex items-center gap-2">
           <span className="text-muted rounded-full bg-white/10 px-2 py-0.5 text-xs">
-            {ASSET_TYPES.find((t) => t.value === asset.asset_type)?.label}
+            {ASSET_TYPES.find((at) => at.value === asset.asset_type)?.label}
           </span>
           {asset.name}
         </span>
@@ -74,9 +76,9 @@ function AssetRow({ asset, onSaved, onDeleted }: {
             onChange={(e) => setAssetType(e.target.value as Asset["asset_type"])}
             className="input rounded-lg px-3 py-2 text-sm"
           >
-            {ASSET_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            {ASSET_TYPES.map((at) => (
+              <option key={at.value} value={at.value}>
+                {at.label}
               </option>
             ))}
           </select>
@@ -90,7 +92,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
         />
         <input
           type="text"
-          placeholder="Note (optional)"
+          placeholder={t("Note (optional)")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           className="input w-full rounded-lg px-3 py-2 text-sm"
@@ -103,7 +105,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
           onClick={handleDelete}
           className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
         >
-          Delete
+          {t("Delete")}
         </button>
         <button
           type="button"
@@ -111,7 +113,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
           disabled={saving}
           className="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
         >
-          Save
+          {t("Save")}
         </button>
       </div>
     </details>
@@ -119,6 +121,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
 }
 
 export default function AssetsPage() {
+  const { t } = useTranslation();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -169,9 +172,9 @@ export default function AssetsPage() {
     <>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold">Assets</h2>
+          <h2 className="text-lg font-bold">{t("Assets")}</h2>
           <p className="text-muted mt-0.5 text-xs">
-            Net worth: <span className="text-main font-semibold">{money(String(totalValue))}</span>
+            {t("Net worth")}: <span className="text-main font-semibold">{money(String(totalValue))}</span>
           </p>
         </div>
         <button
@@ -179,40 +182,44 @@ export default function AssetsPage() {
           onClick={openModal}
           className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
         >
-          + Add
+          + {t("Add")}
         </button>
       </div>
 
-      <Modal id="addAssetModal" open={modalOpen} onClose={() => setModalOpen(false)} title="Add an asset">
+      <Modal id="addAssetModal" open={modalOpen} onClose={() => setModalOpen(false)} title={t("Add an asset")}>
         <form onSubmit={handleAdd} className="space-y-4">
           <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Name</label>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              {t("Name")}
+            </label>
             <input
               type="text"
               required
-              placeholder="e.g. Savings account"
+              placeholder={t("e.g. Savings account")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input w-full rounded-xl px-3 py-2.5 text-sm"
             />
           </div>
           <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Type</label>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              {t("Type")}
+            </label>
             <select
               value={assetType}
               onChange={(e) => setAssetType(e.target.value as Asset["asset_type"])}
               className="input w-full rounded-xl px-3 py-2.5 text-sm"
             >
-              {ASSET_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              {ASSET_TYPES.map((at) => (
+                <option key={at.value} value={at.value}>
+                  {at.label}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              Current value
+              {t("Current value")}
             </label>
             <input
               type="number"
@@ -227,7 +234,7 @@ export default function AssetsPage() {
           </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              Note (optional)
+              {t("Note (optional)")}
             </label>
             <input
               type="text"
@@ -243,14 +250,14 @@ export default function AssetsPage() {
               onClick={() => setModalOpen(false)}
               className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
-              Add asset
+              {t("Add asset")}
             </button>
           </div>
         </form>
@@ -260,7 +267,7 @@ export default function AssetsPage() {
 
       <div className="glass-card rounded-2xl p-5">
         {assets.length === 0 ? (
-          <p className="text-faint text-sm">No assets yet. Add your first one.</p>
+          <p className="text-faint text-sm">{t("No assets yet. Add your first one.")}</p>
         ) : (
           <div className="space-y-2">
             {assets.map((a) => (

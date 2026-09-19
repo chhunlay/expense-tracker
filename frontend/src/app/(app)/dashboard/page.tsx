@@ -19,6 +19,7 @@ import { Doughnut, Line } from "react-chartjs-2";
 import { apiFetch, ApiError } from "@/lib/api";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
+import { useTranslation } from "@/lib/i18n";
 import { getStoredTrendHidden, setStoredTrendHidden } from "@/lib/theme";
 import { Summary, Transaction } from "@/types";
 
@@ -108,6 +109,7 @@ const TREND_RANGES = [
 ] as const;
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [monthStr, setMonthStr] = useState(currentMonth);
   const [trendRange, setTrendRange] = useState<string>("this_month");
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -207,26 +209,26 @@ export default function DashboardPage() {
           onClick={() => setMonthStr(shiftMonth(monthStr, -1))}
           className="nav-link rounded-lg px-3 py-1.5 text-sm font-medium"
         >
-          &larr; Prev
+          &larr; {t("Prev")}
         </button>
         <h2 className="text-lg font-bold">
           {new Date(`${monthStr}-01`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
         </h2>
         {isCurrentMonth ? (
-          <span className="text-faint px-3 py-1.5 text-sm">Next &rarr;</span>
+          <span className="text-faint px-3 py-1.5 text-sm">{t("Next")} &rarr;</span>
         ) : (
           <button
             type="button"
             onClick={() => setMonthStr(shiftMonth(monthStr, 1))}
             className="nav-link rounded-lg px-3 py-1.5 text-sm font-medium"
           >
-            Next &rarr;
+            {t("Next")} &rarr;
           </button>
         )}
       </div>
 
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-muted text-sm font-semibold">Overview</h3>
+        <h3 className="text-muted text-sm font-semibold">{t("Overview")}</h3>
         <button
           type="button"
           onClick={toggleHidden}
@@ -243,17 +245,17 @@ export default function DashboardPage() {
         <>
           <div className="mb-5 grid grid-cols-3 gap-3">
             <div className="kpi-card kpi-income rounded-2xl p-4">
-              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">Income</p>
+              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">{t("Income")}</p>
               <p className={`hideable-amount text-xl font-extrabold ${hidden ? "amount-hidden" : ""}`}>
                 {money(summary.income)}
               </p>
             </div>
             <div className="kpi-card kpi-expense rounded-2xl p-4">
-              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">Expenses</p>
+              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">{t("Expenses")}</p>
               <p className="text-xl font-extrabold">{money(summary.expense)}</p>
             </div>
             <div className="kpi-card kpi-net rounded-2xl p-4">
-              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">Net</p>
+              <p className="kpi-label mb-1 text-xs font-semibold uppercase tracking-wider">{t("Net")}</p>
               <p className={`hideable-amount text-xl font-extrabold ${hidden ? "amount-hidden" : ""}`}>
                 {money(summary.net)}
               </p>
@@ -441,9 +443,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="glass-card rounded-2xl p-5">
-              <h3 className="mb-3 font-bold">Where it went</h3>
+              <h3 className="mb-3 font-bold">{t("Where it went")}</h3>
               {summary.breakdown.length === 0 ? (
-                <p className="text-faint text-sm">No expenses logged this month yet.</p>
+                <p className="text-faint text-sm">{t("No expenses logged this month yet.")}</p>
               ) : (
                 <>
                   <Doughnut
@@ -478,7 +480,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="glass-card rounded-2xl p-5">
-              <h3 className="mb-3 font-bold">Budgets</h3>
+              <h3 className="mb-3 font-bold">{t("Budgets")}</h3>
               {summary.budget_progress.length === 0 ? (
                 <p className="text-faint text-sm">
                   No budgets set yet. Add a limit on the Categories page.
@@ -514,13 +516,13 @@ export default function DashboardPage() {
 
             <div className="glass-card rounded-2xl p-5">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-bold">Recent</h3>
+                <h3 className="font-bold">{t("Recent")}</h3>
                 <Link href="/transactions" className="text-sm font-medium text-indigo-400">
-                  View all &rarr;
+                  {t("View all")} &rarr;
                 </Link>
               </div>
               {recent.length === 0 ? (
-                <p className="text-faint text-sm">Nothing logged this month yet.</p>
+                <p className="text-faint text-sm">{t("Nothing logged this month yet.")}</p>
               ) : (
                 <div className="space-y-2">
                   {recent.map((r) => (
@@ -531,9 +533,13 @@ export default function DashboardPage() {
                           style={{ background: r.category_color || "#94a3b8" }}
                         />
                         <div className="min-w-0">
-                          <p className="truncate">{r.note || r.category_name || "Uncategorized"}</p>
+                          {/* Only the "Uncategorized" fallback gets
+                              translated - r.category_name is a user's
+                              own category name (arbitrary data, not
+                              app UI text), never run through t(). */}
+                          <p className="truncate">{r.note || r.category_name || t("Uncategorized")}</p>
                           <p className="text-faint text-xs">
-                            {r.date} &middot; {r.category_name || "Uncategorized"}
+                            {r.date} &middot; {r.category_name || t("Uncategorized")}
                           </p>
                         </div>
                       </div>
