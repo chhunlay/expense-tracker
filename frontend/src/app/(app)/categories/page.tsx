@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import ColorPicker from "@/components/ColorPicker";
 import Modal from "@/components/Modal";
-import { EditIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
 import { Category } from "@/types";
 
@@ -68,12 +67,9 @@ function CategoryRow({ category, onSaved, onDeleted }: {
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
           {category.name}
         </span>
-        <span className="flex items-center gap-2">
-          <span className="text-muted text-xs">
-            {money(category.spent_this_month)}
-            {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
-          </span>
-          <EditIcon className="text-muted h-3.5 w-3.5 flex-shrink-0" />
+        <span className="text-muted text-xs">
+          {money(category.spent_this_month)}
+          {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
         </span>
       </button>
       {open && (
