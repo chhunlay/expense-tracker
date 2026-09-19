@@ -50,7 +50,7 @@ from .schemas import (
     TransactionPatch,
 )
 from .security import TokenAuth
-from .services import get_daily_totals, get_monthly_totals
+from .services import get_daily_totals, get_monthly_totals, get_weekly_totals
 from .xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 router = Router()
@@ -268,8 +268,8 @@ TREND_RANGE_OFFSETS = {
     # Offsets (months back from the current month) included in each
     # named range, oldest first - anchored to today regardless of the
     # `month` param, which only navigates the KPI cards/breakdown.
-    # "current_month" isn't here - it gets day-level points instead,
-    # same as "this_week" (see summary() below).
+    # "this_month" isn't here - it gets weekly-bucketed points instead,
+    # same idea as "this_week"'s daily points (see summary() below).
     "last_month": [1],
     "last_3_months": [2, 1, 0],
     "last_6_months": [5, 4, 3, 2, 1, 0],
@@ -336,10 +336,17 @@ def summary(request, month: str = None, trend_range: str = "last_3_months"):
         week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
         days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
         mini_trend = get_daily_totals(request.auth, days)
-    elif trend_range == "current_month":
+    elif trend_range == "this_month":
         today = date.today()
-        days = [date(today.year, today.month, d).isoformat() for d in range(1, today.day + 1)]
-        mini_trend = get_daily_totals(request.auth, days)
+        buckets = []
+        cursor = date(today.year, today.month, 1)
+        week_num = 1
+        while cursor <= today:
+            bucket_end = min(cursor + timedelta(days=6), today)
+            buckets.append((f"Week {week_num}", cursor.isoformat(), bucket_end.isoformat()))
+            cursor = bucket_end + timedelta(days=1)
+            week_num += 1
+        mini_trend = get_weekly_totals(request.auth, buckets)
     else:
         mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
 

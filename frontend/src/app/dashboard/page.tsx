@@ -25,18 +25,21 @@ ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcEleme
 
 // Marks today's point on the trend chart, matching the dashed "Today"
 // divider from the reference forecast-chart screenshot the user
-// shared. Labels are either "YYYY-MM" (month ranges) or "YYYY-MM-DD"
-// (This Week's daily range) - This Week runs Monday through Sunday,
-// so today isn't always the last label (e.g. on a Wednesday, Thu-Sun
-// are still upcoming), unlike every month-based range which always
-// ends on the current month.
+// shared. Labels are "YYYY-MM" (month ranges), "YYYY-MM-DD" (This
+// Week's daily range), or "Week N" (This Month's weekly buckets) -
+// This Week runs Monday through Sunday, so today isn't always the
+// last label (e.g. on a Wednesday, Thu-Sun are still upcoming); This
+// Month's weekly buckets and every month-based range are instead
+// always built to end on today, so the last point works as a fallback
+// whenever the label isn't a recognizable date.
 const todayLinePlugin: Plugin<"line"> = {
   id: "todayLine",
   afterDraw(chart) {
     const labels = chart.data.labels as string[] | undefined;
     if (!labels || labels.length < 2) return;
     const todayIso = new Date().toISOString().slice(0, 10);
-    const index = labels.indexOf(labels[0].length > 7 ? todayIso : todayIso.slice(0, 7));
+    let index = labels.indexOf(labels[0].length > 7 ? todayIso : todayIso.slice(0, 7));
+    if (index === -1 && !labels[0].includes("-")) index = labels.length - 1;
     if (index === -1) return;
     const x = chart.scales.x.getPixelForValue(index);
     const { ctx, chartArea } = chart;
@@ -72,7 +75,7 @@ const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 const TREND_RANGES = [
   { value: "this_week", label: "This Week" },
-  { value: "current_month", label: "Current Month" },
+  { value: "this_month", label: "This Month" },
   { value: "last_month", label: "Last Month" },
   { value: "last_3_months", label: "Last 3 Months" },
   { value: "last_6_months", label: "Last 6 Months" },
