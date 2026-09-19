@@ -4,11 +4,108 @@ import { useEffect, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import Modal from "@/components/Modal";
 import { Category } from "@/types";
+
+function CategoryRow({ category, onSaved, onDeleted }: {
+  category: Category;
+  onSaved: () => void;
+  onDeleted: () => void;
+}) {
+  const [name, setName] = useState(category.name);
+  const [color, setColor] = useState(category.color);
+  const [budget, setBudget] = useState(category.budget_limit ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setError(null);
+    setSaving(true);
+    try {
+      await apiFetch(`/api/categories/${category.id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ name, color, budget_limit: budget || null }),
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't save category");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Delete this category? Its past transactions become Uncategorized.")) return;
+    try {
+      await apiFetch(`/api/categories/${category.id}/`, { method: "DELETE" });
+      onDeleted();
+    } catch {
+      setError("Couldn't delete category");
+    }
+  }
+
+  return (
+    <details className="input rounded-xl px-3 py-2.5">
+      <summary className="flex cursor-pointer items-center justify-between text-sm">
+        <span className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
+          {category.name}
+        </span>
+        {category.budget_limit && (
+          <span className="text-muted text-xs">budget ${category.budget_limit}</span>
+        )}
+      </summary>
+      <div className="mt-3 space-y-2">
+        <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="h-9 w-10 rounded-lg border-0 bg-transparent"
+          />
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Monthly budget (optional)"
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+          className="input w-full rounded-lg px-3 py-2 text-sm"
+        />
+      </div>
+      {error && <p className="text-neg mt-2 text-xs">{error}</p>}
+      <div className="mt-2 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
+        >
+          Save
+        </button>
+      </div>
+    </details>
+  );
+}
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6366f1");
   const [budget, setBudget] = useState("");
@@ -22,6 +119,14 @@ export default function CategoriesPage() {
 
   useEffect(loadCategories, []);
 
+  function openModal() {
+    setName("");
+    setColor("#6366f1");
+    setBudget("");
+    setError(null);
+    setModalOpen(true);
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -31,8 +136,7 @@ export default function CategoriesPage() {
         method: "POST",
         body: JSON.stringify({ name, color, budget_limit: budget || null }),
       });
-      setName("");
-      setBudget("");
+      setModalOpen(false);
       loadCategories();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't add category");
@@ -41,54 +145,77 @@ export default function CategoriesPage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Delete this category? Its past transactions become Uncategorized.")) return;
-    try {
-      await apiFetch(`/api/categories/${id}/`, { method: "DELETE" });
-      loadCategories();
-    } catch {
-      setError("Couldn't delete category");
-    }
-  }
-
   return (
     <AppShell>
-      <h2 className="mb-4 text-lg font-bold">Categories</h2>
-
-      <form onSubmit={handleAdd} className="glass-card mb-5 grid grid-cols-2 gap-3 rounded-2xl p-4 sm:grid-cols-4">
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-          className="h-10 w-full rounded-lg border-0 bg-transparent"
-        />
-        <input
-          type="text"
-          required
-          placeholder="Category name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="input rounded-xl px-3 py-2 text-sm"
-        />
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="Monthly budget (optional)"
-          value={budget}
-          onChange={(e) => setBudget(e.target.value)}
-          className="input rounded-xl px-3 py-2 text-sm"
-        />
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-bold">Categories</h2>
         <button
-          type="submit"
-          disabled={saving}
-          className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
+          type="button"
+          onClick={openModal}
+          className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
         >
           + Add
         </button>
-      </form>
+      </div>
 
-      {error && <p className="text-neg mb-3 text-sm">{error}</p>}
+      <Modal id="addCategoryModal" open={modalOpen} onClose={() => setModalOpen(false)} title="Add a category">
+        <form onSubmit={handleAdd} className="space-y-4">
+          <div>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              Name &amp; color
+            </label>
+            <div className="grid grid-cols-[auto_1fr] gap-2">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-10 w-10 rounded-lg border-0 bg-transparent"
+              />
+              <input
+                type="text"
+                required
+                placeholder="Category name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input rounded-xl px-3 py-2.5 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+              Monthly budget (optional)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              className="input w-full rounded-xl px-3 py-2.5 text-sm"
+            />
+          </div>
+          {error && <p className="text-neg text-sm">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
+            >
+              Add category
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {error && !modalOpen && <p className="text-neg mb-3 text-sm">{error}</p>}
 
       <div className="glass-card rounded-2xl p-5">
         {categories.length === 0 ? (
@@ -96,20 +223,7 @@ export default function CategoriesPage() {
         ) : (
           <div className="space-y-2">
             {categories.map((c) => (
-              <div key={c.id} className="input flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
-                  {c.name}
-                  {c.budget_limit && <span className="text-faint text-xs">budget ${c.budget_limit}</span>}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(c.id)}
-                  className="text-neg rounded-lg bg-white/5 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
-                >
-                  Delete
-                </button>
-              </div>
+              <CategoryRow key={c.id} category={c} onSaved={loadCategories} onDeleted={loadCategories} />
             ))}
           </div>
         )}
