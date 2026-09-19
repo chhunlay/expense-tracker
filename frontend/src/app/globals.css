@@ -57,6 +57,19 @@ body {
   color: var(--text-main);
 }
 
+/* Everything below lives in Tailwind's own "utilities" layer (instead of
+   staying unlayered) so it competes with Tailwind's hover/state utilities
+   on normal specificity terms. Per the CSS Cascade Layers spec, an
+   unlayered rule always beats a layered one regardless of specificity -
+   so e.g. `.text-muted { color: ... }` declared unlayered was silently
+   winning over `hover:text-indigo-400:hover` every time, no matter which
+   came later in the file. Moving our classes into the same layer
+   Tailwind's utilities already use restores normal cascade rules, where
+   a two-class hover selector like `.hover\:text-indigo-400:hover`
+   (0,2,0) correctly outranks a plain one-class rule like `.text-muted`
+   (0,1,0). */
+@layer utilities {
+
 .glass-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -223,3 +236,5 @@ dialog[open] {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+} /* end @layer utilities */

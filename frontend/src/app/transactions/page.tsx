@@ -386,7 +386,7 @@ export default function TransactionsPage() {
                         onClick={() => openEditModal(r)}
                         aria-label="Edit transaction"
                         title="Edit"
-                        className="text-muted hover:text-main inline-flex rounded-lg p-1.5 transition-colors hover:bg-white/10"
+                        className="text-muted inline-flex rounded-lg p-1.5 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
                       >
                         <EditIcon />
                       </button>
