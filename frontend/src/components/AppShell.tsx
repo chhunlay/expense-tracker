@@ -9,11 +9,13 @@ import { logout } from "@/lib/auth";
 import { onProfileUpdate } from "@/lib/profile";
 import { getStoredSidebarHeaderStyle, onSidebarHeaderStyleChange, SidebarHeaderStyle } from "@/lib/theme";
 import { Profile } from "@/types";
+import Modal from "./Modal";
 import ThemeToggle from "./ThemeToggle";
 import {
   AssetsIcon,
   CategoriesIcon,
   DashboardIcon,
+  LogoIcon,
   LogoutIcon,
   ReportsIcon,
   SettingsIcon,
@@ -83,8 +85,8 @@ function SidebarBrand({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
-        💰
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow-lg shadow-indigo-500/20">
+        <LogoIcon width={20} height={20} />
       </div>
       <div className="mt-0.5 min-w-0">
         <h1 className={`${titleSize} font-extrabold tracking-tight`}>Expense Tracker</h1>
@@ -111,6 +113,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [headerStyle, setHeaderStyle] = useState<SidebarHeaderStyle>("app");
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     // This effect exists specifically to read an external system
@@ -134,11 +137,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => onSidebarHeaderStyleChange(setHeaderStyle), []);
   useEffect(() => onProfileUpdate(setProfile), []);
 
+  useEffect(() => {
+    // Only ever points the tab icon at the user's own uploaded
+    // favicon (Settings' "Favicon" card) - when they haven't set one,
+    // this does nothing and the browser keeps using the app's static
+    // src/app/favicon.ico as normal. There's no "reset" path since
+    // nothing here ever points it anywhere else.
+    if (!profile?.favicon) return;
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = `${API_BASE_URL}${profile.favicon}`;
+  }, [profile?.favicon]);
+
   if (!checked) return null;
 
   const displayName = profile?.full_name || profile?.email || profile?.username || "";
 
   function handleLogout() {
+    setLogoutConfirmOpen(false);
     logout();
     router.replace("/login");
   }
@@ -176,7 +196,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto flex items-center justify-between gap-2 pt-5">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setLogoutConfirmOpen(true)}
             className="sidebar-link flex flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold"
           >
             <LogoutIcon /> Log out
@@ -206,7 +226,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               ))}
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="nav-link flex-shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold"
               >
                 Log out
@@ -217,6 +237,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      <Modal
+        id="logoutConfirmModal"
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        title="Log out?"
+      >
+        <p className="text-muted mb-4 text-sm">You&apos;ll need to sign in again to get back in.</p>
+        <div className="flex gap-2">
+          {/* The safe default gets the prominent/solid styling and
+              autofocus (so Enter picks it) - "Yes" stays the one that
+              needs a deliberate click, not this one blending into the
+              background next to a bold red button. */}
+          <button
+            type="button"
+            autoFocus
+            onClick={() => setLogoutConfirmOpen(false)}
+            className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
+          >
+            No
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="action-btn text-neg flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-rose-500/20"
+          >
+            Yes, log out
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

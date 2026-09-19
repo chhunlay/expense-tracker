@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
 import { DownloadIcon, EditIcon, UploadIcon } from "@/components/icons";
 import { Category, Transaction } from "@/types";
@@ -148,7 +147,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Transactions</h2>
         <div className="flex flex-wrap gap-2">
@@ -398,6 +397,6 @@ export default function TransactionsPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

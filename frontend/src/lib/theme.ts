@@ -4,9 +4,14 @@
 const THEME_KEY = "expense-tracker-theme";
 const ACCENT_KEY = "expense-tracker-accent-color";
 const SIDEBAR_HEADER_KEY = "expense-tracker-sidebar-header-style";
+const TREND_HIDDEN_KEY = "expense-tracker-trend-hidden-datasets";
 export const DEFAULT_ACCENT = "#f97316";
 
-export type Theme = "dark" | "light";
+// "system" follows the OS/browser's prefers-color-scheme instead of a
+// fixed choice - resolveTheme() below turns it into an actual
+// "dark"/"light" to apply, since CSS only knows those two.
+export type Theme = "dark" | "light" | "system";
+export type ResolvedTheme = "dark" | "light";
 // "app" is the original "Expense Tracker" logo + username subtitle;
 // "user" swaps it for the signed-in user's own avatar/name instead -
 // see the Settings page's "Sidebar header" picker.
@@ -15,7 +20,7 @@ export type SidebarHeaderStyle = "app" | "user";
 export function getStoredTheme(): Theme | null {
   try {
     const value = localStorage.getItem(THEME_KEY);
-    return value === "light" || value === "dark" ? value : null;
+    return value === "light" || value === "dark" || value === "system" ? value : null;
   } catch {
     return null;
   }
@@ -29,8 +34,34 @@ export function setStoredTheme(theme: Theme) {
   }
 }
 
-export function applyTheme(theme: Theme) {
+export function resolveTheme(theme: Theme): ResolvedTheme {
+  if (theme === "light" || theme === "dark") return theme;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+export function applyTheme(theme: ResolvedTheme) {
   document.documentElement.setAttribute("data-theme", theme);
+}
+
+const THEME_EVENT = "expense-tracker-theme-preference-change";
+
+/** Stores the preference, applies its resolved value, and broadcasts
+ * the change - the single entry point for changing the theme, used by
+ * both ThemeToggle (always an explicit light/dark) and the Settings
+ * page's Appearance picker (which can also set "system"). Same
+ * same-tab-live-update need as SIDEBAR_HEADER_EVENT below. */
+export function setThemePreference(theme: Theme) {
+  setStoredTheme(theme);
+  applyTheme(resolveTheme(theme));
+  window.dispatchEvent(new CustomEvent<Theme>(THEME_EVENT, { detail: theme }));
+}
+
+export function onThemePreferenceChange(callback: (theme: Theme) => void): () => void {
+  function handler(e: Event) {
+    callback((e as CustomEvent<Theme>).detail);
+  }
+  window.addEventListener(THEME_EVENT, handler);
+  return () => window.removeEventListener(THEME_EVENT, handler);
 }
 
 export function getStoredAccent(): string | null {
@@ -91,6 +122,30 @@ export function onSidebarHeaderStyleChange(callback: (style: SidebarHeaderStyle)
   return () => window.removeEventListener(SIDEBAR_HEADER_EVENT, handler);
 }
 
+/** Which of Income/Expense/Net are toggled off the Dashboard's Trend
+ * chart - shared between the chart's own legend (click to toggle) and
+ * the Settings page's "Trend chart series" checkboxes, both reading
+ * and writing the same key so either one stays in sync with the
+ * other (via a fresh mount - Settings and the Dashboard are separate
+ * pages, never mounted at once, so no live-update event is needed
+ * here the way SIDEBAR_HEADER_EVENT is for same-page changes). */
+export function getStoredTrendHidden(): Set<string> {
+  try {
+    const raw = localStorage.getItem(TREND_HIDDEN_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function setStoredTrendHidden(hidden: Set<string>) {
+  try {
+    localStorage.setItem(TREND_HIDDEN_KEY, JSON.stringify([...hidden]));
+  } catch {
+    // ignore - see api.ts's setToken for the same tradeoff
+  }
+}
+
 /** Inline script source, run from <head> before paint (see layout.tsx)
  * so the page never flashes the wrong theme/accent color while React
  * hydrates. */
@@ -98,6 +153,9 @@ export const THEME_INIT_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem('${THEME_KEY}');
+    // Unset (first-ever visit) and 'system' both resolve the same way -
+    // via the OS/browser preference - only an explicit 'light'/'dark'
+    // choice skips that lookup.
     var theme = stored === 'light' || stored === 'dark'
       ? stored
       : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');

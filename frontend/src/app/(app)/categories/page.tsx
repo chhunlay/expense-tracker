@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
 import { Category } from "@/types";
 
@@ -156,7 +155,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold">Categories</h2>
         <button
@@ -238,6 +237,6 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

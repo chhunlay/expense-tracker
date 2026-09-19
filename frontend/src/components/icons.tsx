@@ -153,6 +153,62 @@ export function PhoneIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Solid-filled (not stroke-outline like the rest of this file) - used
+// by ThemeToggle's pill switch, replacing the plain moon/sun emoji it
+// used before, to match the reference icon style the user shared.
+function FilledIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0"
+      aria-hidden="true"
+      {...props}
+    />
+  );
+}
+
+// The app's own mark (a segmented pie/donut ring around a solid
+// coin) - recreated from the reference the user shared, replacing the
+// generic 💰 emoji previously used for the sidebar logo and the
+// Settings favicon card's default placeholder. Single-tone
+// (currentColor), like the rest of this file's icons, so it stays
+// legible tinted any color - unlike the standalone two-tone black/
+// white version at src/app/icon.svg (the actual browser tab icon,
+// Next.js's App Router convention), which isn't currentColor-tinted
+// and can safely add a white "$" cutout on the black coin. Keep the
+// ring/coin path in sync between the two if it ever changes.
+export function LogoIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <FilledIcon width={20} height={20} {...props}>
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M11 2.05a10 10 0 0 0-3.518 18.635l1.554-3.226A6 6 0 0 1 11 6.083V2.05Zm2 0v4.033a6 6 0 0 1 3.518 1.409l3.15-2.522A9.98 9.98 0 0 0 13 2.05Zm7.94 4.522-3.15 2.522A5.98 5.98 0 0 1 18 12c0 1.264-.402 2.434-1.086 3.39l3.237 2.148A9.96 9.96 0 0 0 22 12a9.96 9.96 0 0 0-1.06-4.478v-.95ZM16.086 16.39a5.98 5.98 0 0 1-3.32 1.518l.234 3.987a9.98 9.98 0 0 0 6.323-3.357l-3.237-2.148ZM10.966 21.895l-.234-3.987a6.02 6.02 0 0 1-2.696-1.05l-1.554 3.226a9.96 9.96 0 0 0 4.484 1.81ZM12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z"
+      />
+    </FilledIcon>
+  );
+}
+
+export function MoonIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <FilledIcon {...props}>
+      <path d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+    </FilledIcon>
+  );
+}
+
+export function SunIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <FilledIcon {...props}>
+      <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.834 18.894a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 1 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59ZM6 12a.75.75 0 0 1-.75.75H3a.75.75 0 0 1 0-1.5h2.25A.75.75 0 0 1 6 12ZM6.697 7.757a.75.75 0 0 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591Z" />
+    </FilledIcon>
+  );
+}
+
 export function EyeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

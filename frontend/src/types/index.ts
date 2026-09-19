@@ -58,12 +58,14 @@ export interface Summary {
   breakdown: BreakdownItem[];
   budget_progress: BudgetProgressItem[];
   mini_trend: MonthlyTotal[];
+  trend_label: string;
 }
 
 export interface Profile {
   username: string;
   picture: string | null;
-  theme: "dark" | "light";
+  favicon: string | null;
+  theme: "dark" | "light" | "system";
   language: string;
   full_name: string;
   email: string;

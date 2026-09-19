@@ -17,9 +17,9 @@ import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
+import { getStoredTrendHidden, setStoredTrendHidden } from "@/lib/theme";
 import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
@@ -70,6 +70,25 @@ function money(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Highest and average value across the Trend chart's current points
+ * for one series - shown under the "Analytics" heading, per series,
+ * only for series that aren't toggled off in the chart's legend. */
+function seriesStats(values: number[]): { high: number; avg: number } {
+  if (values.length === 0) return { high: 0, avg: 0 };
+  return { high: Math.max(...values), avg: values.reduce((sum, v) => sum + v, 0) / values.length };
+}
+
+/** What one Trend chart point actually spans for a given trend_range -
+ * This Week is daily points, This Month is weekly buckets, everything
+ * else is one point per month (mirrors api.py's summary() endpoint).
+ * Labels the "Avg" stat with it (e.g. "Avg/week") since an average
+ * without a unit is ambiguous once the chart's granularity changes. */
+function avgUnitLabel(trendRange: string): string {
+  if (trendRange === "this_week") return "day";
+  if (trendRange === "this_month") return "week";
+  return "month";
+}
+
 function shiftMonth(monthStr: string, delta: number): string {
   const [y, m] = monthStr.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
@@ -77,7 +96,6 @@ function shiftMonth(monthStr: string, delta: number): string {
 }
 
 const HIDE_KEY = "expense-tracker-hide-amounts";
-const TREND_HIDDEN_KEY = "expense-tracker-trend-hidden-datasets";
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 const TREND_RANGES = [
@@ -109,8 +127,7 @@ export default function DashboardPage() {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setHidden(localStorage.getItem(HIDE_KEY) === "1");
-      const raw = localStorage.getItem(TREND_HIDDEN_KEY);
-      if (raw) setHiddenDatasets(new Set(JSON.parse(raw)));
+      setHiddenDatasets(getStoredTrendHidden());
     } catch {
       // ignore - see lib/api.ts's setToken for the same tradeoff
     }
@@ -145,16 +162,21 @@ export default function DashboardPage() {
     }
   }
 
+  // Income/Expense/Net - kept as a bare count here since the legend
+  // click handler only needs to know how many series exist, not their
+  // colors/labels (those live inline in the chart's `datasets`
+  // below). Matches TREND_SERIES's length in the Settings page,
+  // which enforces the same "at least one visible" rule.
+  const TREND_SERIES_COUNT = 3;
+
   function toggleTrendDataset(label: string) {
     setHiddenDatasets((prev) => {
+      const isCurrentlyVisible = !prev.has(label);
+      if (isCurrentlyVisible && TREND_SERIES_COUNT - prev.size <= 1) return prev;
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      try {
-        localStorage.setItem(TREND_HIDDEN_KEY, JSON.stringify([...next]));
-      } catch {
-        // ignore
-      }
+      if (isCurrentlyVisible) next.add(label);
+      else next.delete(label);
+      setStoredTrendHidden(next);
       return next;
     });
   }
@@ -178,7 +200,7 @@ export default function DashboardPage() {
   const isCurrentMonth = monthStr === currentMonth();
 
   return (
-    <AppShell>
+    <>
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -280,8 +302,39 @@ export default function DashboardPage() {
 
           <div className="mb-5 grid gap-5 lg:grid-cols-3">
             <div className="glass-card rounded-2xl p-5 lg:col-span-2">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="font-bold">Trend</h3>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold">Analytics</h3>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {(() => {
+                      const visible = (
+                        [
+                          ["Income", "#10b981", summary.mini_trend.map((m) => m.income)],
+                          ["Expense", "#f43f5e", summary.mini_trend.map((m) => m.expense)],
+                          ["Net", "#6366f1", summary.mini_trend.map((m) => m.net)],
+                        ] as [string, string, number[]][]
+                      ).filter(([label]) => !hiddenDatasets.has(label));
+                      // With only one series showing, which one it is
+                      // is already obvious (it's the only line/legend
+                      // item left on the chart), so the label prefix
+                      // is just noise.
+                      const showLabel = visible.length > 1;
+                      return visible.map(([label, color, values]) => {
+                        const { high, avg } = seriesStats(values);
+                        return (
+                          <span key={label} className="text-faint text-xs">
+                            {showLabel && (
+                              <span className="font-semibold" style={{ color }}>
+                                {label}{" "}
+                              </span>
+                            )}
+                            High {money(high)} &middot; Avg/{avgUnitLabel(trendRange)} {money(avg)}
+                          </span>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
                 <select
                   value={trendRange}
                   onChange={(e) => setTrendRange(e.target.value)}
@@ -309,6 +362,15 @@ export default function DashboardPage() {
                   // "curving" even where nothing changed. Monotone
                   // interpolation stays flat where the data is flat
                   // and only curves where there's an actual change.
+                  // Filtered out entirely, not just marked `hidden` -
+                  // Chart.js's default legend renders an entry (struck
+                  // through) for every dataset regardless of `hidden`,
+                  // which still reads as "3 series" even when only one
+                  // line is actually drawn. Leaving a hidden series out
+                  // of the array altogether means its legend entry
+                  // disappears too; re-enabling it only through
+                  // Settings/here (see toggleTrendDataset's min-1
+                  // guard) is an acceptable tradeoff for that.
                   datasets: [
                     {
                       label: "Income",
@@ -316,10 +378,9 @@ export default function DashboardPage() {
                       borderColor: "#10b981",
                       backgroundColor: "rgba(16, 185, 129, 0.08)",
                       fill: false,
-                      cubicInterpolationMode: "monotone",
+                      cubicInterpolationMode: "monotone" as const,
                       pointRadius: 3,
                       pointBackgroundColor: "#10b981",
-                      hidden: hiddenDatasets.has("Income"),
                     },
                     {
                       label: "Expense",
@@ -327,10 +388,9 @@ export default function DashboardPage() {
                       borderColor: "#f43f5e",
                       backgroundColor: "rgba(244, 63, 94, 0.08)",
                       fill: false,
-                      cubicInterpolationMode: "monotone",
+                      cubicInterpolationMode: "monotone" as const,
                       pointRadius: 3,
                       pointBackgroundColor: "#f43f5e",
-                      hidden: hiddenDatasets.has("Expense"),
                     },
                     {
                       label: "Net",
@@ -338,12 +398,11 @@ export default function DashboardPage() {
                       borderColor: "#6366f1",
                       backgroundColor: "rgba(99, 102, 241, 0.15)",
                       fill: true,
-                      cubicInterpolationMode: "monotone",
+                      cubicInterpolationMode: "monotone" as const,
                       pointRadius: 3,
                       pointBackgroundColor: "#6366f1",
-                      hidden: hiddenDatasets.has("Net"),
                     },
-                  ],
+                  ].filter((d) => !hiddenDatasets.has(d.label)),
                 }}
                 options={{
                   layout: { padding: { top: 16 } },
@@ -358,24 +417,25 @@ export default function DashboardPage() {
                       // Persists which lines are toggled off to
                       // localStorage (via toggleTrendDataset), instead
                       // of only living in Chart.js's own in-memory
-                      // legend state, which reset on every reload.
-                      onClick: (_e, legendItem, legend) => {
-                        const index = legendItem.datasetIndex;
-                        if (index === undefined) return;
-                        const chart = legend.chart;
-                        if (chart.isDatasetVisible(index)) {
-                          chart.hide(index);
-                          legendItem.hidden = true;
-                        } else {
-                          chart.show(index);
-                          legendItem.hidden = false;
-                        }
-                        toggleTrendDataset(legendItem.text);
+                      // legend state, which reset on every reload. The
+                      // dataset array above is already filtered down
+                      // to visible series, so clicking a legend entry
+                      // only ever means "hide this one" - no
+                      // chart.hide()/show() needed, React just
+                      // re-renders with one fewer dataset (or refuses
+                      // to, via toggleTrendDataset's min-1 guard).
+                      onClick: (_e, legendItem) => {
+                        if (legendItem.text) toggleTrendDataset(legendItem.text);
                       },
                     },
                   },
                 }}
-                plugins={[createTodayLinePlugin(getTodayIndexForRange(trendRange))]}
+                // Only meaningful when looking at the actual current
+                // month - Prev/Next now shifts every trend_range's
+                // anchor to the navigated month server-side (see
+                // month_anchor() in api.py), so a past/future month
+                // has no "today" point to mark at all.
+                plugins={isCurrentMonth ? [createTodayLinePlugin(getTodayIndexForRange(trendRange))] : []}
                 height={140}
               />
             </div>
@@ -491,6 +551,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-    </AppShell>
+    </>
   );
 }

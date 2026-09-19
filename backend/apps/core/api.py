@@ -266,11 +266,18 @@ def upload_profile_picture(request, picture: UploadedFile = File(...)):
     return profile
 
 
+@router.post("/profile/favicon", response=ProfileOut, auth=auth)
+def upload_favicon(request, favicon: UploadedFile = File(...)):
+    profile = request.auth.profile
+    profile.favicon = favicon
+    profile.save()
+    return profile
+
+
 # ---------- Dashboard / Reports ----------
 TREND_RANGE_OFFSETS = {
-    # Offsets (months back from the current month) included in each
-    # named range, oldest first - anchored to today regardless of the
-    # `month` param, which only navigates the KPI cards/breakdown.
+    # Offsets (months back from the anchor month) included in each
+    # named range, oldest first.
     # "this_month" isn't here - it gets weekly-bucketed points instead,
     # same idea as "this_week"'s daily points (see summary() below).
     "last_month": [1],
@@ -279,8 +286,26 @@ TREND_RANGE_OFFSETS = {
 }
 
 
-def trend_months(trend_range: str) -> list[str]:
-    y, m = date.today().year, date.today().month
+def month_anchor(month_str: str) -> date:
+    """The reference point every trend_range is computed relative to -
+    real today when `month_str` is the current calendar month, or that
+    month's last day otherwise. Every trend/breakdown calculation used
+    to anchor to date.today() unconditionally, which meant the Trend
+    chart and "Where it went" never changed when Prev/Next navigated
+    to a different month - only the KPI cards did. Anchoring to the
+    navigated month instead makes Prev/Next actually affect them too,
+    while still behaving exactly as before when `month_str` is the
+    current month (the common case)."""
+    y, m = (int(p) for p in month_str.split("-"))
+    today = date.today()
+    if (y, m) == (today.year, today.month):
+        return today
+    _, next_month_start = month_bounds(month_str)
+    return date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
+
+
+def trend_months(trend_range: str, anchor: date) -> list[str]:
+    y, m = anchor.year, anchor.month
     if trend_range == "current_year":
         offsets = list(range(m - 1, -1, -1))
     else:
@@ -292,6 +317,42 @@ def trend_months(trend_range: str) -> list[str]:
     return months
 
 
+def trend_date_bounds(trend_range: str, anchor: date) -> tuple[date, date]:
+    """The same window each trend_range's chart points span (inclusive
+    on both ends) - used to scope the "Where it went" breakdown to
+    match whatever the Trend chart is currently showing, and to build
+    the human-readable label under the Trend heading. Kept separate
+    from trend_months()/the day/week bucket logic in summary() below,
+    which need the window broken into points rather than one range."""
+    if trend_range == "this_week":
+        start = anchor - timedelta(days=anchor.weekday())
+        return start, start + timedelta(days=6)
+    if trend_range == "this_month":
+        start = date(anchor.year, anchor.month, 1)
+        _, next_month_start = month_bounds(anchor.strftime("%Y-%m"))
+        end = date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
+        return start, end
+    if trend_range == "last_month":
+        y, m = shift_month(anchor.year, anchor.month, -1)
+        end = date(anchor.year, anchor.month, 1) - timedelta(days=1)
+        return date(y, m, 1), end
+    if trend_range == "current_year":
+        return date(anchor.year, 1, 1), anchor
+    months_back = {"last_6_months": 5}.get(trend_range, 2)  # last_3_months + fallback
+    y, m = shift_month(anchor.year, anchor.month, -months_back)
+    return date(y, m, 1), anchor
+
+
+def format_trend_label(trend_range: str, start: date, end: date) -> str:
+    if trend_range == "this_week":
+        return f"{start.strftime('%b')} {start.day} – {end.strftime('%b')} {end.day}, {end.year}"
+    if trend_range in ("this_month", "last_month"):
+        return start.strftime("%B %Y")
+    if start.year == end.year:
+        return f"{start.strftime('%b')} – {end.strftime('%b %Y')}"
+    return f"{start.strftime('%b %Y')} – {end.strftime('%b %Y')}"
+
+
 @router.get("/summary", response=SummaryOut, auth=auth)
 def summary(request, month: str = None, trend_range: str = "this_month"):
     """Everything the Dashboard renders for one month - the same
@@ -299,6 +360,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     net, net worth, the category breakdown, budget progress bars, and
     a 6-month trend for the mini chart), as one call."""
     month_str = month or date.today().strftime("%Y-%m")
+    anchor = month_anchor(month_str)
     start, end = month_bounds(month_str)
     rows = list(
         Transaction.objects.filter(user=request.auth, date__gte=start, date__lt=end).select_related("category")
@@ -307,24 +369,21 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     expense = sum(float(t.amount) for t in rows if t.type == Transaction.EXPENSE)
     net_worth = float(Asset.objects.filter(user=request.auth).aggregate(t=Sum("value"))["t"] or 0)
 
-    breakdown_totals: dict[str, float] = {}
-    breakdown_colors: dict[str, str] = {}
+    # Budgets stay scoped to the navigated calendar month (a monthly
+    # budget_limit compared against anything else wouldn't mean much),
+    # so this dict is built from `rows` and used only for that.
+    month_expense_totals: dict[str, float] = {}
     for t in rows:
         if t.type != Transaction.EXPENSE:
             continue
         name = t.category.name if t.category else "Uncategorized"
-        breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
-        breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
-    breakdown = [
-        {"name": name, "amount": amount, "color": breakdown_colors[name]}
-        for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
-    ]
+        month_expense_totals[name] = month_expense_totals.get(name, 0.0) + float(t.amount)
 
     budget_progress = []
     for c in Category.objects.filter(user=request.auth):
         if not c.budget_limit:
             continue
-        spent = breakdown_totals.get(c.name, 0.0)
+        spent = month_expense_totals.get(c.name, 0.0)
         limit = float(c.budget_limit)
         budget_progress.append({
             "name": c.name,
@@ -335,19 +394,37 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
             "over": spent > limit,
         })
 
+    # "Where it went" instead follows the Trend chart's own filter
+    # (trend_range), not the month nav - so it's built from its own
+    # query over trend_date_bounds() rather than reusing `rows`.
+    trend_start, trend_end = trend_date_bounds(trend_range, anchor)
+    breakdown_rows = Transaction.objects.filter(
+        user=request.auth, type=Transaction.EXPENSE, date__gte=trend_start, date__lte=trend_end
+    ).select_related("category")
+    breakdown_totals: dict[str, float] = {}
+    breakdown_colors: dict[str, str] = {}
+    for t in breakdown_rows:
+        name = t.category.name if t.category else "Uncategorized"
+        breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
+        breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
+    breakdown = [
+        {"name": name, "amount": amount, "color": breakdown_colors[name]}
+        for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
+    ]
+    trend_label = format_trend_label(trend_range, trend_start, trend_end)
+
     if trend_range == "this_week":
-        week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
+        week_start = anchor - timedelta(days=anchor.weekday())  # Monday
         days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
         mini_trend = get_daily_totals(request.auth, days)
     elif trend_range == "this_month":
-        today = date.today()
         # Runs through the month's last day (like "this_week" running
-        # through Sunday), not just up to today - future weeks report
-        # zero until transactions land in them.
-        _, next_month_start = month_bounds(today.strftime("%Y-%m"))
+        # through Sunday), not just up to the anchor - future weeks
+        # report zero until transactions land in them.
+        _, next_month_start = month_bounds(anchor.strftime("%Y-%m"))
         month_end = date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
         buckets = []
-        cursor = date(today.year, today.month, 1)
+        cursor = date(anchor.year, anchor.month, 1)
         week_num = 1
         while cursor <= month_end:
             bucket_end = min(cursor + timedelta(days=6), month_end)
@@ -356,7 +433,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
             week_num += 1
         mini_trend = get_weekly_totals(request.auth, buckets)
     else:
-        mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
+        mini_trend = get_monthly_totals(request.auth, trend_months(trend_range, anchor))
 
     return {
         "month": month_str,
@@ -367,6 +444,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
         "breakdown": breakdown,
         "budget_progress": budget_progress,
         "mini_trend": mini_trend,
+        "trend_label": trend_label,
     }
 
 
