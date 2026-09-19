@@ -70,6 +70,14 @@ function money(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Highest and average value across the Trend chart's current points
+ * for one series - shown under the "Analytics" heading, per series,
+ * only for series that aren't toggled off in the chart's legend. */
+function seriesStats(values: number[]): { high: number; avg: number } {
+  if (values.length === 0) return { high: 0, avg: 0 };
+  return { high: Math.max(...values), avg: values.reduce((sum, v) => sum + v, 0) / values.length };
+}
+
 function shiftMonth(monthStr: string, delta: number): string {
   const [y, m] = monthStr.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
@@ -284,6 +292,27 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="font-bold">Analytics</h3>
                   <p className="text-faint text-xs">{summary.trend_label}</p>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {(
+                      [
+                        ["Income", "#10b981", summary.mini_trend.map((m) => m.income)],
+                        ["Expense", "#f43f5e", summary.mini_trend.map((m) => m.expense)],
+                        ["Net", "#6366f1", summary.mini_trend.map((m) => m.net)],
+                      ] as [string, string, number[]][]
+                    )
+                      .filter(([label]) => !hiddenDatasets.has(label))
+                      .map(([label, color, values]) => {
+                        const { high, avg } = seriesStats(values);
+                        return (
+                          <span key={label} className="text-faint text-xs">
+                            <span className="font-semibold" style={{ color }}>
+                              {label}
+                            </span>{" "}
+                            High {money(high)} &middot; Avg {money(avg)}
+                          </span>
+                        );
+                      })}
+                  </div>
                 </div>
                 <select
                   value={trendRange}
