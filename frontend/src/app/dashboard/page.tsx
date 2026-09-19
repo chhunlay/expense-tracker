@@ -11,6 +11,7 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
+import type { Plugin } from "chart.js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
@@ -21,6 +22,34 @@ import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
+
+// Marks the current month's point on the trend chart, matching the
+// dashed "Today" divider from the reference forecast-chart screenshot
+// the user shared - every trend_range ends at the current month, so
+// that's always the last label.
+const todayLinePlugin: Plugin<"line"> = {
+  id: "todayLine",
+  afterDraw(chart) {
+    const labels = chart.data.labels as string[] | undefined;
+    if (!labels || labels.length < 2) return;
+    const x = chart.scales.x.getPixelForValue(labels.length - 1);
+    const { ctx, chartArea } = chart;
+    ctx.save();
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "600 10px system-ui, sans-serif";
+    ctx.textAlign = x > chartArea.right - 40 ? "right" : "left";
+    ctx.fillText("Today", x + (ctx.textAlign === "right" ? -6 : 6), chartArea.top + 12);
+    ctx.restore();
+  },
+};
 
 function money(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -45,7 +74,7 @@ const TREND_RANGES = [
 
 export default function DashboardPage() {
   const [monthStr, setMonthStr] = useState(currentMonth);
-  const [trendRange, setTrendRange] = useState<string>("current_month");
+  const [trendRange, setTrendRange] = useState<string>("last_3_months");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -229,44 +258,50 @@ export default function DashboardPage() {
                   labels: summary.mini_trend.map((m) => m.month),
                   datasets: [
                     {
+                      // Same accent colors as the KPI cards above
+                      // (.kpi-net/.kpi-income/.kpi-expense in
+                      // globals.css) so the chart reads as an
+                      // extension of them, not a separate palette.
                       label: "Net",
                       data: summary.mini_trend.map((m) => m.net),
-                      borderColor: "#818cf8",
-                      backgroundColor: "rgba(129, 140, 248, 0.15)",
+                      borderColor: "#6366f1",
+                      backgroundColor: "rgba(99, 102, 241, 0.15)",
                       fill: true,
                       tension: 0.3,
                       pointRadius: 3,
-                      pointBackgroundColor: summary.mini_trend.map((m) => (m.net >= 0 ? "#34d399" : "#f87171")),
+                      pointBackgroundColor: "#6366f1",
                     },
                     {
                       label: "Income",
                       data: summary.mini_trend.map((m) => m.income),
-                      borderColor: "#34d399",
-                      backgroundColor: "rgba(52, 211, 153, 0.08)",
+                      borderColor: "#10b981",
+                      backgroundColor: "rgba(16, 185, 129, 0.08)",
                       fill: false,
                       tension: 0.3,
                       pointRadius: 3,
-                      pointBackgroundColor: "#34d399",
+                      pointBackgroundColor: "#10b981",
                     },
                     {
                       label: "Expense",
                       data: summary.mini_trend.map((m) => m.expense),
-                      borderColor: "#f87171",
-                      backgroundColor: "rgba(248, 113, 113, 0.08)",
+                      borderColor: "#f43f5e",
+                      backgroundColor: "rgba(244, 63, 94, 0.08)",
                       fill: false,
                       tension: 0.3,
                       pointRadius: 3,
-                      pointBackgroundColor: "#f87171",
+                      pointBackgroundColor: "#f43f5e",
                     },
                   ],
                 }}
                 options={{
+                  layout: { padding: { top: 16 } },
                   scales: {
                     x: { grid: { display: false } },
                     y: { grid: { color: "rgba(148,163,184,0.15)" } },
                   },
                   plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true } } },
                 }}
+                plugins={[todayLinePlugin]}
                 height={140}
               />
             </div>

@@ -280,7 +280,7 @@ def trend_months(trend_range: str) -> list[str]:
     if trend_range == "current_year":
         offsets = list(range(m - 1, -1, -1))
     else:
-        offsets = TREND_RANGE_OFFSETS.get(trend_range, TREND_RANGE_OFFSETS["current_month"])
+        offsets = TREND_RANGE_OFFSETS.get(trend_range, TREND_RANGE_OFFSETS["last_3_months"])
     months = []
     for i in offsets:
         yy, mm = shift_month(y, m, -i)
@@ -289,7 +289,7 @@ def trend_months(trend_range: str) -> list[str]:
 
 
 @router.get("/summary", response=SummaryOut, auth=auth)
-def summary(request, month: str = None, trend_range: str = "current_month"):
+def summary(request, month: str = None, trend_range: str = "last_3_months"):
     """Everything the Dashboard renders for one month - the same
     numbers the old Django dashboard view computed (income/expense/
     net, net worth, the category breakdown, budget progress bars, and
