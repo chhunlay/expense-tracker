@@ -35,8 +35,17 @@ function shiftMonth(monthStr: string, delta: number): string {
 const HIDE_KEY = "expense-tracker-hide-amounts";
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
+const TREND_RANGES = [
+  { value: "current_month", label: "Current Month" },
+  { value: "last_month", label: "Last Month" },
+  { value: "last_3_months", label: "Last 3 Months" },
+  { value: "last_6_months", label: "Last 6 Months" },
+  { value: "current_year", label: "Current Year" },
+] as const;
+
 export default function DashboardPage() {
   const [monthStr, setMonthStr] = useState(currentMonth);
+  const [trendRange, setTrendRange] = useState<string>("current_month");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +67,7 @@ export default function DashboardPage() {
 
   function load() {
     Promise.all([
-      apiFetch<Summary>(`/api/summary?month=${monthStr}`),
+      apiFetch<Summary>(`/api/summary?month=${monthStr}&trend_range=${trendRange}`),
       apiFetch<Transaction[]>(`/api/transactions?month=${monthStr}&limit=8`),
     ])
       .then(([s, txns]) => {
@@ -73,7 +82,7 @@ export default function DashboardPage() {
     setSummary(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthStr]);
+  }, [monthStr, trendRange]);
 
   function toggleHidden() {
     const next = !hidden;
@@ -201,7 +210,20 @@ export default function DashboardPage() {
 
           <div className="mb-5 grid gap-5 lg:grid-cols-3">
             <div className="glass-card rounded-2xl p-5 lg:col-span-2">
-              <h3 className="mb-3 font-bold">Net trend (last 6 months)</h3>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="font-bold">Trend</h3>
+                <select
+                  value={trendRange}
+                  onChange={(e) => setTrendRange(e.target.value)}
+                  className="input rounded-lg px-2 py-1 text-xs"
+                >
+                  {TREND_RANGES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Line
                 data={{
                   labels: summary.mini_trend.map((m) => m.month),
@@ -216,6 +238,26 @@ export default function DashboardPage() {
                       pointRadius: 3,
                       pointBackgroundColor: summary.mini_trend.map((m) => (m.net >= 0 ? "#34d399" : "#f87171")),
                     },
+                    {
+                      label: "Income",
+                      data: summary.mini_trend.map((m) => m.income),
+                      borderColor: "#34d399",
+                      backgroundColor: "rgba(52, 211, 153, 0.08)",
+                      fill: false,
+                      tension: 0.3,
+                      pointRadius: 3,
+                      pointBackgroundColor: "#34d399",
+                    },
+                    {
+                      label: "Expense",
+                      data: summary.mini_trend.map((m) => m.expense),
+                      borderColor: "#f87171",
+                      backgroundColor: "rgba(248, 113, 113, 0.08)",
+                      fill: false,
+                      tension: 0.3,
+                      pointRadius: 3,
+                      pointBackgroundColor: "#f87171",
+                    },
                   ],
                 }}
                 options={{
@@ -223,7 +265,7 @@ export default function DashboardPage() {
                     x: { grid: { display: false } },
                     y: { grid: { color: "rgba(148,163,184,0.15)" } },
                   },
-                  plugins: { legend: { display: false } },
+                  plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true } } },
                 }}
                 height={140}
               />

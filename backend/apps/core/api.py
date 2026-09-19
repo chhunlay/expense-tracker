@@ -264,8 +264,32 @@ def upload_profile_picture(request, picture: UploadedFile = File(...)):
 
 
 # ---------- Dashboard / Reports ----------
+TREND_RANGE_OFFSETS = {
+    # Offsets (months back from the current month) included in each
+    # named range, oldest first - anchored to today regardless of the
+    # `month` param, which only navigates the KPI cards/breakdown.
+    "current_month": [0],
+    "last_month": [1],
+    "last_3_months": [2, 1, 0],
+    "last_6_months": [5, 4, 3, 2, 1, 0],
+}
+
+
+def trend_months(trend_range: str) -> list[str]:
+    y, m = date.today().year, date.today().month
+    if trend_range == "current_year":
+        offsets = list(range(m - 1, -1, -1))
+    else:
+        offsets = TREND_RANGE_OFFSETS.get(trend_range, TREND_RANGE_OFFSETS["current_month"])
+    months = []
+    for i in offsets:
+        yy, mm = shift_month(y, m, -i)
+        months.append("%04d-%02d" % (yy, mm))
+    return months
+
+
 @router.get("/summary", response=SummaryOut, auth=auth)
-def summary(request, month: str = None):
+def summary(request, month: str = None, trend_range: str = "current_month"):
     """Everything the Dashboard renders for one month - the same
     numbers the old Django dashboard view computed (income/expense/
     net, net worth, the category breakdown, budget progress bars, and
@@ -307,12 +331,7 @@ def summary(request, month: str = None):
             "over": spent > limit,
         })
 
-    mini_months = []
-    y, m = date.today().year, date.today().month
-    for i in range(5, -1, -1):
-        yy, mm = shift_month(y, m, -i)
-        mini_months.append("%04d-%02d" % (yy, mm))
-    mini_trend = get_monthly_totals(request.auth, mini_months)
+    mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
 
     return {
         "month": month_str,
