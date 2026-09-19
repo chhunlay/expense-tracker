@@ -79,11 +79,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="sidebar hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-shrink-0 md:flex-col md:self-start md:p-5">
-        <div className="mb-8 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
             💰
           </div>
-          <h1 className="text-base font-extrabold tracking-tight">Expense Tracker</h1>
+          <h1 className="mt-0.5 text-base font-extrabold tracking-tight">Expense Tracker</h1>
         </div>
 
         <nav className="flex flex-col gap-1">
