@@ -8,7 +8,7 @@ queryset is filtered to that user so one account can never read or
 write another's rows, by id-guessing or otherwise - the same rule the
 DRF viewsets enforced via get_queryset().
 """
-from datetime import date
+from datetime import date, timedelta
 from typing import List
 
 from django.conf import settings as django_settings
@@ -26,6 +26,7 @@ from .constants import DEFAULT_CATEGORIES
 from .csv_io import export_transactions_csv, import_transactions_csv
 from .dates import month_bounds, shift_month
 from .models import Asset, AuthToken, Category, Transaction
+from .quick_add import parse_quick_add
 from .schemas import (
     AssetIn,
     AssetOut,
@@ -38,6 +39,7 @@ from .schemas import (
     MonthlyTotal,
     ProfileOut,
     ProfilePatch,
+    QuickAddIn,
     RegisterIn,
     ReportsOut,
     SummaryOut,
@@ -48,7 +50,7 @@ from .schemas import (
     TransactionPatch,
 )
 from .security import TokenAuth
-from .services import get_monthly_totals
+from .services import get_daily_totals, get_monthly_totals, get_weekly_totals
 from .xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 router = Router()
@@ -87,7 +89,19 @@ def login(request, payload: LoginIn):
 # ---------- Categories ----------
 @router.get("/categories", response=List[CategoryOut], auth=auth)
 def list_categories(request):
-    return Category.objects.filter(user=request.auth)
+    month_start = date.today().replace(day=1)
+    categories = list(Category.objects.filter(user=request.auth))
+    spent_by_category = {
+        row["category_id"]: row["total"]
+        for row in Transaction.objects.filter(
+            user=request.auth, type=Transaction.EXPENSE, date__gte=month_start
+        )
+        .values("category_id")
+        .annotate(total=Sum("amount"))
+    }
+    for c in categories:
+        c.spent_this_month = float(spent_by_category.get(c.id) or 0)
+    return categories
 
 
 @router.post("/categories", response={201: CategoryOut}, auth=auth)
@@ -143,6 +157,33 @@ def create_transaction(request, payload: TransactionIn):
         category=category,
         date=payload.date,
         note=payload.note,
+    )
+    return 201, txn
+
+
+@router.post("/quick-add", response={201: TransactionOut}, auth=auth)
+def quick_add(request, payload: QuickAddIn):
+    """Same one-line parser the old Dashboard's Quick add box used
+    (quick_add.py, unchanged) - "Lunch 5.50 Food" or "+500 Salary"
+    becomes a transaction dated today, filed under a matching
+    category name if one appears in the text, "Other" otherwise."""
+    categories = list(Category.objects.filter(user=request.auth))
+    parsed = parse_quick_add(payload.text, categories) if payload.text.strip() else None
+    if not parsed:
+        raise HttpError(400, 'Couldn\'t find an amount in that - try something like "Lunch 5.50 Food"')
+
+    category_id = parsed["category_id"]
+    if category_id is None:
+        other = Category.objects.filter(user=request.auth, name="Other").first()
+        category_id = other.id if other else None
+
+    txn = Transaction.objects.create(
+        user=request.auth,
+        date=date.today(),
+        type=parsed["type"],
+        amount=parsed["amount"],
+        category_id=category_id,
+        note=parsed["note"],
     )
     return 201, txn
 
@@ -208,6 +249,9 @@ def update_profile(request, payload: ProfilePatch):
         raise HttpError(400, "Not a valid theme.")
     if "language" in data and data["language"] not in dict(django_settings.LANGUAGES):
         raise HttpError(400, "Not a supported language.")
+    if "email" in data:
+        request.auth.email = data.pop("email")
+        request.auth.save(update_fields=["email"])
     for field, value in data.items():
         setattr(profile, field, value)
     profile.save()
@@ -223,20 +267,106 @@ def upload_profile_picture(request, picture: UploadedFile = File(...)):
 
 
 # ---------- Dashboard / Reports ----------
+TREND_RANGE_OFFSETS = {
+    # Offsets (months back from the current month) included in each
+    # named range, oldest first - anchored to today regardless of the
+    # `month` param, which only navigates the KPI cards/breakdown.
+    # "this_month" isn't here - it gets weekly-bucketed points instead,
+    # same idea as "this_week"'s daily points (see summary() below).
+    "last_month": [1],
+    "last_3_months": [2, 1, 0],
+    "last_6_months": [5, 4, 3, 2, 1, 0],
+}
+
+
+def trend_months(trend_range: str) -> list[str]:
+    y, m = date.today().year, date.today().month
+    if trend_range == "current_year":
+        offsets = list(range(m - 1, -1, -1))
+    else:
+        offsets = TREND_RANGE_OFFSETS.get(trend_range, TREND_RANGE_OFFSETS["last_3_months"])
+    months = []
+    for i in offsets:
+        yy, mm = shift_month(y, m, -i)
+        months.append("%04d-%02d" % (yy, mm))
+    return months
+
+
 @router.get("/summary", response=SummaryOut, auth=auth)
-def summary(request, month: str = None):
+def summary(request, month: str = None, trend_range: str = "this_month"):
+    """Everything the Dashboard renders for one month - the same
+    numbers the old Django dashboard view computed (income/expense/
+    net, net worth, the category breakdown, budget progress bars, and
+    a 6-month trend for the mini chart), as one call."""
     month_str = month or date.today().strftime("%Y-%m")
     start, end = month_bounds(month_str)
-    rows = Transaction.objects.filter(user=request.auth, date__gte=start, date__lt=end)
-    income = float(rows.filter(type=Transaction.INCOME).aggregate(t=Sum("amount"))["t"] or 0)
-    expense = float(rows.filter(type=Transaction.EXPENSE).aggregate(t=Sum("amount"))["t"] or 0)
+    rows = list(
+        Transaction.objects.filter(user=request.auth, date__gte=start, date__lt=end).select_related("category")
+    )
+    income = sum(float(t.amount) for t in rows if t.type == Transaction.INCOME)
+    expense = sum(float(t.amount) for t in rows if t.type == Transaction.EXPENSE)
     net_worth = float(Asset.objects.filter(user=request.auth).aggregate(t=Sum("value"))["t"] or 0)
+
+    breakdown_totals: dict[str, float] = {}
+    breakdown_colors: dict[str, str] = {}
+    for t in rows:
+        if t.type != Transaction.EXPENSE:
+            continue
+        name = t.category.name if t.category else "Uncategorized"
+        breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
+        breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
+    breakdown = [
+        {"name": name, "amount": amount, "color": breakdown_colors[name]}
+        for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
+    ]
+
+    budget_progress = []
+    for c in Category.objects.filter(user=request.auth):
+        if not c.budget_limit:
+            continue
+        spent = breakdown_totals.get(c.name, 0.0)
+        limit = float(c.budget_limit)
+        budget_progress.append({
+            "name": c.name,
+            "color": c.color,
+            "spent": spent,
+            "limit": limit,
+            "pct": min(100, round(spent / limit * 100)) if limit else 0,
+            "over": spent > limit,
+        })
+
+    if trend_range == "this_week":
+        week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
+        days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
+        mini_trend = get_daily_totals(request.auth, days)
+    elif trend_range == "this_month":
+        today = date.today()
+        # Runs through the month's last day (like "this_week" running
+        # through Sunday), not just up to today - future weeks report
+        # zero until transactions land in them.
+        _, next_month_start = month_bounds(today.strftime("%Y-%m"))
+        month_end = date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
+        buckets = []
+        cursor = date(today.year, today.month, 1)
+        week_num = 1
+        while cursor <= month_end:
+            bucket_end = min(cursor + timedelta(days=6), month_end)
+            buckets.append((f"Week {week_num}", cursor.isoformat(), bucket_end.isoformat()))
+            cursor = bucket_end + timedelta(days=1)
+            week_num += 1
+        mini_trend = get_weekly_totals(request.auth, buckets)
+    else:
+        mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
+
     return {
         "month": month_str,
         "income": income,
         "expense": expense,
         "net": income - expense,
         "net_worth": net_worth,
+        "breakdown": breakdown,
+        "budget_progress": budget_progress,
+        "mini_trend": mini_trend,
     }
 
 

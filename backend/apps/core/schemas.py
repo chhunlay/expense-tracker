@@ -5,8 +5,23 @@ Ninja equivalent of the old DRF serializers.py. Decimal fields
 Next.js frontend (which already treats these as strings, e.g.
 `parseFloat(a.value)`) sees no change in shape from the DRF version -
 Pydantic would otherwise serialize Decimal as a JSON number.
+
+`date` is imported as `DateType` (not the plain `date` its own type
+usually goes by) specifically so it can't collide with a field that's
+also named `date` (every transaction schema below has one). A field
+named the same as its own type, when that field also carries a
+default value (e.g. `date: Optional[date] = None`), makes Pydantic
+resolve the annotation against the class's own namespace - which by
+then holds `date = None` - instead of the imported class, so the
+field's real type silently becomes `None`. Caught via a PATCH
+/api/transactions/{id} call failing with a 422
+"Input should be None" on the date field even though a real date was
+sent - only TransactionPatch's `date` had a default value, which is
+why TransactionIn/TransactionOut's identically-named required `date`
+fields weren't affected.
 """
-from datetime import date, datetime
+from datetime import date as DateType
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -19,10 +34,19 @@ class CategoryOut(Schema):
     name: str
     color: str
     budget_limit: Optional[str] = None
+    # Not a model field - the list endpoint annotates each Category
+    # instance with this before serializing (same pattern the old
+    # Django categories_view used), so it's only ever populated by
+    # GET /categories, not by the create/update responses.
+    spent_this_month: float = 0.0
 
     @staticmethod
     def resolve_budget_limit(obj) -> Optional[str]:
         return str(obj.budget_limit) if obj.budget_limit is not None else None
+
+    @staticmethod
+    def resolve_spent_this_month(obj) -> float:
+        return getattr(obj, "spent_this_month", 0.0)
 
 
 class CategoryIn(Schema):
@@ -44,7 +68,8 @@ class TransactionOut(Schema):
     amount: str
     category: Optional[int] = None
     category_name: Optional[str] = None
-    date: date
+    category_color: Optional[str] = None
+    date: DateType
     note: Optional[str] = None
 
     @staticmethod
@@ -59,12 +84,16 @@ class TransactionOut(Schema):
     def resolve_category_name(obj) -> Optional[str]:
         return obj.category.name if obj.category_id else None
 
+    @staticmethod
+    def resolve_category_color(obj) -> Optional[str]:
+        return obj.category.color if obj.category_id else None
+
 
 class TransactionIn(Schema):
     type: str
     amount: Decimal
     category: Optional[int] = None
-    date: date
+    date: DateType
     note: Optional[str] = None
 
 
@@ -72,7 +101,7 @@ class TransactionPatch(Schema):
     type: Optional[str] = None
     amount: Optional[Decimal] = None
     category: Optional[int] = None
-    date: Optional[date] = None
+    date: Optional[DateType] = None
     note: Optional[str] = None
 
 
@@ -126,6 +155,9 @@ class ProfileOut(Schema):
     picture: Optional[str] = None
     theme: str
     language: str
+    full_name: str
+    email: str
+    phone: str
 
     @staticmethod
     def resolve_username(obj) -> str:
@@ -135,26 +167,53 @@ class ProfileOut(Schema):
     def resolve_picture(obj) -> Optional[str]:
         return obj.picture.url if obj.picture else None
 
+    @staticmethod
+    def resolve_email(obj) -> str:
+        return obj.user.email
+
 
 class ProfilePatch(Schema):
     theme: Optional[str] = None
     language: Optional[str] = None
+    full_name: Optional[str] = None
+    # Not on Profile itself (see models.py) - update_profile() writes
+    # this one to request.auth.email instead of the Profile row.
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 # ---------- Dashboard / Reports ----------
+class MonthlyTotal(Schema):
+    month: str
+    income: float
+    expense: float
+    net: float
+
+
+class BreakdownItem(Schema):
+    name: str
+    amount: float
+    color: str
+
+
+class BudgetProgressItem(Schema):
+    name: str
+    color: str
+    spent: float
+    limit: float
+    pct: int
+    over: bool
+
+
 class SummaryOut(Schema):
     month: str
     income: float
     expense: float
     net: float
     net_worth: float
-
-
-class MonthlyTotal(Schema):
-    month: str
-    income: float
-    expense: float
-    net: float
+    breakdown: list[BreakdownItem]
+    budget_progress: list[BudgetProgressItem]
+    mini_trend: list[MonthlyTotal]
 
 
 class TopCategory(Schema):
@@ -172,6 +231,10 @@ class ImportResult(Schema):
     imported: int
     skipped: int
     created_categories: int
+
+
+class QuickAddIn(Schema):
+    text: str
 
 
 class ErrorOut(Schema):

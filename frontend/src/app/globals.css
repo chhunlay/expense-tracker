@@ -25,6 +25,10 @@
   --neg: #f87171;
   --background: var(--bg-2);
   --foreground: var(--text-main);
+  /* Overridden inline on <html> by lib/theme.ts's applyAccent() - see
+     the Settings page's "Accent color" picker - so this is only the
+     fallback for a first-ever visit with nothing in localStorage yet. */
+  --accent: #f97316;
 }
 html[data-theme="light"] {
   color-scheme: light;
@@ -57,6 +61,19 @@ body {
   color: var(--text-main);
 }
 
+/* Everything below lives in Tailwind's own "utilities" layer (instead of
+   staying unlayered) so it competes with Tailwind's hover/state utilities
+   on normal specificity terms. Per the CSS Cascade Layers spec, an
+   unlayered rule always beats a layered one regardless of specificity -
+   so e.g. `.text-muted { color: ... }` declared unlayered was silently
+   winning over `hover:text-indigo-400:hover` every time, no matter which
+   came later in the file. Moving our classes into the same layer
+   Tailwind's utilities already use restores normal cascade rules, where
+   a two-class hover selector like `.hover\:text-indigo-400:hover`
+   (0,2,0) correctly outranks a plain one-class rule like `.text-muted`
+   (0,1,0). */
+@layer utilities {
+
 .glass-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -85,8 +102,8 @@ body {
 }
 .nav-link:hover { color: var(--text-main); }
 .nav-link.active {
-  color: var(--text-main);
-  background: var(--input-bg);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .sidebar {
@@ -95,6 +112,7 @@ body {
   backdrop-filter: blur(20px);
 }
 .sidebar-link {
+  position: relative;
   color: var(--text-muted);
   transition: color 0.15s ease, background 0.15s ease;
 }
@@ -102,10 +120,24 @@ body {
   color: var(--text-main);
   background: var(--input-bg);
 }
+/* Soft accent-tinted pill with a small accent bar riding the left
+   edge, replacing the old solid indigo/purple gradient - matches the
+   reference "Home" sidebar item the user shared, and uses the
+   Settings page's selectable --accent color instead of a fixed one. */
 .sidebar-link.active {
-  color: #fff;
-  background: linear-gradient(90deg, #6366f1, #a855f7);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: none;
+}
+.sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .kpi-card { color: #fff; box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35); }
@@ -195,7 +227,18 @@ dialog {
   padding: 0;
   margin: auto;
   color: var(--text-main);
+  /* A <dialog> renders in the browser's own "top layer" - tried
+   * `color-scheme: inherit` first (matching :root/html), but Chrome
+   * doesn't actually resolve that inherited value for a top-layer
+   * element (computed style came back "normal", not the page's real
+   * theme), which is what made native controls (radio buttons, the
+   * number input's spinner) inside a modal render in dark styling
+   * even in light theme. Declaring the value directly per theme,
+   * instead of relying on inheritance, sidesteps that. */
   color-scheme: dark;
+}
+html[data-theme="light"] dialog {
+  color-scheme: light;
 }
 dialog .glass-card {
   background: var(--bg-3);
@@ -212,3 +255,5 @@ dialog[open] {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+} /* end @layer utilities */

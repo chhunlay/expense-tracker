@@ -1,12 +1,16 @@
-// Shapes returned by the Django REST Framework API (expense-tracker/expenses/api/).
-// Keep these in sync with expenses/api/serializers.py by hand - there's
-// no schema generation wired up (yet) to derive them automatically.
+// Shapes returned by the Django/Ninja API (backend/apps/core/api.py).
+// Keep these in sync with backend/apps/core/schemas.py by hand -
+// there's no schema generation wired up (yet) to derive them
+// automatically.
 
 export interface Category {
   id: number;
   name: string;
   color: string;
   budget_limit: string | null;
+  // Only populated by GET /api/categories (see backend's resolver) -
+  // absent/0 from the create/update responses.
+  spent_this_month: number;
 }
 
 export interface Transaction {
@@ -15,6 +19,7 @@ export interface Transaction {
   amount: string;
   category: number | null;
   category_name: string | null;
+  category_color: string | null;
   date: string; // YYYY-MM-DD
   note: string | null;
 }
@@ -29,12 +34,30 @@ export interface Asset {
   updated_at: string;
 }
 
+export interface BreakdownItem {
+  name: string;
+  amount: number;
+  color: string;
+}
+
+export interface BudgetProgressItem {
+  name: string;
+  color: string;
+  spent: number;
+  limit: number;
+  pct: number;
+  over: boolean;
+}
+
 export interface Summary {
   month: string;
   income: number;
   expense: number;
   net: number;
   net_worth: number;
+  breakdown: BreakdownItem[];
+  budget_progress: BudgetProgressItem[];
+  mini_trend: MonthlyTotal[];
 }
 
 export interface Profile {
@@ -42,6 +65,9 @@ export interface Profile {
   picture: string | null;
   theme: "dark" | "light";
   language: string;
+  full_name: string;
+  email: string;
+  phone: string;
 }
 
 export interface MonthlyTotal {

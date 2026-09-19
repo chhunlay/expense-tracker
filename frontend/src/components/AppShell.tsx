@@ -4,8 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getToken } from "@/lib/api";
+import { API_BASE_URL, apiFetch, getToken } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { onProfileUpdate } from "@/lib/profile";
+import { getStoredSidebarHeaderStyle, onSidebarHeaderStyleChange, SidebarHeaderStyle } from "@/lib/theme";
+import { Profile } from "@/types";
 import ThemeToggle from "./ThemeToggle";
 import {
   AssetsIcon,
@@ -41,6 +44,56 @@ const NAV_SECTIONS = [
   },
 ];
 
+/** The sidebar/mobile-header brand block - either the app logo + name
+ * (with the username as a small subtitle) or, when the user has
+ * picked "User profile" in Settings, the user's own avatar with the
+ * exact same title/subtitle styling - the user's own name (full_name,
+ * falling back to email, then username) where "Expense Tracker" was,
+ * the username where its subtitle was. Shared between the desktop
+ * sidebar and the mobile header so the two can't drift out of sync. */
+function SidebarBrand({
+  style,
+  profile,
+  displayName,
+  titleSize,
+}: {
+  style: SidebarHeaderStyle;
+  profile: Profile | null;
+  displayName: string;
+  titleSize: "text-base" | "text-lg";
+}) {
+  if (style === "user") {
+    return (
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-sm font-bold text-white shadow-lg shadow-indigo-500/20">
+          {profile?.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`${API_BASE_URL}${profile.picture}`} alt="" className="h-full w-full object-cover" />
+          ) : (
+            profile?.username?.[0]?.toUpperCase() || "?"
+          )}
+        </div>
+        <div className="mt-0.5 min-w-0">
+          <h1 className={`${titleSize} truncate font-extrabold tracking-tight`}>{displayName || " "}</h1>
+          {profile?.username && <p className="text-faint truncate text-xs">{profile.username}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
+        💰
+      </div>
+      <div className="mt-0.5 min-w-0">
+        <h1 className={`${titleSize} font-extrabold tracking-tight`}>Expense Tracker</h1>
+        {displayName && <p className="text-faint truncate text-xs">{displayName}</p>}
+      </div>
+    </div>
+  );
+}
+
 /** Wraps every authenticated page: the sidebar/mobile-nav chrome, plus
  * the redirect-to-/login guard the standalone RequireAuth used to do -
  * merged here since every page that needs the shell also needs auth. */
@@ -56,6 +109,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // effect+setState pattern below entirely, but it broke re-checking
   // the token on a hard reload/direct URL visit - reverted.)
   const [checked, setChecked] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [headerStyle, setHeaderStyle] = useState<SidebarHeaderStyle>("app");
 
   useEffect(() => {
     // This effect exists specifically to read an external system
@@ -67,9 +122,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setChecked(true);
+    setHeaderStyle(getStoredSidebarHeaderStyle());
+    apiFetch<Profile>("/api/profile")
+      .then(setProfile)
+      .catch(() => {
+        // Not worth surfacing an error banner for - the header/subtitle
+        // just stays off and the rest of the shell still works fine.
+      });
   }, [router]);
 
+  useEffect(() => onSidebarHeaderStyleChange(setHeaderStyle), []);
+  useEffect(() => onProfileUpdate(setProfile), []);
+
   if (!checked) return null;
+
+  const displayName = profile?.full_name || profile?.email || profile?.username || "";
 
   function handleLogout() {
     logout();
@@ -79,11 +146,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="sidebar hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-shrink-0 md:flex-col md:self-start md:p-5">
-        <div className="mb-8 flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
-            💰
-          </div>
-          <h1 className="text-base font-extrabold tracking-tight">Expense Tracker</h1>
+        <div className="mb-4">
+          <SidebarBrand style={headerStyle} profile={profile} displayName={displayName} titleSize="text-base" />
         </div>
 
         <nav className="flex flex-col gap-1">
@@ -125,12 +189,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-5xl">
           <div className="mb-5 md:hidden">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
-                  💰
-                </div>
-                <h1 className="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
-              </div>
+              <SidebarBrand style={headerStyle} profile={profile} displayName={displayName} titleSize="text-lg" />
               <ThemeToggle />
             </div>
             <nav className="glass-card flex gap-1 overflow-x-auto rounded-2xl p-1.5">

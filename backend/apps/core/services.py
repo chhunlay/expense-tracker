@@ -27,3 +27,48 @@ def get_monthly_totals(user, months):
         expense = agg["expense"] or 0
         totals.append({"month": ms, "income": float(income), "expense": float(expense), "net": float(income - expense)})
     return totals
+
+
+def get_daily_totals(user, days):
+    """Same shape as get_monthly_totals, one row per 'YYYY-MM-DD' string
+    in `days` - used for the dashboard trend chart's "This Week" range,
+    where a whole month/week bucket would collapse to a single point.
+    Reuses the "month" key so it still fits the MonthlyTotal schema."""
+    totals = []
+    for d in days:
+        agg = Transaction.objects.filter(user=user, date=d).aggregate(
+            income=Sum(
+                Case(When(type=Transaction.INCOME, then="amount"), default=0, output_field=DecimalField())
+            ),
+            expense=Sum(
+                Case(When(type=Transaction.EXPENSE, then="amount"), default=0, output_field=DecimalField())
+            ),
+        )
+        income = agg["income"] or 0
+        expense = agg["expense"] or 0
+        totals.append({"month": d, "income": float(income), "expense": float(expense), "net": float(income - expense)})
+    return totals
+
+
+def get_weekly_totals(user, buckets):
+    """Same shape again, one row per (label, start_date, end_date) tuple
+    in `buckets` (inclusive on both ends) - used for the dashboard trend
+    chart's "This Month" range, bucketed into 7-day chunks from the 1st
+    instead of one point per day (too dense) or a single monthly total
+    (not a trend)."""
+    totals = []
+    for label, start, end in buckets:
+        agg = Transaction.objects.filter(user=user, date__gte=start, date__lte=end).aggregate(
+            income=Sum(
+                Case(When(type=Transaction.INCOME, then="amount"), default=0, output_field=DecimalField())
+            ),
+            expense=Sum(
+                Case(When(type=Transaction.EXPENSE, then="amount"), default=0, output_field=DecimalField())
+            ),
+        )
+        income = agg["income"] or 0
+        expense = agg["expense"] or 0
+        totals.append(
+            {"month": label, "income": float(income), "expense": float(expense), "net": float(income - expense)}
+        )
+    return totals
