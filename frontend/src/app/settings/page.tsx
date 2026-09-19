@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import { MailIcon, PhoneIcon } from "@/components/icons";
 import { applyAccent, DEFAULT_ACCENT, getStoredAccent, setStoredAccent } from "@/lib/theme";
 import { Profile } from "@/types";
 
@@ -21,13 +22,21 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [savingDetails, setSavingDetails] = useState(false);
 
   useEffect(() => {
     apiFetch<Profile>("/api/profile")
-      .then(setProfile)
+      .then((p) => {
+        setProfile(p);
+        setFullName(p.full_name);
+        setEmail(p.email);
+        setPhone(p.phone);
+      })
       .catch(() => setError("Couldn't load your profile"));
     // Reads an external system (localStorage) not available during
     // SSR - see AppShell's auth-check effect for the same pattern.
@@ -69,22 +78,39 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!file) return;
+  async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
     setError(null);
     setSaving(true);
     try {
       const formData = new FormData();
-      formData.append("picture", file);
+      formData.append("picture", picked);
       const updated = await apiFetch<Profile>("/api/profile/picture", { method: "POST", body: formData });
       setProfile(updated);
-      setFile(null);
       setMessage("Profile picture updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't upload picture");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDetailsSave() {
+    setError(null);
+    setSavingDetails(true);
+    try {
+      const updated = await apiFetch<Profile>("/api/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: fullName, email, phone }),
+      });
+      setProfile(updated);
+      setMessage("Profile updated");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't update your profile");
+    } finally {
+      setSavingDetails(false);
     }
   }
 
@@ -98,34 +124,86 @@ export default function SettingsPage() {
       {profile && (
         <div className="space-y-4">
           <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 text-sm font-semibold">Profile picture</h3>
-            <form onSubmit={handleUpload} className="flex items-center gap-4">
-              {profile.picture ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`${API_BASE_URL}${profile.picture}`}
-                  alt=""
-                  className="h-14 w-14 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-lg font-bold text-white">
-                  {profile.username[0]?.toUpperCase()}
+            <div className="flex items-center gap-4">
+              {/* Square avatar, not the old circle - clicking it opens
+                  the file picker directly and uploads on selection
+                  (no separate Upload button), and hovering swaps in an
+                  "Add Photo" overlay instead. */}
+              <label className="group relative h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-2xl">
+                {profile.picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`${API_BASE_URL}${profile.picture}`}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500 to-pink-500 text-2xl font-bold text-white">
+                    {(profile.full_name || profile.username)[0]?.toUpperCase()}
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-center text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  {saving ? "Uploading…" : "Add Photo"}
                 </span>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="input flex-1 rounded-xl px-3 py-2 text-sm"
-              />
+                <input type="file" accept="image/*" onChange={handlePictureChange} className="hidden" />
+              </label>
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-bold">{profile.full_name || profile.username}</h3>
+                {profile.email && (
+                  <p className="text-muted mt-1 flex items-center gap-1.5 text-sm">
+                    <MailIcon /> {profile.email}
+                  </p>
+                )}
+                {profile.phone && (
+                  <p className="text-muted mt-1 flex items-center gap-1.5 text-sm">
+                    <PhoneIcon /> {profile.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3 border-t border-[var(--card-border)] pt-5">
+              <div>
+                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">
+                  Full name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your name"
+                  className="input w-full rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="input w-full rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">Phone</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+1 555 000 0000"
+                  className="input w-full rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
               <button
-                type="submit"
-                disabled={!file || saving}
-                className="action-btn flex-shrink-0 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
+                type="button"
+                onClick={handleDetailsSave}
+                disabled={savingDetails}
+                className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
               >
-                Upload
+                Save
               </button>
-            </form>
+            </div>
           </div>
 
           <div className="glass-card rounded-2xl p-5">

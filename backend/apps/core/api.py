@@ -249,6 +249,9 @@ def update_profile(request, payload: ProfilePatch):
         raise HttpError(400, "Not a valid theme.")
     if "language" in data and data["language"] not in dict(django_settings.LANGUAGES):
         raise HttpError(400, "Not a supported language.")
+    if "email" in data:
+        request.auth.email = data.pop("email")
+        request.auth.save(update_fields=["email"])
     for field, value in data.items():
         setattr(profile, field, value)
     profile.save()

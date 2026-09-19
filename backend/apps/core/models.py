@@ -69,6 +69,11 @@ class Profile(models.Model):
     # CharField rather than validated against LANGUAGES directly so a
     # future added language doesn't need a migration.
     language = models.CharField(max_length=10, default="en")
+    full_name = models.CharField(max_length=150, blank=True, default="")
+    phone = models.CharField(max_length=30, blank=True, default="")
+    # Email lives on the built-in User model (settings.AUTH_USER_MODEL
+    # already has one, so there's no reason to duplicate it here) -
+    # ProfileOut/ProfilePatch read and write it through user.email.
 
     def __str__(self):
         return f"{self.user.username}'s profile"

@@ -20,7 +20,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
-import { Profile, Summary, Transaction } from "@/types";
+import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
 
@@ -92,7 +92,6 @@ const TREND_RANGES = [
 export default function DashboardPage() {
   const [monthStr, setMonthStr] = useState(currentMonth);
   const [trendRange, setTrendRange] = useState<string>("this_month");
-  const [username, setUsername] = useState<string | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -115,12 +114,6 @@ export default function DashboardPage() {
     } catch {
       // ignore - see lib/api.ts's setToken for the same tradeoff
     }
-    apiFetch<Profile>("/api/profile")
-      .then((p) => setUsername(p.username))
-      .catch(() => {
-        // Not worth surfacing an error banner for - the greeting just
-        // stays off and the rest of the dashboard still loads fine.
-      });
   }, []);
 
   function load() {
@@ -186,7 +179,6 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      {username && <h1 className="mb-1 text-2xl font-extrabold">Welcome back, {username}</h1>}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"

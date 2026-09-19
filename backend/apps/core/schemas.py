@@ -155,6 +155,9 @@ class ProfileOut(Schema):
     picture: Optional[str] = None
     theme: str
     language: str
+    full_name: str
+    email: str
+    phone: str
 
     @staticmethod
     def resolve_username(obj) -> str:
@@ -164,10 +167,19 @@ class ProfileOut(Schema):
     def resolve_picture(obj) -> Optional[str]:
         return obj.picture.url if obj.picture else None
 
+    @staticmethod
+    def resolve_email(obj) -> str:
+        return obj.user.email
+
 
 class ProfilePatch(Schema):
     theme: Optional[str] = None
     language: Optional[str] = None
+    full_name: Optional[str] = None
+    # Not on Profile itself (see models.py) - update_profile() writes
+    # this one to request.auth.email instead of the Profile row.
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 # ---------- Dashboard / Reports ----------

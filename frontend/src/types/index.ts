@@ -65,6 +65,9 @@ export interface Profile {
   picture: string | null;
   theme: "dark" | "light";
   language: string;
+  full_name: string;
+  email: string;
+  phone: string;
 }
 
 export interface MonthlyTotal {
