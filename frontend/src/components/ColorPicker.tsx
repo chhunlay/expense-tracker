@@ -43,34 +43,40 @@ export default function ColorPicker({
         style={{ background: value }}
       />
       {open && (
-        <div className="glass-card absolute left-0 top-full z-20 mt-1.5 w-44 rounded-xl p-2.5 shadow-lg">
-          <div className="flex flex-wrap gap-2">
-            {PRESET_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => {
-                  onChange(color);
-                  setOpen(false);
-                }}
-                aria-label={`Use ${color}`}
-                className="h-6 w-6 flex-shrink-0 rounded-full transition-transform hover:scale-110"
-                style={{
-                  background: color,
-                  outline: value.toLowerCase() === color ? "2px solid var(--text-main)" : "none",
-                  outlineOffset: 2,
-                }}
-              />
-            ))}
-            <label className="text-muted flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-current text-[10px]">
-              +
-              <input
-                type="color"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="sr-only"
-              />
-            </label>
+        // The visible gap to the button below is padding-top here, not
+        // a margin - a margin would leave a dead zone the pointer falls
+        // through on its way down, exiting this element's hover box and
+        // closing the popover before the mouse ever reaches it.
+        <div className="absolute left-0 top-full z-20 pt-1.5">
+          <div className="glass-card w-44 rounded-xl p-2.5 shadow-lg">
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => {
+                    onChange(color);
+                    setOpen(false);
+                  }}
+                  aria-label={`Use ${color}`}
+                  className="h-6 w-6 flex-shrink-0 rounded-full transition-transform hover:scale-110"
+                  style={{
+                    background: color,
+                    outline: value.toLowerCase() === color ? "2px solid var(--text-main)" : "none",
+                    outlineOffset: 2,
+                  }}
+                />
+              ))}
+              <label className="text-muted flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-current text-[10px]">
+                +
+                <input
+                  type="color"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="sr-only"
+                />
+              </label>
+            </div>
           </div>
         </div>
       )}
