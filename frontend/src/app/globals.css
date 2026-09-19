@@ -195,7 +195,18 @@ dialog {
   padding: 0;
   margin: auto;
   color: var(--text-main);
+  /* A <dialog> renders in the browser's own "top layer" - tried
+   * `color-scheme: inherit` first (matching :root/html), but Chrome
+   * doesn't actually resolve that inherited value for a top-layer
+   * element (computed style came back "normal", not the page's real
+   * theme), which is what made native controls (radio buttons, the
+   * number input's spinner) inside a modal render in dark styling
+   * even in light theme. Declaring the value directly per theme,
+   * instead of relying on inheritance, sidesteps that. */
   color-scheme: dark;
+}
+html[data-theme="light"] dialog {
+  color-scheme: light;
 }
 dialog .glass-card {
   background: var(--bg-3);
