@@ -1,8 +1,8 @@
-// Thin fetch wrapper around the Django REST Framework API - handles the
-// base URL, the Authorization: Token header, and turning a non-2xx
-// response into a thrown Error with the server's own message (DRF's
-// {"field": ["message"]} / {"detail": "..."} shapes) instead of a bare
-// "Failed to fetch" the caller would otherwise have to unpack itself.
+// Thin fetch wrapper around the Django/Ninja API - handles the base
+// URL, the Authorization: Token header, and turning a non-2xx response
+// into a thrown Error with the server's own message (Ninja's
+// {"detail": "..."} shape) instead of a bare "Failed to fetch" the
+// caller would otherwise have to unpack itself.
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const TOKEN_KEY = "expense-tracker-token";
@@ -41,7 +41,8 @@ export class ApiError extends Error {
   }
 }
 
-/** Flattens DRF's error shapes ({"field": ["msg"]} or {"detail": "msg"}) into one string. */
+/** Flattens the API's error shape ({"detail": "msg"}, or occasionally a
+ * raw {"field": ["msg"]} from a Pydantic validation error) into one string. */
 function extractErrorMessage(body: unknown): string {
   if (body && typeof body === "object") {
     const obj = body as Record<string, unknown>;
@@ -54,6 +55,23 @@ function extractErrorMessage(body: unknown): string {
     }
   }
   return "Something went wrong";
+}
+
+/** A 401 means the stored token is stale (wrong/expired, or - as
+ * happened once during development - the whole backend database got
+ * reset out from under it). Clearing it and bouncing to /login is far
+ * more useful than leaving every page stuck on a generic "couldn't
+ * load" error with no way out. */
+function handleUnauthorized() {
+  clearToken();
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    // A plain module (not a component/hook) can't call useRouter() -
+    // a full page navigation is fine here anyway, since a stale/
+    // invalid token means every bit of in-memory app state needs to
+    // be thrown away regardless.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/login");
+  }
 }
 
 export async function apiFetch<T>(
@@ -76,6 +94,7 @@ export async function apiFetch<T>(
 
   const body = await res.json().catch(() => null);
   if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
     throw new ApiError(extractErrorMessage(body), res.status);
   }
   return body as T;
@@ -94,6 +113,7 @@ export async function apiDownload(path: string, filename: string): Promise<void>
   const res = await fetch(`${API_BASE_URL}${path}`, { headers });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    if (res.status === 401) handleUnauthorized();
     throw new ApiError(extractErrorMessage(body), res.status);
   }
   const blob = await res.blob();
