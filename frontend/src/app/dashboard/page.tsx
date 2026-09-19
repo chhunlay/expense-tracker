@@ -76,6 +76,7 @@ function shiftMonth(monthStr: string, delta: number): string {
 }
 
 const HIDE_KEY = "expense-tracker-hide-amounts";
+const TREND_HIDDEN_KEY = "expense-tracker-trend-hidden-datasets";
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 const TREND_RANGES = [
@@ -94,6 +95,7 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [hiddenDatasets, setHiddenDatasets] = useState<Set<string>>(new Set());
   const [quickAddText, setQuickAddText] = useState("");
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [quickAdding, setQuickAdding] = useState(false);
@@ -104,6 +106,8 @@ export default function DashboardPage() {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setHidden(localStorage.getItem(HIDE_KEY) === "1");
+      const raw = localStorage.getItem(TREND_HIDDEN_KEY);
+      if (raw) setHiddenDatasets(new Set(JSON.parse(raw)));
     } catch {
       // ignore - see lib/api.ts's setToken for the same tradeoff
     }
@@ -136,6 +140,20 @@ export default function DashboardPage() {
     } catch {
       // ignore
     }
+  }
+
+  function toggleTrendDataset(label: string) {
+    setHiddenDatasets((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      try {
+        localStorage.setItem(TREND_HIDDEN_KEY, JSON.stringify([...next]));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
   }
 
   async function handleQuickAdd(e: React.FormEvent) {
@@ -293,6 +311,7 @@ export default function DashboardPage() {
                       cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#10b981",
+                      hidden: hiddenDatasets.has("Income"),
                     },
                     {
                       label: "Expense",
@@ -303,6 +322,7 @@ export default function DashboardPage() {
                       cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#f43f5e",
+                      hidden: hiddenDatasets.has("Expense"),
                     },
                     {
                       label: "Net",
@@ -313,6 +333,7 @@ export default function DashboardPage() {
                       cubicInterpolationMode: "monotone",
                       pointRadius: 3,
                       pointBackgroundColor: "#6366f1",
+                      hidden: hiddenDatasets.has("Net"),
                     },
                   ],
                 }}
@@ -322,7 +343,29 @@ export default function DashboardPage() {
                     x: { grid: { display: false } },
                     y: { grid: { color: "rgba(148,163,184,0.15)" } },
                   },
-                  plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true } } },
+                  plugins: {
+                    legend: {
+                      display: true,
+                      labels: { boxWidth: 10, usePointStyle: true },
+                      // Persists which lines are toggled off to
+                      // localStorage (via toggleTrendDataset), instead
+                      // of only living in Chart.js's own in-memory
+                      // legend state, which reset on every reload.
+                      onClick: (_e, legendItem, legend) => {
+                        const index = legendItem.datasetIndex;
+                        if (index === undefined) return;
+                        const chart = legend.chart;
+                        if (chart.isDatasetVisible(index)) {
+                          chart.hide(index);
+                          legendItem.hidden = true;
+                        } else {
+                          chart.show(index);
+                          legendItem.hidden = false;
+                        }
+                        toggleTrendDataset(legendItem.text);
+                      },
+                    },
+                  },
                 }}
                 plugins={[createTodayLinePlugin(getTodayIndexForRange(trendRange))]}
                 height={140}
