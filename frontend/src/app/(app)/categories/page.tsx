@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
+import ColorPicker from "@/components/ColorPicker";
 import Modal from "@/components/Modal";
+import { EditIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
 import { Category } from "@/types";
 
@@ -56,24 +58,22 @@ function CategoryRow({ category, onSaved, onDeleted }: {
 
   return (
     <details ref={detailsRef} className="input rounded-xl px-3 py-2.5">
-      <summary className="flex cursor-pointer items-center justify-between text-sm">
+      <summary className="group flex cursor-pointer items-center justify-between text-sm">
         <span className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
           {category.name}
         </span>
-        <span className="text-muted text-xs">
-          {money(category.spent_this_month)}
-          {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
+        <span className="flex items-center gap-2">
+          <span className="text-muted text-xs">
+            {money(category.spent_this_month)}
+            {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
+          </span>
+          <EditIcon className="text-muted h-3.5 w-3.5 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
         </span>
       </summary>
       <div className="mt-3 space-y-2">
         <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="h-9 w-10 rounded-lg border-0 bg-transparent"
-          />
+          <ColorPicker value={color} onChange={setColor} />
           <input
             type="text"
             value={name}
@@ -177,12 +177,7 @@ export default function CategoriesPage() {
               {t("Name & color")}
             </label>
             <div className="grid grid-cols-[auto_1fr] gap-2">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-10 rounded-lg border-0 bg-transparent"
-              />
+              <ColorPicker value={color} onChange={setColor} swatchClassName="h-10 w-10" />
               <input
                 type="text"
                 required
