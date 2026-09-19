@@ -268,7 +268,8 @@ TREND_RANGE_OFFSETS = {
     # Offsets (months back from the current month) included in each
     # named range, oldest first - anchored to today regardless of the
     # `month` param, which only navigates the KPI cards/breakdown.
-    "current_month": [0],
+    # "current_month" isn't here - it gets day-level points instead,
+    # same as "this_week" (see summary() below).
     "last_month": [1],
     "last_3_months": [2, 1, 0],
     "last_6_months": [5, 4, 3, 2, 1, 0],
@@ -334,6 +335,10 @@ def summary(request, month: str = None, trend_range: str = "last_3_months"):
     if trend_range == "this_week":
         week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
         days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
+        mini_trend = get_daily_totals(request.auth, days)
+    elif trend_range == "current_month":
+        today = date.today()
+        days = [date(today.year, today.month, d).isoformat() for d in range(1, today.day + 1)]
         mini_trend = get_daily_totals(request.auth, days)
     else:
         mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
