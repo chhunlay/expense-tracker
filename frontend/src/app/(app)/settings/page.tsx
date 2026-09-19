@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingFavicon, setSavingFavicon] = useState(false);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
@@ -71,13 +72,33 @@ export default function SettingsPage() {
     setTrendHidden(getStoredTrendHidden());
   }, []);
 
-  /** Shows a message, then clears it on its own after a moment instead
-   * of sticking around until the next reload/navigation - the guard
-   * only clears it if nothing newer has replaced it in the meantime. */
   function flashMessage(text: string) {
     setMessage(text);
-    setTimeout(() => setMessage((current) => (current === text ? null : current)), 2500);
   }
+
+  // Drives the toast's fade in/out - a success message fades in, sits
+  // for a moment, then fades out and clears itself (no reload needed
+  // to make it go away); an error fades in the same way but stays put
+  // until the next action, since it's worth the user actually reading
+  // it rather than it vanishing on a timer.
+  const toastText = error ?? message;
+  useEffect(() => {
+    if (!toastText) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the fade before the next frame flips it back on; see AppShell's auth-check effect for the same tradeoff
+    setToastVisible(false);
+    const showFrame = requestAnimationFrame(() => setToastVisible(true));
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    let clearTimer: ReturnType<typeof setTimeout> | undefined;
+    if (!error) {
+      hideTimer = setTimeout(() => setToastVisible(false), 2200);
+      clearTimer = setTimeout(() => setMessage(null), 2500);
+    }
+    return () => {
+      cancelAnimationFrame(showFrame);
+      if (hideTimer) clearTimeout(hideTimer);
+      if (clearTimer) clearTimeout(clearTimer);
+    };
+  }, [toastText, error]);
 
   function handleAccentColorChange(color: string) {
     setAccentColor(color);
@@ -161,6 +182,11 @@ export default function SettingsPage() {
   }
 
   async function handleDetailsSave() {
+    // Blurring a field fires this even when nothing was actually
+    // typed (just clicking in and back out) - skip the PATCH and the
+    // "Profile updated" toast entirely when the values still match
+    // what was last loaded/saved.
+    if (profile && fullName === profile.full_name && email === profile.email && phone === profile.phone) return;
     setError(null);
     try {
       const updated = await apiFetch<Profile>("/api/profile", {
@@ -179,8 +205,15 @@ export default function SettingsPage() {
     <>
       <h2 className="mb-4 text-lg font-bold">Settings</h2>
 
-      {message && <p className="text-pos mb-3 text-sm">{message}</p>}
-      {error && <p className="text-neg mb-3 text-sm">{error}</p>}
+      {toastText && (
+        <div
+          className={`glass-card fixed left-4 top-4 z-50 rounded-xl px-4 py-2.5 text-sm shadow-lg transition-opacity duration-300 ${
+            toastVisible ? "opacity-100" : "opacity-0"
+          } ${error ? "text-neg" : "text-pos"}`}
+        >
+          {toastText}
+        </div>
+      )}
 
       {profile && (
         <div className="space-y-4">
