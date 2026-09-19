@@ -2,26 +2,32 @@
 
 import { useState } from "react";
 
-// Same palette as Settings' Accent color picker, so category colors and
-// the accent color come from one consistent set.
+// A wide enough spread of colors that picking one never needs to fall
+// back to the native `<input type="color">` OS picker - that one opens
+// as a separate window on macOS/Windows and needs its own explicit
+// close, which is exactly the friction this component exists to avoid.
 const PRESET_COLORS = [
   "#f97316",
-  "#6366f1",
-  "#ec4899",
-  "#10b981",
-  "#06b6d4",
+  "#f59e0b",
   "#eab308",
-  "#ef4444",
-  "#8b5cf6",
+  "#84cc16",
+  "#10b981",
   "#14b8a6",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#d946ef",
+  "#ec4899",
+  "#f43f5e",
+  "#ef4444",
   "#64748b",
 ];
 
 /** A swatch button that opens a small preset palette on click and
- * closes on mouse-leave - unlike the native `<input type="color">`
- * OS picker (a separate window on macOS/Windows), this is ours to
- * dismiss without a deliberate close click. A "+" custom option still
- * falls back to the native picker for anything outside the palette. */
+ * closes on mouse-leave or on picking a color - no native OS picker
+ * involved, so there's never a separate window to close. */
 export default function ColorPicker({
   value,
   onChange,
@@ -67,15 +73,6 @@ export default function ColorPicker({
                   }}
                 />
               ))}
-              <label className="text-muted flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-current text-[10px]">
-                +
-                <input
-                  type="color"
-                  value={value}
-                  onChange={(e) => onChange(e.target.value)}
-                  className="sr-only"
-                />
-              </label>
             </div>
           </div>
         </div>
