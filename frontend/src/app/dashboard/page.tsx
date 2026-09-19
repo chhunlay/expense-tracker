@@ -23,16 +23,22 @@ import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
 
-// Marks the current month's point on the trend chart, matching the
-// dashed "Today" divider from the reference forecast-chart screenshot
-// the user shared - every trend_range ends at the current month, so
-// that's always the last label.
+// Marks today's point on the trend chart, matching the dashed "Today"
+// divider from the reference forecast-chart screenshot the user
+// shared. Labels are either "YYYY-MM" (month ranges) or "YYYY-MM-DD"
+// (This Week's daily range) - This Week runs Monday through Sunday,
+// so today isn't always the last label (e.g. on a Wednesday, Thu-Sun
+// are still upcoming), unlike every month-based range which always
+// ends on the current month.
 const todayLinePlugin: Plugin<"line"> = {
   id: "todayLine",
   afterDraw(chart) {
     const labels = chart.data.labels as string[] | undefined;
     if (!labels || labels.length < 2) return;
-    const x = chart.scales.x.getPixelForValue(labels.length - 1);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const index = labels.indexOf(labels[0].length > 7 ? todayIso : todayIso.slice(0, 7));
+    if (index === -1) return;
+    const x = chart.scales.x.getPixelForValue(index);
     const { ctx, chartArea } = chart;
     ctx.save();
     ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
@@ -65,6 +71,7 @@ const HIDE_KEY = "expense-tracker-hide-amounts";
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 const TREND_RANGES = [
+  { value: "this_week", label: "This Week" },
   { value: "current_month", label: "Current Month" },
   { value: "last_month", label: "Last Month" },
   { value: "last_3_months", label: "Last 3 Months" },
@@ -256,21 +263,12 @@ export default function DashboardPage() {
               <Line
                 data={{
                   labels: summary.mini_trend.map((m) => m.month),
+                  // Same accent colors as the KPI cards above
+                  // (.kpi-income/.kpi-expense/.kpi-net in globals.css)
+                  // so the chart reads as an extension of them, not a
+                  // separate palette. Net is listed last so it draws
+                  // on top of (and legends after) Income/Expense.
                   datasets: [
-                    {
-                      // Same accent colors as the KPI cards above
-                      // (.kpi-net/.kpi-income/.kpi-expense in
-                      // globals.css) so the chart reads as an
-                      // extension of them, not a separate palette.
-                      label: "Net",
-                      data: summary.mini_trend.map((m) => m.net),
-                      borderColor: "#6366f1",
-                      backgroundColor: "rgba(99, 102, 241, 0.15)",
-                      fill: true,
-                      tension: 0.3,
-                      pointRadius: 3,
-                      pointBackgroundColor: "#6366f1",
-                    },
                     {
                       label: "Income",
                       data: summary.mini_trend.map((m) => m.income),
@@ -290,6 +288,16 @@ export default function DashboardPage() {
                       tension: 0.3,
                       pointRadius: 3,
                       pointBackgroundColor: "#f43f5e",
+                    },
+                    {
+                      label: "Net",
+                      data: summary.mini_trend.map((m) => m.net),
+                      borderColor: "#6366f1",
+                      backgroundColor: "rgba(99, 102, 241, 0.15)",
+                      fill: true,
+                      tension: 0.3,
+                      pointRadius: 3,
+                      pointBackgroundColor: "#6366f1",
                     },
                   ],
                 }}

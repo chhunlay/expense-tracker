@@ -8,7 +8,7 @@ queryset is filtered to that user so one account can never read or
 write another's rows, by id-guessing or otherwise - the same rule the
 DRF viewsets enforced via get_queryset().
 """
-from datetime import date
+from datetime import date, timedelta
 from typing import List
 
 from django.conf import settings as django_settings
@@ -50,7 +50,7 @@ from .schemas import (
     TransactionPatch,
 )
 from .security import TokenAuth
-from .services import get_monthly_totals
+from .services import get_daily_totals, get_monthly_totals
 from .xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 router = Router()
@@ -331,7 +331,12 @@ def summary(request, month: str = None, trend_range: str = "last_3_months"):
             "over": spent > limit,
         })
 
-    mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
+    if trend_range == "this_week":
+        week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
+        days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
+        mini_trend = get_daily_totals(request.auth, days)
+    else:
+        mini_trend = get_monthly_totals(request.auth, trend_months(trend_range))
 
     return {
         "month": month_str,
