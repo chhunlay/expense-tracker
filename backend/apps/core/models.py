@@ -5,7 +5,14 @@ extends Django's built-in User with the extra per-account preferences
 the Settings page needs (profile picture, theme, language) that don't
 belong on User itself. Asset is the new Accounting feature - net-worth
 items (bank accounts, cash, investments, property, ...) a user owns.
+AuthToken is a self-contained replacement for
+rest_framework.authtoken.models.Token, since the API layer no longer
+depends on Django REST Framework at all (see api.py/security.py) -
+same shape (a random hex key per user), just not borrowed from a
+library we otherwise don't use.
 """
+import secrets
+
 from django.conf import settings
 from django.db import models
 
@@ -96,3 +103,22 @@ class Asset(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AuthToken(models.Model):
+    """One active token per user, checked by security.py's TokenAuth on
+    every authenticated request (Authorization: Token <key>) - the same
+    role rest_framework.authtoken.models.Token played before the API
+    moved off Django REST Framework."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="auth_token")
+    key = models.CharField(max_length=40, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = secrets.token_hex(20)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Token for {self.user.username}"

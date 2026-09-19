@@ -3,6 +3,48 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.0.0] - 2026-09-19
+### Changed
+- **Restructured into a decoupled `backend/` + `frontend/` monorepo**
+  and **rebuilt the API on [django-ninja](https://django-ninja.dev/),
+  dropping Django REST Framework entirely.**
+  - `manage.py`, `config/`, the app, `data/`, `media/`, `locale/`, and
+    `requirements.txt` all moved under a new `backend/` directory.
+  - The app itself moved from `expenses/` to `backend/apps/core/` (app
+    label `core`, was `expenses`) - a fresh `0001_initial` migration
+    replaces the old history, since renaming a Django app label isn't
+    a clean in-place migration; the local SQLite dev database was
+    reset (it's gitignored, disposable local data).
+  - `expenses/api/serializers.py` + `views.py` + `urls.py` (DRF) are
+    replaced by `apps/core/schemas.py` (Pydantic request/response
+    shapes) and `apps/core/api.py` (one Ninja `Router` with every
+    endpoint, decorators instead of a separate urls.py).
+  - Token auth no longer depends on
+    `rest_framework.authtoken.models.Token` - a new self-contained
+    `AuthToken` model (`apps/core/models.py`) plus `TokenAuth`
+    (`apps/core/security.py`, a Ninja auth class) replace it, still
+    parsing the same `Authorization: Token <key>` header the frontend
+    already sends.
+  - **API routes no longer have a trailing slash** (Ninja's
+    convention, e.g. `/api/categories` not `/api/categories/`) -
+    `frontend/`'s `lib/api.ts` calls and `lib/auth.ts` updated to
+    match.
+  - The profile-picture upload split into its own endpoint
+    (`POST /api/profile/picture`, multipart) instead of being folded
+    into `PATCH /api/profile` - Ninja doesn't mix a JSON-schema body
+    and a file upload on one operation as cleanly as DRF's parser
+    stack did; `frontend/`'s Settings page updated to match.
+  - Ninja's built-in interactive API docs are live at `/api/docs`.
+- Removed a leftover `expenses/static/expenses/script.js` that had
+  survived the earlier "Django API-only" cleanup by mistake (nothing
+  serves it).
+### Fixed
+- `.gitignore`'s `data/*.db` pattern was root-anchored (a gitignore
+  pattern containing a slash before the last segment only matches at
+  the repo root) and silently stopped matching once the SQLite file
+  moved to `backend/data/`; changed to `**/data/*.db` so it matches at
+  any depth.
+
 ## [2.0.0] - 2026-09-19
 ### Changed
 - **Django is now API + admin only.** Removed every Django-rendered

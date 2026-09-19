@@ -17,14 +17,16 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import path
+
+from .api import api
 
 urlpatterns = [
     # Django is API + admin only - the UI lives entirely in frontend/
     # (Next.js), which talks to /api/ over HTTP. There's no HTML "/"
     # route here on purpose.
     path('admin/', admin.site.urls),
-    path('api/', include('expenses.api.urls')),
+    path('api/', api.urls),
 ]
 
 if settings.DEBUG:
