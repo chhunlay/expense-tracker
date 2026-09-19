@@ -247,25 +247,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         title="Log out?"
       >
         <p className="text-muted mb-4 text-sm">You&apos;ll need to sign in again to get back in.</p>
-        <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
           {/* The safe default gets the prominent/solid styling and
               autofocus (so Enter picks it) - "Yes" stays the one that
               needs a deliberate click, not this one blending into the
               background next to a bold red button. */}
           <button
             type="button"
-            autoFocus
-            onClick={() => setLogoutConfirmOpen(false)}
-            className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
+            onClick={handleLogout}
+            className="action-btn text-neg rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-rose-500/20"
           >
-            No
+            Yes, log out
           </button>
           <button
             type="button"
-            onClick={handleLogout}
-            className="action-btn text-neg flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-rose-500/20"
+            autoFocus
+            onClick={() => setLogoutConfirmOpen(false)}
+            className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
           >
-            Yes, log out
+            No
           </button>
         </div>
       </Modal>
