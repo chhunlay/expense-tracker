@@ -64,6 +64,7 @@ export interface Summary {
 export interface Profile {
   username: string;
   picture: string | null;
+  favicon: string | null;
   theme: "dark" | "light" | "system";
   language: string;
   full_name: string;

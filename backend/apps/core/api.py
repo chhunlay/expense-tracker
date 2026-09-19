@@ -266,6 +266,14 @@ def upload_profile_picture(request, picture: UploadedFile = File(...)):
     return profile
 
 
+@router.post("/profile/favicon", response=ProfileOut, auth=auth)
+def upload_favicon(request, favicon: UploadedFile = File(...)):
+    profile = request.auth.profile
+    profile.favicon = favicon
+    profile.save()
+    return profile
+
+
 # ---------- Dashboard / Reports ----------
 TREND_RANGE_OFFSETS = {
     # Offsets (months back from the anchor month) included in each

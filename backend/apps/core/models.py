@@ -65,6 +65,11 @@ class Profile(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     picture = models.ImageField(upload_to="profile_pictures/", blank=True, null=True)
+    # Per-account override for the browser tab icon - falls back to
+    # the app's own static favicon.ico when unset (see AppShell's
+    # applyFavicon(), which only ever points <link rel="icon"> here
+    # when this is set).
+    favicon = models.ImageField(upload_to="favicons/", blank=True, null=True)
     # Default is SYSTEM (follow the OS/browser preference), not DARK -
     # matches the frontend's own first-visit fallback in
     # THEME_INIT_SCRIPT (lib/theme.ts) for a brand new account.

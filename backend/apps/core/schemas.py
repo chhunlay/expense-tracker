@@ -153,6 +153,7 @@ class TokenOut(Schema):
 class ProfileOut(Schema):
     username: str
     picture: Optional[str] = None
+    favicon: Optional[str] = None
     theme: str
     language: str
     full_name: str
@@ -166,6 +167,10 @@ class ProfileOut(Schema):
     @staticmethod
     def resolve_picture(obj) -> Optional[str]:
         return obj.picture.url if obj.picture else None
+
+    @staticmethod
+    def resolve_favicon(obj) -> Optional[str]:
+        return obj.favicon.url if obj.favicon else None
 
     @staticmethod
     def resolve_email(obj) -> str:

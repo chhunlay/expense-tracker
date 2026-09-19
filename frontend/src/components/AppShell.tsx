@@ -14,6 +14,7 @@ import {
   AssetsIcon,
   CategoriesIcon,
   DashboardIcon,
+  LogoIcon,
   LogoutIcon,
   ReportsIcon,
   SettingsIcon,
@@ -83,8 +84,8 @@ function SidebarBrand({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
-        💰
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow-lg shadow-indigo-500/20">
+        <LogoIcon width={20} height={20} />
       </div>
       <div className="mt-0.5 min-w-0">
         <h1 className={`${titleSize} font-extrabold tracking-tight`}>Expense Tracker</h1>
@@ -133,6 +134,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => onSidebarHeaderStyleChange(setHeaderStyle), []);
   useEffect(() => onProfileUpdate(setProfile), []);
+
+  useEffect(() => {
+    // Only ever points the tab icon at the user's own uploaded
+    // favicon (Settings' "Favicon" card) - when they haven't set one,
+    // this does nothing and the browser keeps using the app's static
+    // src/app/favicon.ico as normal. There's no "reset" path since
+    // nothing here ever points it anywhere else.
+    if (!profile?.favicon) return;
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = `${API_BASE_URL}${profile.favicon}`;
+  }, [profile?.favicon]);
 
   if (!checked) return null;
 

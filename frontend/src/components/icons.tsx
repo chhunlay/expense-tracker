@@ -171,6 +171,28 @@ function FilledIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// The app's own mark (a segmented pie/donut ring around a solid
+// coin) - recreated from the reference the user shared, replacing the
+// generic 💰 emoji previously used for the sidebar logo and the
+// Settings favicon card's default placeholder. Single-tone
+// (currentColor), like the rest of this file's icons, so it stays
+// legible tinted any color - unlike the standalone two-tone black/
+// white version at src/app/icon.svg (the actual browser tab icon,
+// Next.js's App Router convention), which isn't currentColor-tinted
+// and can safely add a white "$" cutout on the black coin. Keep the
+// ring/coin path in sync between the two if it ever changes.
+export function LogoIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <FilledIcon width={20} height={20} {...props}>
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M11 2.05a10 10 0 0 0-3.518 18.635l1.554-3.226A6 6 0 0 1 11 6.083V2.05Zm2 0v4.033a6 6 0 0 1 3.518 1.409l3.15-2.522A9.98 9.98 0 0 0 13 2.05Zm7.94 4.522-3.15 2.522A5.98 5.98 0 0 1 18 12c0 1.264-.402 2.434-1.086 3.39l3.237 2.148A9.96 9.96 0 0 0 22 12a9.96 9.96 0 0 0-1.06-4.478v-.95ZM16.086 16.39a5.98 5.98 0 0 1-3.32 1.518l.234 3.987a9.98 9.98 0 0 0 6.323-3.357l-3.237-2.148ZM10.966 21.895l-.234-3.987a6.02 6.02 0 0 1-2.696-1.05l-1.554 3.226a9.96 9.96 0 0 0 4.484 1.81ZM12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z"
+      />
+    </FilledIcon>
+  );
+}
+
 export function MoonIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <FilledIcon {...props}>

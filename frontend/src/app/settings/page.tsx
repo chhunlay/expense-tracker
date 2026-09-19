@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
-import { MailIcon, PhoneIcon } from "@/components/icons";
+import { LogoIcon, MailIcon, PhoneIcon } from "@/components/icons";
 import { broadcastProfileUpdate } from "@/lib/profile";
 import {
   applyAccent,
@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingFavicon, setSavingFavicon] = useState(false);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
   const [sidebarHeaderStyle, setSidebarHeaderStyle] = useState<SidebarHeaderStyle>("app");
   const [trendHidden, setTrendHidden] = useState<Set<string>>(new Set());
@@ -156,6 +157,26 @@ export default function SettingsPage() {
       setError(err instanceof ApiError ? err.message : "Couldn't upload picture");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleFaviconChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    setError(null);
+    setSavingFavicon(true);
+    try {
+      const formData = new FormData();
+      formData.append("favicon", picked);
+      const updated = await apiFetch<Profile>("/api/profile/favicon", { method: "POST", body: formData });
+      setProfile(updated);
+      broadcastProfileUpdate(updated);
+      setMessage("Favicon updated");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't upload favicon");
+    } finally {
+      setSavingFavicon(false);
     }
   }
 
@@ -264,6 +285,29 @@ export default function SettingsPage() {
                   <span className="font-semibold">{opt.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Favicon</h3>
+            <div className="flex items-center gap-4">
+              <label className="group relative h-10 w-10 flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)]">
+                {profile.favicon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`${API_BASE_URL}${profile.favicon}`} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <span className="text-muted flex h-full w-full items-center justify-center">
+                    <LogoIcon width={20} height={20} />
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-center text-[9px] font-semibold leading-tight text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  {savingFavicon ? "…" : "Change"}
+                </span>
+                <input type="file" accept="image/*" onChange={handleFaviconChange} className="hidden" />
+              </label>
+              <p className="text-faint text-xs">
+                Shown as this browser tab&apos;s icon. Falls back to the default when unset.
+              </p>
             </div>
           </div>
 
