@@ -58,6 +58,7 @@ export interface Summary {
   breakdown: BreakdownItem[];
   budget_progress: BudgetProgressItem[];
   mini_trend: MonthlyTotal[];
+  trend_label: string;
 }
 
 export interface Profile {

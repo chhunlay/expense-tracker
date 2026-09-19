@@ -292,6 +292,43 @@ def trend_months(trend_range: str) -> list[str]:
     return months
 
 
+def trend_date_bounds(trend_range: str) -> tuple[date, date]:
+    """The same window each trend_range's chart points span (inclusive
+    on both ends) - used to scope the "Where it went" breakdown to
+    match whatever the Trend chart is currently showing, and to build
+    the human-readable label under the Trend heading. Kept separate
+    from trend_months()/the day/week bucket logic in summary() below,
+    which need the window broken into points rather than one range."""
+    today = date.today()
+    if trend_range == "this_week":
+        start = today - timedelta(days=today.weekday())
+        return start, start + timedelta(days=6)
+    if trend_range == "this_month":
+        start = date(today.year, today.month, 1)
+        _, next_month_start = month_bounds(today.strftime("%Y-%m"))
+        end = date(*(int(p) for p in next_month_start.split("-"))) - timedelta(days=1)
+        return start, end
+    if trend_range == "last_month":
+        y, m = shift_month(today.year, today.month, -1)
+        end = date(today.year, today.month, 1) - timedelta(days=1)
+        return date(y, m, 1), end
+    if trend_range == "current_year":
+        return date(today.year, 1, 1), today
+    months_back = {"last_6_months": 5}.get(trend_range, 2)  # last_3_months + fallback
+    y, m = shift_month(today.year, today.month, -months_back)
+    return date(y, m, 1), today
+
+
+def format_trend_label(trend_range: str, start: date, end: date) -> str:
+    if trend_range == "this_week":
+        return f"{start.strftime('%b')} {start.day} – {end.strftime('%b')} {end.day}, {end.year}"
+    if trend_range in ("this_month", "last_month"):
+        return start.strftime("%B %Y")
+    if start.year == end.year:
+        return f"{start.strftime('%b')} – {end.strftime('%b %Y')}"
+    return f"{start.strftime('%b %Y')} – {end.strftime('%b %Y')}"
+
+
 @router.get("/summary", response=SummaryOut, auth=auth)
 def summary(request, month: str = None, trend_range: str = "this_month"):
     """Everything the Dashboard renders for one month - the same
@@ -307,24 +344,21 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     expense = sum(float(t.amount) for t in rows if t.type == Transaction.EXPENSE)
     net_worth = float(Asset.objects.filter(user=request.auth).aggregate(t=Sum("value"))["t"] or 0)
 
-    breakdown_totals: dict[str, float] = {}
-    breakdown_colors: dict[str, str] = {}
+    # Budgets stay scoped to the navigated calendar month (a monthly
+    # budget_limit compared against anything else wouldn't mean much),
+    # so this dict is built from `rows` and used only for that.
+    month_expense_totals: dict[str, float] = {}
     for t in rows:
         if t.type != Transaction.EXPENSE:
             continue
         name = t.category.name if t.category else "Uncategorized"
-        breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
-        breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
-    breakdown = [
-        {"name": name, "amount": amount, "color": breakdown_colors[name]}
-        for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
-    ]
+        month_expense_totals[name] = month_expense_totals.get(name, 0.0) + float(t.amount)
 
     budget_progress = []
     for c in Category.objects.filter(user=request.auth):
         if not c.budget_limit:
             continue
-        spent = breakdown_totals.get(c.name, 0.0)
+        spent = month_expense_totals.get(c.name, 0.0)
         limit = float(c.budget_limit)
         budget_progress.append({
             "name": c.name,
@@ -334,6 +368,25 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
             "pct": min(100, round(spent / limit * 100)) if limit else 0,
             "over": spent > limit,
         })
+
+    # "Where it went" instead follows the Trend chart's own filter
+    # (trend_range), not the month nav - so it's built from its own
+    # query over trend_date_bounds() rather than reusing `rows`.
+    trend_start, trend_end = trend_date_bounds(trend_range)
+    breakdown_rows = Transaction.objects.filter(
+        user=request.auth, type=Transaction.EXPENSE, date__gte=trend_start, date__lte=trend_end
+    ).select_related("category")
+    breakdown_totals: dict[str, float] = {}
+    breakdown_colors: dict[str, str] = {}
+    for t in breakdown_rows:
+        name = t.category.name if t.category else "Uncategorized"
+        breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
+        breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
+    breakdown = [
+        {"name": name, "amount": amount, "color": breakdown_colors[name]}
+        for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
+    ]
+    trend_label = format_trend_label(trend_range, trend_start, trend_end)
 
     if trend_range == "this_week":
         week_start = date.today() - timedelta(days=date.today().weekday())  # Monday
@@ -367,6 +420,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
         "breakdown": breakdown,
         "budget_progress": budget_progress,
         "mini_trend": mini_trend,
+        "trend_label": trend_label,
     }
 
 

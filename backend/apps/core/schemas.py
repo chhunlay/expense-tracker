@@ -214,6 +214,7 @@ class SummaryOut(Schema):
     breakdown: list[BreakdownItem]
     budget_progress: list[BudgetProgressItem]
     mini_trend: list[MonthlyTotal]
+    trend_label: str
 
 
 class TopCategory(Schema):

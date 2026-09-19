@@ -280,8 +280,11 @@ export default function DashboardPage() {
 
           <div className="mb-5 grid gap-5 lg:grid-cols-3">
             <div className="glass-card rounded-2xl p-5 lg:col-span-2">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="font-bold">Trend</h3>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold">Trend</h3>
+                  <p className="text-faint text-xs">{summary.trend_label}</p>
+                </div>
                 <select
                   value={trendRange}
                   onChange={(e) => setTrendRange(e.target.value)}
