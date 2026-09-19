@@ -9,6 +9,7 @@ import { logout } from "@/lib/auth";
 import { onProfileUpdate } from "@/lib/profile";
 import { getStoredSidebarHeaderStyle, onSidebarHeaderStyleChange, SidebarHeaderStyle } from "@/lib/theme";
 import { Profile } from "@/types";
+import Modal from "./Modal";
 import ThemeToggle from "./ThemeToggle";
 import {
   AssetsIcon,
@@ -112,6 +113,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [headerStyle, setHeaderStyle] = useState<SidebarHeaderStyle>("app");
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     // This effect exists specifically to read an external system
@@ -156,6 +158,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const displayName = profile?.full_name || profile?.email || profile?.username || "";
 
   function handleLogout() {
+    setLogoutConfirmOpen(false);
     logout();
     router.replace("/login");
   }
@@ -193,7 +196,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto flex items-center justify-between gap-2 pt-5">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setLogoutConfirmOpen(true)}
             className="sidebar-link flex flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold"
           >
             <LogoutIcon /> Log out
@@ -223,7 +226,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               ))}
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="nav-link flex-shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold"
               >
                 Log out
@@ -234,6 +237,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      <Modal
+        id="logoutConfirmModal"
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        title="Log out?"
+      >
+        <p className="text-muted mb-4 text-sm">You&apos;ll need to sign in again to get back in.</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setLogoutConfirmOpen(false)}
+            className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
+          >
+            No
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="action-btn flex-1 rounded-xl bg-rose-500 py-3 font-semibold text-white shadow-lg shadow-rose-500/20 hover:bg-rose-400"
+          >
+            Yes, log out
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

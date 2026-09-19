@@ -207,7 +207,7 @@ export default function SettingsPage() {
 
       {toastText && (
         <div
-          className={`glass-card fixed left-4 top-4 z-50 rounded-xl px-4 py-2.5 text-sm shadow-lg transition-opacity duration-300 ${
+          className={`glass-card fixed right-4 top-4 z-50 rounded-xl px-4 py-2.5 text-sm shadow-lg transition-opacity duration-300 ${
             toastVisible ? "opacity-100" : "opacity-0"
           } ${error ? "text-neg" : "text-pos"}`}
         >
@@ -361,23 +361,21 @@ export default function SettingsPage() {
           <div className="glass-card rounded-2xl p-5">
             <h3 className="mb-3 text-sm font-semibold">Trend chart series</h3>
             <div className="flex flex-wrap gap-4">
-              {TREND_SERIES.map(({ label, color }) => (
+              {TREND_SERIES.map(({ label }) => (
                 <label key={label} className="flex cursor-pointer items-center gap-2 text-sm">
                   {/* Still a checkbox under the hood (each series
                       toggles independently, not an exclusive group) -
                       just styled round like a radio button per the
                       user's ask, with a guard in toggleTrendSeries()
-                      keeping at least one checked. */}
+                      keeping at least one checked. Plain/neutral, not
+                      per-series colored. */}
                   <input
                     type="checkbox"
                     checked={!trendHidden.has(label)}
                     onChange={() => toggleTrendSeries(label)}
                     className="radio-checkbox h-4 w-4"
-                    style={{ "--dot-color": color } as React.CSSProperties}
                   />
-                  <span className="font-semibold" style={{ color }}>
-                    {label}
-                  </span>
+                  <span className="font-semibold">{label}</span>
                 </label>
               ))}
             </div>
