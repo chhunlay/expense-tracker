@@ -3,6 +3,39 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [1.4.0] - 2026-09-19
+### Added
+- **Next.js frontend** (`frontend/`) - a separate TypeScript/App
+  Router/Tailwind app that talks to the Django REST API instead of
+  using the Django HTML templates. Covers login, register, Dashboard,
+  and Transactions (list + add) for this first pass; Categories,
+  Assets, Reports, and Settings are still Django-only. Auth is
+  token-based (`localStorage`, `Authorization: Token ...`), via two
+  new API endpoints:
+  - `POST /api/register/` - same account-creation flow as the HTML
+    `/register` form (seeds default categories), returns a token.
+  - `GET /api/summary/` - the Dashboard's income/expense/net/net-worth
+    numbers in one call, computed the same way `views.dashboard` does.
+- `django-cors-headers`, configured to allow the Next.js dev server's
+  origin (`http://localhost:3000`) to call the API cross-origin.
+
+## [1.3.0] - 2026-09-18
+### Changed
+- Simplified several emoji icons (nav, logout, login/register logo) to
+  plain monochrome outline SVGs via a new `icon_svg` template filter;
+  reverted the dark/light theme toggle's icon back to 🌙/☀️ emoji after
+  trying an SVG swap.
+- Replaced the square theme-toggle button with a pill-shaped switch
+  (moon on a dark track, sun sliding to a light track).
+- Added a show/hide toggle to the password fields on login/register.
+- Static CSS/JS now load with a `?v={app_version}` cache-busting query
+  string, so a version bump reliably invalidates a browser's cached
+  copy instead of silently serving stale styles/scripts.
+- Added a warm cream/yellow/orange/coral color palette, scoped to just
+  the login/register **card** in light theme (`.glass-card` under
+  `html.auth-page[data-theme="light"]`) - the page background and the
+  rest of the app keep the original indigo/white light theme.
+
 ## [1.2.0] - 2026-09-18
 ### Added
 - **JSON API** under `/api/` (Django REST Framework, not FastAPI - kept

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Matches the Django app's default (dark) theme for this first pass -
+   no light/dark toggle here yet, unlike the Django templates. */
+:root {
+  --background: #05070d;
+  --foreground: #f1f5f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

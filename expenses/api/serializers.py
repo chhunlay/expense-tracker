@@ -5,6 +5,8 @@ these: it's always set from request.user in the viewset
 (perform_create), never trusted from client input, so one account can
 never write data into another account by guessing an id.
 """
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from expenses.models import Asset, Category, Transaction
@@ -38,3 +40,26 @@ class AssetSerializer(serializers.ModelSerializer):
         model = Asset
         fields = ["id", "name", "asset_type", "value", "note", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """Mirrors UserCreationForm (views.register) for API clients (the
+    Next.js frontend) - same uniqueness/strength rules, via Django's own
+    validate_password rather than duplicating UserCreationForm's checks."""
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ["username", "password"]
+
+    def validate_username(self, username):
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError("That username is already taken.")
+        return username
+
+    def validate_password(self, password):
+        validate_password(password)
+        return password
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
