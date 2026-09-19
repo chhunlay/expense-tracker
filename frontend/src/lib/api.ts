@@ -80,3 +80,29 @@ export async function apiFetch<T>(
   }
   return body as T;
 }
+
+/** For a file-download endpoint (export CSV/XLSX) - apiFetch always
+ * parses JSON, which a file response isn't, so this fetches the raw
+ * bytes with the same auth header and triggers the browser's normal
+ * "Save As" flow via a throwaway <a download> link, the same outcome
+ * clicking the old Django export links gave you. */
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Token ${token}`);
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(extractErrorMessage(body), res.status);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

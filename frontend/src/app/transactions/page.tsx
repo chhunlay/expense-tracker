@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
+import { DownloadIcon, UploadIcon } from "@/components/icons";
 import { Category, Transaction } from "@/types";
 
 function money(value: string): string {
@@ -27,9 +28,19 @@ export default function TransactionsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   function loadData() {
+    const params = new URLSearchParams();
+    if (filterMonth) params.set("month", filterMonth);
+    if (filterCategory) params.set("category_id", filterCategory);
+    const qs = params.toString();
     Promise.all([
-      apiFetch<Transaction[]>("/api/transactions/"),
+      apiFetch<Transaction[]>(`/api/transactions/${qs ? `?${qs}` : ""}`),
       apiFetch<Category[]>("/api/categories/"),
     ])
       .then(([txns, cats]) => {
@@ -39,7 +50,7 @@ export default function TransactionsPage() {
       .catch(() => setError("Couldn't load transactions"));
   }
 
-  useEffect(loadData, []);
+  useEffect(loadData, [filterMonth, filterCategory]);
 
   function openModal() {
     setForm({ ...emptyForm(), categoryId: categories[0] ? String(categories[0].id) : "" });
@@ -71,17 +82,86 @@ export default function TransactionsPage() {
     }
   }
 
+  async function handleExport(format: "csv" | "xlsx") {
+    setExportMenuOpen(false);
+    try {
+      await apiDownload(`/api/export/${format}/`, `transactions.${format}`);
+    } catch {
+      setError("Couldn't export transactions");
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMessage(null);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await apiFetch<{ imported: number; skipped: number; created_categories: number }>(
+        "/api/import/",
+        { method: "POST", body: formData }
+      );
+      setImportMessage(
+        `Imported ${result.imported} transaction(s), created ${result.created_categories} new categor(y/ies), skipped ${result.skipped} invalid row(s)`
+      );
+      loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't import file");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <AppShell>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Transactions</h2>
-        <button
-          type="button"
-          onClick={openModal}
-          className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
-        >
-          + Add
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((v) => !v)}
+              className="action-btn text-muted flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
+            >
+              <DownloadIcon /> Export
+            </button>
+            {exportMenuOpen && (
+              <div className="glass-card absolute right-0 top-full z-10 mt-2 w-32 space-y-1 rounded-xl p-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleExport("csv")}
+                  className="nav-link block w-full rounded-lg px-3 py-2 text-left text-sm"
+                >
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("xlsx")}
+                  className="nav-link block w-full rounded-lg px-3 py-2 text-left text-sm"
+                >
+                  XLSX
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="action-btn text-muted flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
+          >
+            <UploadIcon /> Import
+          </button>
+          <input ref={fileInputRef} type="file" accept=".csv,.xlsx" onChange={handleImport} className="hidden" />
+          <button
+            type="button"
+            onClick={openModal}
+            className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
+          >
+            + Add
+          </button>
+        </div>
       </div>
 
       <Modal id="addModal" open={modalOpen} onClose={() => setModalOpen(false)} title="Add transaction">
@@ -158,7 +238,7 @@ export default function TransactionsPage() {
               className="input w-full rounded-xl px-3 py-2.5"
             />
           </div>
-          {error && <p className="text-neg text-sm">{error}</p>}
+          {error && modalOpen && <p className="text-neg text-sm">{error}</p>}
           <div className="flex gap-2">
             <button
               type="button"
@@ -178,11 +258,45 @@ export default function TransactionsPage() {
         </form>
       </Modal>
 
+      <div className="glass-card mb-4 flex flex-wrap gap-2 rounded-2xl p-4">
+        <input
+          type="month"
+          value={filterMonth}
+          onChange={(e) => setFilterMonth(e.target.value)}
+          className="input rounded-xl px-3 py-2 text-sm"
+        />
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="input rounded-xl px-3 py-2 text-sm"
+        >
+          <option value="">All categories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {(filterMonth || filterCategory) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFilterMonth("");
+              setFilterCategory("");
+            }}
+            className="action-btn text-muted rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {importMessage && <p className="text-pos mb-3 text-sm">{importMessage}</p>}
       {error && !modalOpen && <p className="text-neg mb-3 text-sm">{error}</p>}
 
       <div className="glass-card rounded-2xl p-5">
         {rows.length === 0 ? (
-          <p className="text-faint text-sm">No transactions yet.</p>
+          <p className="text-faint text-sm">No transactions match this filter.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="txn-table w-full text-left text-sm">

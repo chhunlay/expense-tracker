@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { getToken } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import ThemeToggle from "./ThemeToggle";
 import {
   AssetsIcon,
   CategoriesIcon,
@@ -108,25 +109,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="mt-auto pt-5">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-5">
           <button
             type="button"
             onClick={handleLogout}
-            className="sidebar-link flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold"
+            className="sidebar-link flex flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold"
           >
             <LogoutIcon /> Log out
           </button>
+          <ThemeToggle />
         </div>
       </aside>
 
       <main className="min-w-0 flex-1 p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-5 md:hidden">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
-                💰
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-lg shadow-lg shadow-indigo-500/20">
+                  💰
+                </div>
+                <h1 className="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
               </div>
-              <h1 className="text-lg font-extrabold tracking-tight">Expense Tracker</h1>
+              <ThemeToggle />
             </div>
             <nav className="glass-card flex gap-1 overflow-x-auto rounded-2xl p-1.5">
               {NAV_SECTIONS.flatMap((s) => s.items).map(({ href, label }) => (

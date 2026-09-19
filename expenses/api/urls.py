@@ -6,6 +6,9 @@ from .views import (
     AssetViewSet,
     CategoryViewSet,
     TransactionViewSet,
+    export_csv,
+    export_xlsx,
+    import_transactions,
     profile,
     register,
     reports,
@@ -33,4 +36,9 @@ urlpatterns = router.urls + [
     path("profile/", profile, name="api-profile"),
     # GET the Reports page's 12-month trend + top-spending-categories.
     path("reports/", reports, name="api-reports"),
+    # GET a full transaction-history export; POST (multipart, field
+    # "file") a .csv/.xlsx to import.
+    path("export/csv/", export_csv, name="api-export-csv"),
+    path("export/xlsx/", export_xlsx, name="api-export-xlsx"),
+    path("import/", import_transactions, name="api-import"),
 ]

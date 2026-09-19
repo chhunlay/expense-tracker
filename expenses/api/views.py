@@ -8,6 +8,7 @@ client could pass in).
 from datetime import date
 
 from django.db.models import Sum
+from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, parser_classes, permission_classes
@@ -16,9 +17,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from expenses.constants import DEFAULT_CATEGORIES
+from expenses.csv_io import export_transactions_csv, import_transactions_csv
 from expenses.dates import month_bounds, shift_month
 from expenses.models import Asset, Category, Transaction
 from expenses.services import get_monthly_totals
+from expenses.xlsx_io import export_transactions_xlsx, import_transactions_xlsx
 
 from .serializers import (
     AssetSerializer,
@@ -45,7 +48,22 @@ class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user).select_related("category")
+        qs = Transaction.objects.filter(user=self.request.user).select_related("category")
+        # Same two filters the old Transactions page's filter form had
+        # (?month=YYYY-MM, ?category_id=<id>), plus a small extra
+        # (?limit=) the Dashboard's Recent list uses instead of
+        # over-fetching the whole history just to show 8 rows.
+        month_str = self.request.query_params.get("month")
+        if month_str:
+            start, end = month_bounds(month_str)
+            qs = qs.filter(date__gte=start, date__lt=end)
+        category_id = self.request.query_params.get("category_id")
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+        limit = self.request.query_params.get("limit")
+        if limit and limit.isdigit():
+            qs = qs[: int(limit)]
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -146,3 +164,50 @@ def reports(request):
     top_categories.sort(key=lambda c: -c["total"])
 
     return Response({"monthly_totals": monthly_totals, "top_categories": top_categories})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def export_csv(request):
+    csv_text = export_transactions_csv(request.user)
+    response = HttpResponse(csv_text, content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="transactions.csv"'
+    return response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def export_xlsx(request):
+    xlsx_bytes = export_transactions_xlsx(request.user)
+    response = HttpResponse(
+        xlsx_bytes, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="transactions.xlsx"'
+    return response
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser])
+def import_transactions(request):
+    """POST a .csv or .xlsx file (multipart, field name "file") - same
+    import rules as the old /import HTML page (see csv_io.py's
+    docstring): a category name that doesn't exist yet is created
+    automatically, invalid rows are skipped rather than aborting."""
+    upload = request.FILES.get("file")
+    if not upload:
+        return Response({"detail": "Choose a file first"}, status=status.HTTP_400_BAD_REQUEST)
+
+    name = upload.name.lower()
+    file_bytes = upload.read()
+    if name.endswith(".csv"):
+        imported, skipped, created = import_transactions_csv(request.user, file_bytes)
+    elif name.endswith(".xlsx"):
+        imported, skipped, created = import_transactions_xlsx(request.user, file_bytes)
+    else:
+        return Response(
+            {"detail": "Unsupported file type - upload a .csv or .xlsx file"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response({"imported": imported, "skipped": skipped, "created_categories": created})
