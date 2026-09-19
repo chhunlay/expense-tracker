@@ -15,6 +15,7 @@ import {
   setStoredAccent,
   setStoredSidebarHeaderStyle,
   setStoredTrendHidden,
+  setThemePreference,
   SidebarHeaderStyle,
 } from "@/lib/theme";
 import { Profile } from "@/types";
@@ -22,6 +23,12 @@ import { Profile } from "@/types";
 const SIDEBAR_HEADER_OPTIONS: { value: SidebarHeaderStyle; label: string; description: string }[] = [
   { value: "app", label: "App name", description: '"Expense Tracker" with your username underneath.' },
   { value: "user", label: "User profile", description: "Your avatar with your name and username instead." },
+];
+
+const APPEARANCE_OPTIONS: { value: Profile["theme"]; label: string; icon: string }[] = [
+  { value: "system", label: "System", icon: "🖥️" },
+  { value: "light", label: "Light", icon: "☀️" },
+  { value: "dark", label: "Dark", icon: "🌙" },
 ];
 
 // Matches the Dashboard trend chart's own dataset colors/labels
@@ -53,7 +60,6 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [savingDetails, setSavingDetails] = useState(false);
 
   useEffect(() => {
     apiFetch<Profile>("/api/profile")
@@ -100,6 +106,11 @@ export default function SettingsPage() {
 
   async function handleThemeChange(theme: Profile["theme"]) {
     setError(null);
+    // Applies (and persists to localStorage) immediately, rather than
+    // waiting on the PATCH below - matches the accent color/sidebar
+    // header pickers, and means a slow/failed request doesn't leave
+    // the picker looking like nothing happened.
+    setThemePreference(theme);
     try {
       const updated = await apiFetch<Profile>("/api/profile", {
         method: "PATCH",
@@ -150,7 +161,6 @@ export default function SettingsPage() {
 
   async function handleDetailsSave() {
     setError(null);
-    setSavingDetails(true);
     try {
       const updated = await apiFetch<Profile>("/api/profile", {
         method: "PATCH",
@@ -161,8 +171,6 @@ export default function SettingsPage() {
       setMessage("Profile updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update your profile");
-    } finally {
-      setSavingDetails(false);
     }
   }
 
@@ -207,6 +215,7 @@ export default function SettingsPage() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  onBlur={handleDetailsSave}
                   placeholder="Your name"
                   className="w-full truncate rounded-lg bg-transparent text-lg font-bold outline-none focus:bg-[var(--input-bg)] focus:px-2 focus:py-0.5"
                 />
@@ -216,6 +225,7 @@ export default function SettingsPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={handleDetailsSave}
                     placeholder="you@example.com"
                     className="w-full bg-transparent outline-none"
                   />
@@ -226,35 +236,35 @@ export default function SettingsPage() {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    onBlur={handleDetailsSave}
                     placeholder="+1 555 000 0000"
                     className="w-full bg-transparent outline-none"
                   />
                 </label>
               </div>
             </div>
-
-            <div className="mt-5 border-t border-[var(--card-border)] pt-5">
-              <button
-                type="button"
-                onClick={handleDetailsSave}
-                disabled={savingDetails}
-                className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
-              >
-                Save
-              </button>
-            </div>
           </div>
 
           <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 text-sm font-semibold">Color theme</h3>
-            <select
-              value={profile.theme}
-              onChange={(e) => handleThemeChange(e.target.value as Profile["theme"])}
-              className="input rounded-xl px-3 py-2 text-sm"
-            >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
+            <h3 className="mb-3 text-sm font-semibold">Appearance</h3>
+            <div className="grid grid-cols-3 gap-2.5">
+              {APPEARANCE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleThemeChange(opt.value)}
+                  className="input flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-sm"
+                  style={
+                    profile.theme === opt.value
+                      ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" }
+                      : undefined
+                  }
+                >
+                  <span className="text-xl">{opt.icon}</span>
+                  <span className="font-semibold">{opt.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="glass-card rounded-2xl p-5">

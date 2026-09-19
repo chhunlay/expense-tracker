@@ -79,6 +79,17 @@ function seriesStats(values: number[]): { high: number; avg: number } {
   return { high: Math.max(...values), avg: values.reduce((sum, v) => sum + v, 0) / values.length };
 }
 
+/** What one Trend chart point actually spans for a given trend_range -
+ * This Week is daily points, This Month is weekly buckets, everything
+ * else is one point per month (mirrors api.py's summary() endpoint).
+ * Labels the "Avg" stat with it (e.g. "Avg/week") since an average
+ * without a unit is ambiguous once the chart's granularity changes. */
+function avgUnitLabel(trendRange: string): string {
+  if (trendRange === "this_week") return "day";
+  if (trendRange === "this_month") return "week";
+  return "month";
+}
+
 function shiftMonth(monthStr: string, delta: number): string {
   const [y, m] = monthStr.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
@@ -318,7 +329,7 @@ export default function DashboardPage() {
                                 {label}{" "}
                               </span>
                             )}
-                            High {money(high)} &middot; Avg {money(avg)}
+                            High {money(high)} &middot; Avg/{avgUnitLabel(trendRange)} {money(avg)}
                           </span>
                         );
                       });

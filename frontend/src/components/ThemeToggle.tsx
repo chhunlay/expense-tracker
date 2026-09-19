@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 
-import { applyTheme, setStoredTheme, Theme } from "@/lib/theme";
+import { onThemePreferenceChange, resolveTheme, ResolvedTheme, setThemePreference } from "@/lib/theme";
 
 /** Same pill switch as the old sidebar/mobile-header toggle - moon on a
  * dark track, sun sliding to a light track. Reads the theme the inline
  * script in layout.tsx already applied to <html> on first render, so
  * there's nothing to do before mount here beyond mirroring it into
- * this button's own state for the thumb position. */
+ * this button's own state for the thumb position. Clicking it always
+ * sets an explicit light/dark preference (overriding "system" if that
+ * was picked in Settings' Appearance section), and it also listens
+ * for changes made there so its own thumb stays in sync without
+ * needing a remount. */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<ResolvedTheme>("dark");
 
   useEffect(() => {
     // Reads an external system (the <html> attribute the inline script
@@ -19,11 +23,12 @@ export default function ThemeToggle() {
     setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
   }, []);
 
+  useEffect(() => onThemePreferenceChange((pref) => setTheme(resolveTheme(pref))), []);
+
   function toggle() {
-    const next: Theme = theme === "light" ? "dark" : "light";
+    const next: ResolvedTheme = theme === "light" ? "dark" : "light";
     setTheme(next);
-    applyTheme(next);
-    setStoredTheme(next);
+    setThemePreference(next);
   }
 
   return (
