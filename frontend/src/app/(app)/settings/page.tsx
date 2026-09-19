@@ -14,7 +14,6 @@ import {
   setStoredAccent,
   setStoredSidebarHeaderStyle,
   setStoredTrendHidden,
-  setThemePreference,
   SidebarHeaderStyle,
 } from "@/lib/theme";
 import { Profile } from "@/types";
@@ -22,12 +21,6 @@ import { Profile } from "@/types";
 const SIDEBAR_HEADER_OPTIONS: { value: SidebarHeaderStyle; label: string; description: string }[] = [
   { value: "app", label: "App name", description: '"Expense Tracker" with your username underneath.' },
   { value: "user", label: "User profile", description: "Your avatar with your name and username instead." },
-];
-
-const APPEARANCE_OPTIONS: { value: Profile["theme"]; label: string; icon: string }[] = [
-  { value: "system", label: "System", icon: "🖥️" },
-  { value: "light", label: "Light", icon: "☀️" },
-  { value: "dark", label: "Dark", icon: "🌙" },
 ];
 
 // Matches the Dashboard trend chart's own dataset colors/labels
@@ -78,6 +71,14 @@ export default function SettingsPage() {
     setTrendHidden(getStoredTrendHidden());
   }, []);
 
+  /** Shows a message, then clears it on its own after a moment instead
+   * of sticking around until the next reload/navigation - the guard
+   * only clears it if nothing newer has replaced it in the meantime. */
+  function flashMessage(text: string) {
+    setMessage(text);
+    setTimeout(() => setMessage((current) => (current === text ? null : current)), 2500);
+  }
+
   function handleAccentColorChange(color: string) {
     setAccentColor(color);
     applyAccent(color);
@@ -104,26 +105,6 @@ export default function SettingsPage() {
     setStoredSidebarHeaderStyle(style);
   }
 
-  async function handleThemeChange(theme: Profile["theme"]) {
-    setError(null);
-    // Applies (and persists to localStorage) immediately, rather than
-    // waiting on the PATCH below - matches the accent color/sidebar
-    // header pickers, and means a slow/failed request doesn't leave
-    // the picker looking like nothing happened.
-    setThemePreference(theme);
-    try {
-      const updated = await apiFetch<Profile>("/api/profile", {
-        method: "PATCH",
-        body: JSON.stringify({ theme }),
-      });
-      setProfile(updated);
-      broadcastProfileUpdate(updated);
-      setMessage("Theme updated");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't update theme");
-    }
-  }
-
   async function handleLanguageChange(language: string) {
     setError(null);
     try {
@@ -133,7 +114,7 @@ export default function SettingsPage() {
       });
       setProfile(updated);
       broadcastProfileUpdate(updated);
-      setMessage("Language updated");
+      flashMessage("Language updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update language");
     }
@@ -151,7 +132,7 @@ export default function SettingsPage() {
       const updated = await apiFetch<Profile>("/api/profile/picture", { method: "POST", body: formData });
       setProfile(updated);
       broadcastProfileUpdate(updated);
-      setMessage("Profile picture updated");
+      flashMessage("Profile picture updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't upload picture");
     } finally {
@@ -171,7 +152,7 @@ export default function SettingsPage() {
       const updated = await apiFetch<Profile>("/api/profile/favicon", { method: "POST", body: formData });
       setProfile(updated);
       broadcastProfileUpdate(updated);
-      setMessage("Favicon updated");
+      flashMessage("Favicon updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't upload favicon");
     } finally {
@@ -188,7 +169,7 @@ export default function SettingsPage() {
       });
       setProfile(updated);
       broadcastProfileUpdate(updated);
-      setMessage("Profile updated");
+      flashMessage("Profile updated");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't update your profile");
     }
@@ -231,15 +212,19 @@ export default function SettingsPage() {
                   full_name/email/phone, so there's no separate,
                   duplicate set of labeled fields below anymore. */}
               <div className="min-w-0 flex-1 space-y-1.5">
+                {/* action-btn gives these the same hover/active nudge
+                    as every other clickable control in the app - a
+                    plain text field with no border doesn't otherwise
+                    read as "click here to edit". */}
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   onBlur={handleDetailsSave}
                   placeholder="Your name"
-                  className="w-full truncate rounded-lg bg-transparent text-lg font-bold outline-none focus:bg-[var(--input-bg)] focus:px-2 focus:py-0.5"
+                  className="action-btn w-full truncate rounded-lg bg-transparent text-lg font-bold outline-none focus:bg-[var(--input-bg)] focus:px-2 focus:py-0.5"
                 />
-                <label className="text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
+                <label className="action-btn text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
                   <MailIcon />
                   <input
                     type="email"
@@ -250,7 +235,7 @@ export default function SettingsPage() {
                     className="w-full bg-transparent outline-none"
                   />
                 </label>
-                <label className="text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
+                <label className="action-btn text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
                   <PhoneIcon />
                   <input
                     type="tel"
@@ -262,28 +247,6 @@ export default function SettingsPage() {
                   />
                 </label>
               </div>
-            </div>
-          </div>
-
-          <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 text-sm font-semibold">Appearance</h3>
-            <div className="grid grid-cols-3 gap-2.5">
-              {APPEARANCE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleThemeChange(opt.value)}
-                  className="input flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-sm"
-                  style={
-                    profile.theme === opt.value
-                      ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" }
-                      : undefined
-                  }
-                >
-                  <span className="text-xl">{opt.icon}</span>
-                  <span className="font-semibold">{opt.label}</span>
-                </button>
-              ))}
             </div>
           </div>
 
