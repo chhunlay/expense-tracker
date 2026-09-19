@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
@@ -22,6 +22,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
   const [note, setNote] = useState(asset.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
 
   async function handleSave() {
     setError(null);
@@ -31,6 +32,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
         method: "PATCH",
         body: JSON.stringify({ name, asset_type: assetType, value, note: note || null }),
       });
+      if (detailsRef.current) detailsRef.current.open = false;
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save asset");
@@ -50,7 +52,7 @@ function AssetRow({ asset, onSaved, onDeleted }: {
   }
 
   return (
-    <details className="input rounded-xl px-3 py-2.5">
+    <details ref={detailsRef} className="input rounded-xl px-3 py-2.5">
       <summary className="flex cursor-pointer items-center justify-between text-sm">
         <span className="flex items-center gap-2">
           <span className="text-muted rounded-full bg-white/10 px-2 py-0.5 text-xs">

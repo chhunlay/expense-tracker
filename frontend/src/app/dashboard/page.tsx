@@ -11,12 +11,13 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
-import { EyeIcon, EyeOffIcon } from "@/components/icons";
+import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { Summary, Transaction } from "@/types";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
@@ -163,7 +164,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="glass-card mb-5 flex items-center justify-between rounded-2xl p-4">
-            <span className="text-muted flex items-center gap-2 text-sm font-semibold">💼 Net worth</span>
+            <span className="text-muted flex items-center gap-2 text-sm font-semibold">
+              <AssetsIcon /> Net worth
+            </span>
             <span className={`hideable-amount text-lg font-extrabold ${hidden ? "amount-hidden" : ""}`}>
               {money(summary.net_worth)}
             </span>
@@ -279,9 +282,16 @@ export default function DashboardPage() {
                           {money(b.spent)} / {money(b.limit)}
                         </span>
                       </div>
+                      {/* Only the track is rounded, not the bar - the
+                          track's overflow-hidden already clips the bar
+                          to that same rounded shape, and having both
+                          independently rounded caused a hairline
+                          mismatch at the corners in some browsers
+                          (the bar's own corner geometry didn't quite
+                          agree with the track's clip path). */}
                       <div className="progress-track h-2 w-full overflow-hidden rounded-full">
                         <div
-                          className={`progress-bar h-full rounded-full ${b.over ? "over" : ""}`}
+                          className={`progress-bar h-full ${b.over ? "over" : ""}`}
                           style={{ width: `${b.pct}%` }}
                         />
                       </div>
@@ -292,18 +302,29 @@ export default function DashboardPage() {
             </div>
 
             <div className="glass-card rounded-2xl p-5">
-              <h3 className="mb-3 font-bold">Recent</h3>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-bold">Recent</h3>
+                <Link href="/transactions" className="text-sm font-medium text-indigo-400">
+                  View all &rarr;
+                </Link>
+              </div>
               {recent.length === 0 ? (
                 <p className="text-faint text-sm">Nothing logged this month yet.</p>
               ) : (
                 <div className="space-y-2">
                   {recent.map((r) => (
                     <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
-                      <div className="min-w-0">
-                        <p className="truncate">{r.note || r.category_name || "Uncategorized"}</p>
-                        <p className="text-faint text-xs">
-                          {r.date} &middot; {r.category_name || "Uncategorized"}
-                        </p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                          style={{ background: r.category_color || "#94a3b8" }}
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate">{r.note || r.category_name || "Uncategorized"}</p>
+                          <p className="text-faint text-xs">
+                            {r.date} &middot; {r.category_name || "Uncategorized"}
+                          </p>
+                        </div>
                       </div>
                       <span
                         className={`ml-2 flex-shrink-0 font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
@@ -21,6 +21,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   const [budget, setBudget] = useState(category.budget_limit ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
 
   async function handleSave() {
     setError(null);
@@ -30,6 +31,10 @@ function CategoryRow({ category, onSaved, onDeleted }: {
         method: "PATCH",
         body: JSON.stringify({ name, color, budget_limit: budget || null }),
       });
+      // Collapse back to the default closed state - matching the old
+      // Django page, where saving was a full-page reload the <details>
+      // never survived open across.
+      if (detailsRef.current) detailsRef.current.open = false;
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save category");
@@ -49,7 +54,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   }
 
   return (
-    <details className="input rounded-xl px-3 py-2.5">
+    <details ref={detailsRef} className="input rounded-xl px-3 py-2.5">
       <summary className="flex cursor-pointer items-center justify-between text-sm">
         <span className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />

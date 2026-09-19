@@ -53,6 +53,7 @@ class TransactionOut(Schema):
     amount: str
     category: Optional[int] = None
     category_name: Optional[str] = None
+    category_color: Optional[str] = None
     date: date
     note: Optional[str] = None
 
@@ -67,6 +68,10 @@ class TransactionOut(Schema):
     @staticmethod
     def resolve_category_name(obj) -> Optional[str]:
         return obj.category.name if obj.category_id else None
+
+    @staticmethod
+    def resolve_category_color(obj) -> Optional[str]:
+        return obj.category.color if obj.category_id else None
 
 
 class TransactionIn(Schema):

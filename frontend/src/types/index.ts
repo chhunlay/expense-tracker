@@ -19,6 +19,7 @@ export interface Transaction {
   amount: string;
   category: number | null;
   category_name: string | null;
+  category_color: string | null;
   date: string; // YYYY-MM-DD
   note: string | null;
 }
