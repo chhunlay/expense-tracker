@@ -46,7 +46,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'corsheaders',
     'expenses',
+]
+
+# The Next.js frontend (frontend/, its own dev server on :3000) calls
+# this API cross-origin - CORS must allow it explicitly. Token auth
+# (not cookies) means credentials/CSRF aren't in play, but the browser
+# still needs the preflight-approved Authorization header.
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 # https://www.django-rest-framework.org/api-guide/settings/
@@ -65,6 +75,8 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # As early as possible (CORS docs), definitely before CommonMiddleware.
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # Must come after SessionMiddleware, before CommonMiddleware - reads
     # the active language from the session (set via the Settings page,

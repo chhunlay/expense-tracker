@@ -91,6 +91,16 @@ curl -X POST -H "Content-Type: application/json" \
 curl -H "Authorization: Token abc123..." http://localhost:5051/api/assets/
 ```
 
+## Next.js frontend (in progress)
+`frontend/` is a separate Next.js (TypeScript, App Router, Tailwind)
+frontend that talks to this same API instead of using the Django HTML
+templates - see [frontend/README.md](frontend/README.md) for its own
+setup and structure. It currently covers login/register, the
+Dashboard, and Transactions; Categories/Assets/Reports/Settings are
+still Django-only pages for now. Run both at once (Django on :8000,
+`npm run dev` on :3000) to use it - `CORS_ALLOWED_ORIGINS` in
+`config/settings.py` already allows the Next.js dev server's origin.
+
 ## What changed from the Flask version
 - **Django ORM instead of raw SQL** - `expenses/models.py` defines
   `Category` and `Transaction` as real models; the old hand-written SQLite
