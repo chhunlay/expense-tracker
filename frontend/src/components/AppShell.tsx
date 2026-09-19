@@ -46,12 +46,11 @@ const NAV_SECTIONS = [
 
 /** The sidebar/mobile-header brand block - either the app logo + name
  * (with the username as a small subtitle) or, when the user has
- * picked "User greeting" in Settings, the user's own avatar with the
- * exact same title/subtitle styling - "Welcome" where "Expense
- * Tracker" was, the username where its subtitle was - just swapped
- * for a personal greeting instead of the app name. Shared between the
- * desktop sidebar and the mobile header so the two can't drift out of
- * sync. */
+ * picked "User profile" in Settings, the user's own avatar with the
+ * exact same title/subtitle styling - the user's own name (full_name,
+ * falling back to email, then username) where "Expense Tracker" was,
+ * the username where its subtitle was. Shared between the desktop
+ * sidebar and the mobile header so the two can't drift out of sync. */
 function SidebarBrand({
   style,
   profile,
@@ -75,7 +74,7 @@ function SidebarBrand({
           )}
         </div>
         <div className="mt-0.5 min-w-0">
-          <h1 className={`${titleSize} font-extrabold tracking-tight`}>Welcome</h1>
+          <h1 className={`${titleSize} truncate font-extrabold tracking-tight`}>{displayName || " "}</h1>
           {profile?.username && <p className="text-faint truncate text-xs">{profile.username}</p>}
         </div>
       </div>

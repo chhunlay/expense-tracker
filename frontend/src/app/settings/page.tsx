@@ -19,7 +19,7 @@ import { Profile } from "@/types";
 
 const SIDEBAR_HEADER_OPTIONS: { value: SidebarHeaderStyle; label: string; description: string }[] = [
   { value: "app", label: "App name", description: '"Expense Tracker" with your username underneath.' },
-  { value: "user", label: "User greeting", description: 'Your avatar with "Welcome" and your username instead.' },
+  { value: "user", label: "User profile", description: "Your avatar with your name and username instead." },
 ];
 
 const LANGUAGES = [
