@@ -199,6 +199,34 @@ html[data-theme="light"] .theme-switch-thumb { transform: translateX(20px); }
   color: var(--text-main);
 }
 
+/* ---------- Radio-styled checkbox (Settings' "Trend chart series")
+   Each one still toggles independently (not an exclusive group, see
+   toggleTrendSeries()), just round like a radio button visually -
+   plain border-radius doesn't shape a native checkbox in Chromium, so
+   this drops the UA rendering (appearance: none) and draws the
+   circle/fill itself. Color comes from the --dot-color custom
+   property each input sets inline (per series). ---------- */
+.radio-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  border: 2px solid var(--input-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.radio-checkbox:checked {
+  border-color: var(--dot-color, var(--text-main));
+}
+.radio-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: var(--dot-color, var(--text-main));
+}
+
 /* ---------- Hide/show sensitive amounts ---------- */
 .hideable-amount { transition: filter 0.2s ease; }
 .hideable-amount.amount-hidden { filter: blur(7px); user-select: none; }

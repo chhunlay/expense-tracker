@@ -11,8 +11,10 @@ import {
   DEFAULT_ACCENT,
   getStoredAccent,
   getStoredSidebarHeaderStyle,
+  getStoredTrendHidden,
   setStoredAccent,
   setStoredSidebarHeaderStyle,
+  setStoredTrendHidden,
   SidebarHeaderStyle,
 } from "@/lib/theme";
 import { Profile } from "@/types";
@@ -21,6 +23,14 @@ const SIDEBAR_HEADER_OPTIONS: { value: SidebarHeaderStyle; label: string; descri
   { value: "app", label: "App name", description: '"Expense Tracker" with your username underneath.' },
   { value: "user", label: "User profile", description: "Your avatar with your name and username instead." },
 ];
+
+// Matches the Dashboard trend chart's own dataset colors/labels
+// (Income/Expense/Net) - see dashboard/page.tsx.
+const TREND_SERIES = [
+  { label: "Income", color: "#10b981" },
+  { label: "Expense", color: "#f43f5e" },
+  { label: "Net", color: "#6366f1" },
+] as const;
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -39,6 +49,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
   const [sidebarHeaderStyle, setSidebarHeaderStyle] = useState<SidebarHeaderStyle>("app");
+  const [trendHidden, setTrendHidden] = useState<Set<string>>(new Set());
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,12 +69,28 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAccentColor(getStoredAccent() || DEFAULT_ACCENT);
     setSidebarHeaderStyle(getStoredSidebarHeaderStyle());
+    setTrendHidden(getStoredTrendHidden());
   }, []);
 
   function handleAccentColorChange(color: string) {
     setAccentColor(color);
     applyAccent(color);
     setStoredAccent(color);
+  }
+
+  function toggleTrendSeries(label: string) {
+    setTrendHidden((prev) => {
+      const isCurrentlyVisible = !prev.has(label);
+      // At least one series must stay visible - if this is the last
+      // one still checked, ignore the click instead of leaving the
+      // chart with nothing to show.
+      if (isCurrentlyVisible && TREND_SERIES.length - prev.size <= 1) return prev;
+      const next = new Set(prev);
+      if (isCurrentlyVisible) next.add(label);
+      else next.delete(label);
+      setStoredTrendHidden(next);
+      return next;
+    });
   }
 
   function handleSidebarHeaderStyleChange(style: SidebarHeaderStyle) {
@@ -280,6 +307,35 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5">
+            <h3 className="mb-3 text-sm font-semibold">Trend chart series</h3>
+            <div className="flex flex-wrap gap-4">
+              {TREND_SERIES.map(({ label, color }) => (
+                <label key={label} className="flex cursor-pointer items-center gap-2 text-sm">
+                  {/* Still a checkbox under the hood (each series
+                      toggles independently, not an exclusive group) -
+                      just styled round like a radio button per the
+                      user's ask, with a guard in toggleTrendSeries()
+                      keeping at least one checked. */}
+                  <input
+                    type="checkbox"
+                    checked={!trendHidden.has(label)}
+                    onChange={() => toggleTrendSeries(label)}
+                    className="radio-checkbox h-4 w-4"
+                    style={{ "--dot-color": color } as React.CSSProperties}
+                  />
+                  <span className="font-semibold" style={{ color }}>
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-faint mt-2.5 text-xs">
+              Deselecting one hides it from the Dashboard&apos;s Trend chart - same as clicking it in the chart&apos;s
+              own legend. At least one must stay selected.
+            </p>
           </div>
 
           <div className="glass-card rounded-2xl p-5">

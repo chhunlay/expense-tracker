@@ -60,11 +60,15 @@ class Transaction(models.Model):
 class Profile(models.Model):
     LIGHT = "light"
     DARK = "dark"
-    THEME_CHOICES = [(DARK, "Dark"), (LIGHT, "Light")]
+    SYSTEM = "system"
+    THEME_CHOICES = [(SYSTEM, "System"), (LIGHT, "Light"), (DARK, "Dark")]
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     picture = models.ImageField(upload_to="profile_pictures/", blank=True, null=True)
-    theme = models.CharField(max_length=5, choices=THEME_CHOICES, default=DARK)
+    # Default is SYSTEM (follow the OS/browser preference), not DARK -
+    # matches the frontend's own first-visit fallback in
+    # THEME_INIT_SCRIPT (lib/theme.ts) for a brand new account.
+    theme = models.CharField(max_length=6, choices=THEME_CHOICES, default=SYSTEM)
     # Mirrors settings.LANGUAGES' codes ("en"/"km") - kept as a plain
     # CharField rather than validated against LANGUAGES directly so a
     # future added language doesn't need a migration.

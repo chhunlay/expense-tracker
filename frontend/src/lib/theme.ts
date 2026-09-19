@@ -4,6 +4,7 @@
 const THEME_KEY = "expense-tracker-theme";
 const ACCENT_KEY = "expense-tracker-accent-color";
 const SIDEBAR_HEADER_KEY = "expense-tracker-sidebar-header-style";
+const TREND_HIDDEN_KEY = "expense-tracker-trend-hidden-datasets";
 export const DEFAULT_ACCENT = "#f97316";
 
 export type Theme = "dark" | "light";
@@ -89,6 +90,30 @@ export function onSidebarHeaderStyleChange(callback: (style: SidebarHeaderStyle)
   }
   window.addEventListener(SIDEBAR_HEADER_EVENT, handler);
   return () => window.removeEventListener(SIDEBAR_HEADER_EVENT, handler);
+}
+
+/** Which of Income/Expense/Net are toggled off the Dashboard's Trend
+ * chart - shared between the chart's own legend (click to toggle) and
+ * the Settings page's "Trend chart series" checkboxes, both reading
+ * and writing the same key so either one stays in sync with the
+ * other (via a fresh mount - Settings and the Dashboard are separate
+ * pages, never mounted at once, so no live-update event is needed
+ * here the way SIDEBAR_HEADER_EVENT is for same-page changes). */
+export function getStoredTrendHidden(): Set<string> {
+  try {
+    const raw = localStorage.getItem(TREND_HIDDEN_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function setStoredTrendHidden(hidden: Set<string>) {
+  try {
+    localStorage.setItem(TREND_HIDDEN_KEY, JSON.stringify([...hidden]));
+  } catch {
+    // ignore - see api.ts's setToken for the same tradeoff
+  }
 }
 
 /** Inline script source, run from <head> before paint (see layout.tsx)
