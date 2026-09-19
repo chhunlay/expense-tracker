@@ -147,54 +147,41 @@ export default function SettingsPage() {
                 </span>
                 <input type="file" accept="image/*" onChange={handlePictureChange} className="hidden" />
               </label>
-              <div className="min-w-0">
-                <h3 className="truncate text-lg font-bold">{profile.full_name || profile.username}</h3>
-                {profile.email && (
-                  <p className="text-muted mt-1 flex items-center gap-1.5 text-sm">
-                    <MailIcon /> {profile.email}
-                  </p>
-                )}
-                {profile.phone && (
-                  <p className="text-muted mt-1 flex items-center gap-1.5 text-sm">
-                    <PhoneIcon /> {profile.phone}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3 border-t border-[var(--card-border)] pt-5">
-              <div>
-                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">
-                  Full name
-                </label>
+              {/* Editable in place - typing here IS filling out
+                  full_name/email/phone, so there's no separate,
+                  duplicate set of labeled fields below anymore. */}
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Your name"
-                  className="input w-full rounded-xl px-3 py-2 text-sm"
+                  className="w-full truncate rounded-lg bg-transparent text-lg font-bold outline-none focus:bg-[var(--input-bg)] focus:px-2 focus:py-0.5"
                 />
+                <label className="text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
+                  <MailIcon />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full bg-transparent outline-none"
+                  />
+                </label>
+                <label className="text-muted flex items-center gap-1.5 rounded-lg text-sm focus-within:bg-[var(--input-bg)] focus-within:px-2 focus-within:py-0.5">
+                  <PhoneIcon />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 555 000 0000"
+                    className="w-full bg-transparent outline-none"
+                  />
+                </label>
               </div>
-              <div>
-                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="input w-full rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-muted mb-1 block text-xs font-semibold uppercase tracking-wider">Phone</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 555 000 0000"
-                  className="input w-full rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
+            </div>
+
+            <div className="mt-5 border-t border-[var(--card-border)] pt-5">
               <button
                 type="button"
                 onClick={handleDetailsSave}
