@@ -19,10 +19,19 @@ class CategoryOut(Schema):
     name: str
     color: str
     budget_limit: Optional[str] = None
+    # Not a model field - the list endpoint annotates each Category
+    # instance with this before serializing (same pattern the old
+    # Django categories_view used), so it's only ever populated by
+    # GET /categories, not by the create/update responses.
+    spent_this_month: float = 0.0
 
     @staticmethod
     def resolve_budget_limit(obj) -> Optional[str]:
         return str(obj.budget_limit) if obj.budget_limit is not None else None
+
+    @staticmethod
+    def resolve_spent_this_month(obj) -> float:
+        return getattr(obj, "spent_this_month", 0.0)
 
 
 class CategoryIn(Schema):

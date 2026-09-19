@@ -89,7 +89,19 @@ def login(request, payload: LoginIn):
 # ---------- Categories ----------
 @router.get("/categories", response=List[CategoryOut], auth=auth)
 def list_categories(request):
-    return Category.objects.filter(user=request.auth)
+    month_start = date.today().replace(day=1)
+    categories = list(Category.objects.filter(user=request.auth))
+    spent_by_category = {
+        row["category_id"]: row["total"]
+        for row in Transaction.objects.filter(
+            user=request.auth, type=Transaction.EXPENSE, date__gte=month_start
+        )
+        .values("category_id")
+        .annotate(total=Sum("amount"))
+    }
+    for c in categories:
+        c.spent_this_month = float(spent_by_category.get(c.id) or 0)
+    return categories
 
 
 @router.post("/categories", response={201: CategoryOut}, auth=auth)

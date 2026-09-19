@@ -8,6 +8,9 @@ export interface Category {
   name: string;
   color: string;
   budget_limit: string | null;
+  // Only populated by GET /api/categories (see backend's resolver) -
+  // absent/0 from the create/update responses.
+  spent_this_month: number;
 }
 
 export interface Transaction {

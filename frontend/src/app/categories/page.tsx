@@ -7,6 +7,10 @@ import AppShell from "@/components/AppShell";
 import Modal from "@/components/Modal";
 import { Category } from "@/types";
 
+function money(value: number): string {
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function CategoryRow({ category, onSaved, onDeleted }: {
   category: Category;
   onSaved: () => void;
@@ -51,9 +55,10 @@ function CategoryRow({ category, onSaved, onDeleted }: {
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
           {category.name}
         </span>
-        {category.budget_limit && (
-          <span className="text-muted text-xs">budget ${category.budget_limit}</span>
-        )}
+        <span className="text-muted text-xs">
+          {money(category.spent_this_month)}
+          {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} this month
+        </span>
       </summary>
       <div className="mt-3 space-y-2">
         <div className="grid grid-cols-[auto_1fr] items-center gap-2">
