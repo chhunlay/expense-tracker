@@ -18,6 +18,7 @@ import { Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { Summary, Transaction } from "@/types";
 
@@ -97,7 +98,9 @@ export default function DashboardPage() {
   const [hidden, setHidden] = useState(false);
   const [hiddenDatasets, setHiddenDatasets] = useState<Set<string>>(new Set());
   const [quickAddText, setQuickAddText] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Quick add form, commented out below
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Quick add form, commented out below
   const [quickAdding, setQuickAdding] = useState(false);
 
   useEffect(() => {
@@ -156,6 +159,7 @@ export default function DashboardPage() {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Quick add form, commented out below
   async function handleQuickAdd(e: React.FormEvent) {
     e.preventDefault();
     setQuickAddError(null);
@@ -234,6 +238,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Net worth card - temporarily disabled, keep for later.
           <div className="glass-card mb-5 flex items-center justify-between rounded-2xl p-4">
             <span className="text-muted flex items-center gap-2 text-sm font-semibold">
               <AssetsIcon /> Net worth
@@ -242,7 +247,9 @@ export default function DashboardPage() {
               {money(summary.net_worth)}
             </span>
           </div>
+          */}
 
+          {/* Quick add form - temporarily disabled, keep for later.
           <form onSubmit={handleQuickAdd} className="glass-card mb-5 rounded-2xl p-4">
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
               Quick add
@@ -269,6 +276,7 @@ export default function DashboardPage() {
               Amount + optional category name anywhere in the text. Prefix the amount with &quot;+&quot; for income.
             </p>
           </form>
+          */}
 
           <div className="mb-5 grid gap-5 lg:grid-cols-3">
             <div className="glass-card rounded-2xl p-5 lg:col-span-2">
