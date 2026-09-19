@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, getToken } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
 import { onProfileUpdate } from "@/lib/profile";
 import { getStoredSidebarHeaderStyle, onSidebarHeaderStyleChange, SidebarHeaderStyle } from "@/lib/theme";
 import { Profile } from "@/types";
@@ -114,6 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [headerStyle, setHeaderStyle] = useState<SidebarHeaderStyle>("app");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     // This effect exists specifically to read an external system
@@ -175,7 +177,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div key={i}>
               {section.label && (
                 <p className="text-faint mb-1 mt-4 px-3 text-[0.7rem] font-bold uppercase tracking-wider first:mt-0">
-                  {section.label}
+                  {t(section.label)}
                 </p>
               )}
               {section.items.map(({ href, label, Icon }) => (
@@ -186,7 +188,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     pathname === href ? "active" : ""
                   }`}
                 >
-                  <Icon /> {label}
+                  <Icon /> {t(label)}
                 </Link>
               ))}
             </div>
@@ -199,7 +201,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setLogoutConfirmOpen(true)}
             className="sidebar-link flex flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold"
           >
-            <LogoutIcon /> Log out
+            <LogoutIcon /> {t("Log out")}
           </button>
           <ThemeToggle />
         </div>
@@ -221,7 +223,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     pathname === href ? "active" : ""
                   }`}
                 >
-                  {label}
+                  {t(label)}
                 </Link>
               ))}
               <button
@@ -229,7 +231,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setLogoutConfirmOpen(true)}
                 className="nav-link flex-shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold"
               >
-                Log out
+                {t("Log out")}
               </button>
             </nav>
           </div>
@@ -245,25 +247,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         title="Log out?"
       >
         <p className="text-muted mb-4 text-sm">You&apos;ll need to sign in again to get back in.</p>
-        <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
           {/* The safe default gets the prominent/solid styling and
               autofocus (so Enter picks it) - "Yes" stays the one that
               needs a deliberate click, not this one blending into the
               background next to a bold red button. */}
           <button
             type="button"
-            autoFocus
-            onClick={() => setLogoutConfirmOpen(false)}
-            className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
+            onClick={handleLogout}
+            className="action-btn text-neg rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-rose-500/20"
           >
-            No
+            Yes, log out
           </button>
           <button
             type="button"
-            onClick={handleLogout}
-            className="action-btn text-neg flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-rose-500/20"
+            autoFocus
+            onClick={() => setLogoutConfirmOpen(false)}
+            className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
           >
-            Yes, log out
+            No
           </button>
         </div>
       </Modal>

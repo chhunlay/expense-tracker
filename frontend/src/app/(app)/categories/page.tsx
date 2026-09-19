@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
+import { useTranslation } from "@/lib/i18n";
 import { Category } from "@/types";
 
 function money(value: number): string {
@@ -21,6 +22,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  const { t } = useTranslation();
 
   async function handleSave() {
     setError(null);
@@ -43,7 +45,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this category? Its past transactions become Uncategorized.")) return;
+    if (!confirm(t("Delete this category? Its past transactions become Uncategorized."))) return;
     try {
       await apiFetch(`/api/categories/${category.id}`, { method: "DELETE" });
       onDeleted();
@@ -61,7 +63,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
         </span>
         <span className="text-muted text-xs">
           {money(category.spent_this_month)}
-          {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} this month
+          {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
         </span>
       </summary>
       <div className="mt-3 space-y-2">
@@ -83,7 +85,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
           type="number"
           step="0.01"
           min="0"
-          placeholder="Monthly budget (optional)"
+          placeholder={t("Monthly budget (optional)")}
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
           className="input w-full rounded-lg px-3 py-2 text-sm"
@@ -96,7 +98,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
           onClick={handleDelete}
           className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
         >
-          Delete
+          {t("Delete")}
         </button>
         <button
           type="button"
@@ -104,7 +106,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
           disabled={saving}
           className="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
         >
-          Save
+          {t("Save")}
         </button>
       </div>
     </details>
@@ -112,6 +114,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
 }
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -157,21 +160,21 @@ export default function CategoriesPage() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold">Categories</h2>
+        <h2 className="text-lg font-bold">{t("Categories")}</h2>
         <button
           type="button"
           onClick={openModal}
           className="action-btn rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
         >
-          + Add
+          + {t("Add")}
         </button>
       </div>
 
-      <Modal id="addCategoryModal" open={modalOpen} onClose={() => setModalOpen(false)} title="Add a category">
+      <Modal id="addCategoryModal" open={modalOpen} onClose={() => setModalOpen(false)} title={t("Add a category")}>
         <form onSubmit={handleAdd} className="space-y-4">
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              Name &amp; color
+              {t("Name & color")}
             </label>
             <div className="grid grid-cols-[auto_1fr] gap-2">
               <input
@@ -183,7 +186,7 @@ export default function CategoriesPage() {
               <input
                 type="text"
                 required
-                placeholder="Category name"
+                placeholder={t("Category name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="input rounded-xl px-3 py-2.5 text-sm"
@@ -192,7 +195,7 @@ export default function CategoriesPage() {
           </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              Monthly budget (optional)
+              {t("Monthly budget (optional)")}
             </label>
             <input
               type="number"
@@ -211,14 +214,14 @@ export default function CategoriesPage() {
               onClick={() => setModalOpen(false)}
               className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="action-btn flex-1 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
-              Add category
+              {t("Add category")}
             </button>
           </div>
         </form>

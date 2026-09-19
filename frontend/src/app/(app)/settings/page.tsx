@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { API_BASE_URL, apiFetch, ApiError } from "@/lib/api";
 import { LogoIcon, MailIcon, PhoneIcon } from "@/components/icons";
+import { Language, setStoredLanguage, useTranslation } from "@/lib/i18n";
 import { broadcastProfileUpdate } from "@/lib/profile";
 import {
   applyAccent,
@@ -31,7 +32,7 @@ const TREND_SERIES = [
   { label: "Net", color: "#6366f1" },
 ] as const;
 
-const LANGUAGES = [
+const LANGUAGES: { code: Language; label: string }[] = [
   { code: "en", label: "English" },
   { code: "km", label: "ភាសាខ្មែរ" },
 ];
@@ -54,6 +55,7 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const { language, t } = useTranslation();
 
   useEffect(() => {
     apiFetch<Profile>("/api/profile")
@@ -126,8 +128,13 @@ export default function SettingsPage() {
     setStoredSidebarHeaderStyle(style);
   }
 
-  async function handleLanguageChange(language: string) {
+  async function handleLanguageChange(language: Language) {
     setError(null);
+    // Applies (and persists to localStorage) immediately, same as the
+    // accent color/sidebar header pickers - this used to only PATCH
+    // the server, which saved the preference but never actually
+    // translated anything on screen.
+    setStoredLanguage(language);
     try {
       const updated = await apiFetch<Profile>("/api/profile", {
         method: "PATCH",
@@ -203,7 +210,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h2 className="mb-4 text-lg font-bold">Settings</h2>
+      <h2 className="mb-4 text-lg font-bold">{t("Settings")}</h2>
 
       {toastText && (
         <div
@@ -386,18 +393,21 @@ export default function SettingsPage() {
           </div>
 
           <div className="glass-card rounded-2xl p-5">
-            <h3 className="mb-3 text-sm font-semibold">Language</h3>
-            <select
-              value={profile.language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="input rounded-xl px-3 py-2 text-sm"
-            >
+            <h3 className="mb-3 text-sm font-semibold">{t("Language")}</h3>
+            <div className="flex flex-wrap gap-4">
               {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
-                </option>
+                <label key={l.code} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="language"
+                    checked={language === l.code}
+                    onChange={() => handleLanguageChange(l.code)}
+                    className="radio-checkbox h-4 w-4"
+                  />
+                  <span className="font-semibold">{l.label}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         </div>
       )}

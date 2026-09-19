@@ -8,8 +8,10 @@ import { ApiError } from "@/lib/api";
 import { register } from "@/lib/auth";
 import PasswordField from "@/components/PasswordField";
 import { WalletIcon } from "@/components/icons";
+import { useTranslation } from "@/lib/i18n";
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -46,11 +48,11 @@ export default function RegisterPage() {
         </div>
 
         <div className="glass-card rounded-2xl p-6">
-          <h2 className="mb-4 text-lg font-bold">Create account</h2>
+          <h2 className="mb-4 text-lg font-bold">{t("Create account")}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-                Username
+                {t("Username")}
               </label>
               <input
                 type="text"
@@ -63,13 +65,13 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-                Password
+                {t("Password")}
               </label>
               <PasswordField value={password} onChange={setPassword} minLength={8} />
             </div>
             <div>
               <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-                Confirm password
+                {t("Confirm password")}
               </label>
               <PasswordField value={confirm} onChange={setConfirm} />
             </div>
@@ -79,13 +81,13 @@ export default function RegisterPage() {
               disabled={loading}
               className="action-btn w-full rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-400 disabled:opacity-60"
             >
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Creating account..." : t("Create account")}
             </button>
           </form>
           <p className="text-faint mt-4 text-center text-sm">
-            Already have an account?{" "}
+            {t("Already have an account?")}{" "}
             <Link href="/login" className="text-indigo-400 underline">
-              Log in
+              {t("Log in")}
             </Link>
           </p>
         </div>
