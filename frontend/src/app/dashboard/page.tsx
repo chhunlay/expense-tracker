@@ -291,27 +291,34 @@ export default function DashboardPage() {
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-bold">Analytics</h3>
-                  <p className="text-faint text-xs">{summary.trend_label}</p>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                    {(
-                      [
-                        ["Income", "#10b981", summary.mini_trend.map((m) => m.income)],
-                        ["Expense", "#f43f5e", summary.mini_trend.map((m) => m.expense)],
-                        ["Net", "#6366f1", summary.mini_trend.map((m) => m.net)],
-                      ] as [string, string, number[]][]
-                    )
-                      .filter(([label]) => !hiddenDatasets.has(label))
-                      .map(([label, color, values]) => {
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {(() => {
+                      const visible = (
+                        [
+                          ["Income", "#10b981", summary.mini_trend.map((m) => m.income)],
+                          ["Expense", "#f43f5e", summary.mini_trend.map((m) => m.expense)],
+                          ["Net", "#6366f1", summary.mini_trend.map((m) => m.net)],
+                        ] as [string, string, number[]][]
+                      ).filter(([label]) => !hiddenDatasets.has(label));
+                      // With only one series showing, which one it is
+                      // is already obvious (it's the only line/legend
+                      // item left on the chart), so the label prefix
+                      // is just noise.
+                      const showLabel = visible.length > 1;
+                      return visible.map(([label, color, values]) => {
                         const { high, avg } = seriesStats(values);
                         return (
                           <span key={label} className="text-faint text-xs">
-                            <span className="font-semibold" style={{ color }}>
-                              {label}
-                            </span>{" "}
+                            {showLabel && (
+                              <span className="font-semibold" style={{ color }}>
+                                {label}{" "}
+                              </span>
+                            )}
                             High {money(high)} &middot; Avg {money(avg)}
                           </span>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
                 </div>
                 <select
