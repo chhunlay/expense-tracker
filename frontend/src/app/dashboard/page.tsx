@@ -282,7 +282,7 @@ export default function DashboardPage() {
             <div className="glass-card rounded-2xl p-5 lg:col-span-2">
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="font-bold">Trend</h3>
+                  <h3 className="font-bold">Analytics</h3>
                   <p className="text-faint text-xs">{summary.trend_label}</p>
                 </div>
                 <select
@@ -378,7 +378,12 @@ export default function DashboardPage() {
                     },
                   },
                 }}
-                plugins={[createTodayLinePlugin(getTodayIndexForRange(trendRange))]}
+                // Only meaningful when looking at the actual current
+                // month - Prev/Next now shifts every trend_range's
+                // anchor to the navigated month server-side (see
+                // month_anchor() in api.py), so a past/future month
+                // has no "today" point to mark at all.
+                plugins={isCurrentMonth ? [createTodayLinePlugin(getTodayIndexForRange(trendRange))] : []}
                 height={140}
               />
             </div>
