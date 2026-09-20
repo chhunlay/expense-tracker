@@ -118,6 +118,7 @@ class SavedSearchOut(Schema):
     date_to: str
     category_ids: str
     group_by: str
+    fold_groups: bool
     is_default: bool
 
 
@@ -129,11 +130,13 @@ class SavedSearchIn(Schema):
     date_to: str = ""
     category_ids: str = ""
     group_by: str = ""
+    fold_groups: bool = True
     is_default: bool = False
 
 
 class SavedSearchPatch(Schema):
     is_default: Optional[bool] = None
+    fold_groups: Optional[bool] = None
 
 
 # ---------- Assets ----------

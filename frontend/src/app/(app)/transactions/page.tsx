@@ -222,7 +222,7 @@ function FilterPanel({
   onToggleGroupField: (field: GroupField) => void;
   savedSearches: SavedSearch[];
   onApplySavedSearch: (search: SavedSearch) => void;
-  onSaveCurrentSearch: (name: string, isDefault: boolean) => void;
+  onSaveCurrentSearch: (name: string, isDefault: boolean, foldGroups: boolean) => void;
   onToggleDefault: (search: SavedSearch) => void;
   onDeleteSavedSearch: (search: SavedSearch) => void;
   t: (text: string) => string;
@@ -230,6 +230,7 @@ function FilterPanel({
   const [open, setOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [saveFolded, setSaveFolded] = useState(true);
   const ref = useClickOutside(() => setOpen(false));
 
   function toggleCategory(id: number) {
@@ -423,9 +424,10 @@ function FilterPanel({
                   type="button"
                   disabled={!saveName.trim()}
                   onClick={() => {
-                    onSaveCurrentSearch(saveName.trim(), saveAsDefault);
+                    onSaveCurrentSearch(saveName.trim(), saveAsDefault, saveFolded);
                     setSaveName("");
                     setSaveAsDefault(false);
+                    setSaveFolded(true);
                   }}
                   className="rounded-lg bg-indigo-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-40"
                 >
@@ -440,6 +442,15 @@ function FilterPanel({
                   className="accent-indigo-500 h-3 w-3 flex-shrink-0"
                 />
                 {t("Use as default on load")}
+              </label>
+              <label className="text-muted mt-1.5 flex cursor-pointer items-center gap-1.5 px-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={saveFolded}
+                  onChange={(e) => setSaveFolded(e.target.checked)}
+                  className="accent-indigo-500 h-3 w-3 flex-shrink-0"
+                />
+                {t("Fold groups")}
               </label>
             </div>
           </div>
@@ -471,6 +482,11 @@ export default function TransactionsPage() {
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
   const [dateFilter, setDateFilter] = useState<DateOption | null>(null);
   const [groupByFields, setGroupByFields] = useState<GroupField[]>([]);
+  // Set by applySavedSearch right before changing groupByFields, so the
+  // fold-on-groupBy-change logic below can honor that search's own
+  // fold_groups choice instead of always defaulting to folded. Consumed
+  // (and cleared back to null) the moment it's used.
+  const [foldOnApply, setFoldOnApply] = useState<boolean | null>(null);
 
   function toggleGroupField(field: GroupField) {
     setGroupByFields((prev) => (prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]));
@@ -538,6 +554,7 @@ export default function TransactionsPage() {
     } else {
       setDateFilter(null);
     }
+    setFoldOnApply(search.fold_groups);
     setGroupByFields((search.group_by || "").split(",").filter(Boolean) as GroupField[]);
   }
 
@@ -564,7 +581,7 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(loadSavedSearches, []);
 
-  async function handleSaveCurrentSearch(name: string, isDefault: boolean) {
+  async function handleSaveCurrentSearch(name: string, isDefault: boolean, foldGroups: boolean) {
     try {
       const saved = await apiFetch<SavedSearch>("/api/saved-searches", {
         method: "POST",
@@ -576,6 +593,7 @@ export default function TransactionsPage() {
           date_from: dateFilter?.from ?? "",
           date_to: dateFilter?.to ?? "",
           group_by: groupByFields.join(","),
+          fold_groups: foldGroups,
           is_default: isDefault,
         }),
       });
@@ -689,11 +707,16 @@ export default function TransactionsPage() {
   // an explicit per-group choice from there via toggleGroupCollapse.
   // Every level's path is folded, not just the top one, so switching
   // to a two-level chain doesn't leave the new inner groups expanded.
-  // Adjusted during render (see resetKey above) rather than in an effect.
+  // A saved search can override this via its own fold_groups choice
+  // (see applySavedSearch, which stashes it in foldOnApplyRef right
+  // before changing groupByFields). Adjusted during render (see
+  // resetKey above) rather than in an effect.
   const [prevGroupByForCollapse, setPrevGroupByForCollapse] = useState(groupByKey);
   if (groupByKey !== prevGroupByForCollapse) {
     setPrevGroupByForCollapse(groupByKey);
-    setCollapsedGroups(groups ? new Set(collectGroupPaths(groups)) : new Set());
+    const shouldFold = foldOnApply ?? true;
+    if (foldOnApply !== null) setFoldOnApply(null);
+    setCollapsedGroups(groups && shouldFold ? new Set(collectGroupPaths(groups)) : new Set());
   }
 
   const visibleRows = groups ? sortedRows : pagedRows;

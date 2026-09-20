@@ -100,6 +100,7 @@ export interface SavedSearch {
   date_to: string;
   category_ids: string;
   group_by: string;
+  fold_groups: boolean;
   is_default: boolean;
 }
 
