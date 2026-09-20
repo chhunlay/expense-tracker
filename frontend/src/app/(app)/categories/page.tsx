@@ -26,15 +26,20 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   const [saving, setSaving] = useState(false);
   const { t } = useTranslation();
 
-  async function handleSave() {
+  // Saves immediately as each field changes - a color pick or type
+  // toggle fires right away, while name/budget (free text) wait for
+  // blur so a save isn't fired on every keystroke. Takes the changed
+  // value directly rather than reading it back off state, since a
+  // just-called setState hasn't landed yet when this runs.
+  async function saveField(overrides: Partial<{ name: string; color: string; type: "expense" | "income"; budget: string }>) {
+    const next = { name, color, type, budget, ...overrides };
     setError(null);
     setSaving(true);
     try {
       await apiFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name, color, type, budget_limit: budget || null }),
+        body: JSON.stringify({ name: next.name, color: next.color, type: next.type, budget_limit: next.budget || null }),
       });
-      setOpen(false);
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save category");
@@ -84,7 +89,10 @@ function CategoryRow({ category, onSaved, onDeleted }: {
                 <input
                   type="radio"
                   checked={type === "expense"}
-                  onChange={() => setType("expense")}
+                  onChange={() => {
+                    setType("expense");
+                    saveField({ type: "expense" });
+                  }}
                   className="accent-indigo-500 h-3 w-3"
                 />
                 {t("Expense")}
@@ -93,18 +101,29 @@ function CategoryRow({ category, onSaved, onDeleted }: {
                 <input
                   type="radio"
                   checked={type === "income"}
-                  onChange={() => setType("income")}
+                  onChange={() => {
+                    setType("income");
+                    saveField({ type: "income" });
+                  }}
                   className="accent-indigo-500 h-3 w-3"
                 />
                 {t("Income")}
               </label>
             </div>
             <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-              <ColorPicker value={color} onChange={setColor} />
+              <ColorPicker
+                value={color}
+                onChange={(newColor) => {
+                  setColor(newColor);
+                  saveField({ color: newColor });
+                }}
+              />
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => name !== category.name && saveField({})}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 className="input rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -115,25 +134,20 @@ function CategoryRow({ category, onSaved, onDeleted }: {
               placeholder={t("Monthly budget (optional)")}
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
+              onBlur={() => budget !== (category.budget_limit ?? "") && saveField({})}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               className="input w-full rounded-lg px-3 py-2 text-sm"
             />
           </div>
           {error && <p className="text-neg mt-2 text-xs">{error}</p>}
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-faint text-xs">{saving ? t("Saving...") : ""}</span>
             <button
               type="button"
               onClick={handleDelete}
               className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
             >
               {t("Delete")}
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
-            >
-              {t("Save")}
             </button>
           </div>
         </>
