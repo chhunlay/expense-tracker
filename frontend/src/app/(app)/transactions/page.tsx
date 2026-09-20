@@ -44,7 +44,8 @@ function useClickOutside(onOutside: () => void) {
   return ref;
 }
 
-export type GroupField = "category" | "type" | "month";
+export type GroupField = "category" | "type" | "date";
+export type DateGranularity = "year" | "quarter" | "month" | "week" | "day";
 type SortColumn = "date" | "category" | "note" | "amount" | null;
 
 const DEFAULT_PAGE_SIZE = 40;
@@ -52,8 +53,24 @@ const DEFAULT_PAGE_SIZE = 40;
 const GROUP_OPTIONS: { value: GroupField; label: string }[] = [
   { value: "category", label: "Category" },
   { value: "type", label: "Type" },
-  { value: "month", label: "Month" },
+  { value: "date", label: "Date" },
 ];
+
+const DATE_GRANULARITY_OPTIONS: { value: DateGranularity; label: string }[] = [
+  { value: "year", label: "Year" },
+  { value: "quarter", label: "Quarter" },
+  { value: "month", label: "Month" },
+  { value: "week", label: "Week" },
+  { value: "day", label: "Day" },
+];
+
+function groupFieldLabel(field: GroupField, dateGranularity: DateGranularity, t: (text: string) => string): string {
+  if (field === "date") {
+    const granularityLabel = t(DATE_GRANULARITY_OPTIONS.find((g) => g.value === dateGranularity)!.label);
+    return `${t("Date")} (${granularityLabel})`;
+  }
+  return t(GROUP_OPTIONS.find((o) => o.value === field)!.label);
+}
 
 interface GroupNode {
   label: string;
@@ -63,14 +80,40 @@ interface GroupNode {
   children: GroupNode[] | null;
 }
 
-function groupKeyFor(r: Transaction, field: GroupField, t: (text: string) => string): string {
+/** The Monday starting the week `dateStr` (YYYY-MM-DD) falls in, as an
+ * ISO date string - used to label a "grouped by Date: Week" bucket. */
+function mondayOf(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const offset = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - offset);
+  return isoDate(d);
+}
+
+function dateGroupKey(dateStr: string, granularity: DateGranularity, t: (text: string) => string): string {
+  switch (granularity) {
+    case "year":
+      return dateStr.slice(0, 4);
+    case "quarter": {
+      const month = parseInt(dateStr.slice(5, 7), 10);
+      return `${dateStr.slice(0, 4)}-Q${Math.ceil(month / 3)}`;
+    }
+    case "month":
+      return dateStr.slice(0, 7);
+    case "week":
+      return `${t("Week of")} ${mondayOf(dateStr)}`;
+    case "day":
+      return dateStr;
+  }
+}
+
+function groupKeyFor(r: Transaction, field: GroupField, dateGranularity: DateGranularity, t: (text: string) => string): string {
   switch (field) {
     case "category":
       return r.category_name || t("Uncategorized");
     case "type":
       return r.type === "income" ? t("Income") : t("Expense");
-    case "month":
-      return r.date.slice(0, 7);
+    case "date":
+      return dateGroupKey(r.date, dateGranularity, t);
   }
 }
 
@@ -80,12 +123,18 @@ function groupKeyFor(r: Transaction, field: GroupField, t: (text: string) => str
  * level. `path` threads the full chain of labels down to each node
  * (e.g. "Expense>Food & Dining") so fold state and React keys stay
  * unique across sibling branches that happen to share a label. */
-function buildGroups(rows: Transaction[], fields: GroupField[], t: (text: string) => string, parentPath = ""): GroupNode[] {
+function buildGroups(
+  rows: Transaction[],
+  fields: GroupField[],
+  dateGranularity: DateGranularity,
+  t: (text: string) => string,
+  parentPath = ""
+): GroupNode[] {
   if (fields.length === 0) return [];
   const [field, ...rest] = fields;
   const map = new Map<string, Transaction[]>();
   for (const r of rows) {
-    const key = groupKeyFor(r, field, t);
+    const key = groupKeyFor(r, field, dateGranularity, t);
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(r);
   }
@@ -96,7 +145,7 @@ function buildGroups(rows: Transaction[], fields: GroupField[], t: (text: string
       path,
       rows: groupRows,
       total: groupRows.reduce((sum, r) => sum + parseFloat(r.amount) * (r.type === "income" ? 1 : -1), 0),
-      children: rest.length > 0 ? buildGroups(groupRows, rest, t, path) : null,
+      children: rest.length > 0 ? buildGroups(groupRows, rest, dateGranularity, t, path) : null,
     };
   });
 }
@@ -206,6 +255,8 @@ function FilterPanel({
   onDateFilterChange,
   groupByFields,
   onToggleGroupField,
+  dateGranularity,
+  onDateGranularityChange,
   savedSearches,
   onApplySavedSearch,
   onSaveCurrentSearch,
@@ -220,6 +271,8 @@ function FilterPanel({
   onDateFilterChange: (date: DateOption | null) => void;
   groupByFields: GroupField[];
   onToggleGroupField: (field: GroupField) => void;
+  dateGranularity: DateGranularity;
+  onDateGranularityChange: (granularity: DateGranularity) => void;
   savedSearches: SavedSearch[];
   onApplySavedSearch: (search: SavedSearch) => void;
   onSaveCurrentSearch: (name: string, isDefault: boolean, foldGroups: boolean) => void;
@@ -353,27 +406,49 @@ function FilterPanel({
                   const position = groupByFields.indexOf(opt.value);
                   const active = position !== -1;
                   return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => onToggleGroupField(opt.value)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
-                    >
-                      <span
-                        className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded border text-[9px] font-bold leading-none ${
-                          active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--input-border)]"
-                        }`}
+                    <div key={opt.value}>
+                      <button
+                        type="button"
+                        onClick={() => onToggleGroupField(opt.value)}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
                       >
-                        {active ? position + 1 : ""}
-                      </span>
-                      {t(opt.label)}
-                    </button>
+                        <span
+                          className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded border text-[9px] font-bold leading-none ${
+                            active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--input-border)]"
+                          }`}
+                        >
+                          {active ? position + 1 : ""}
+                        </span>
+                        {t(opt.label)}
+                      </button>
+                      {/* Date's own granularity - only meaningful, and
+                          only shown, once Date is an active group field. */}
+                      {opt.value === "date" && active && (
+                        <div className="ml-6 space-y-0.5 border-l border-[var(--card-border)] pl-2">
+                          {DATE_GRANULARITY_OPTIONS.map((g) => (
+                            <button
+                              key={g.value}
+                              type="button"
+                              onClick={() => onDateGranularityChange(g.value)}
+                              className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
+                            >
+                              <span
+                                className={`h-3 w-3 flex-shrink-0 rounded-full border ${
+                                  dateGranularity === g.value ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
+                                }`}
+                              />
+                              {t(g.label)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
               {groupByFields.length > 0 && (
                 <p className="text-faint mt-1.5 px-2 text-xs">
-                  {groupByFields.map((f) => t(GROUP_OPTIONS.find((o) => o.value === f)!.label)).join(" → ")}
+                  {groupByFields.map((f) => groupFieldLabel(f, dateGranularity, t)).join(" → ")}
                 </p>
               )}
             </div>
@@ -484,6 +559,7 @@ export default function TransactionsPage() {
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
   const [dateFilter, setDateFilter] = useState<DateOption | null>(null);
   const [groupByFields, setGroupByFields] = useState<GroupField[]>([]);
+  const [dateGranularity, setDateGranularity] = useState<DateGranularity>("month");
   // Set by applySavedSearch right before changing groupByFields, so the
   // fold-on-groupBy-change logic below can honor that search's own
   // fold_groups choice instead of always defaulting to folded. Consumed
@@ -566,7 +642,12 @@ export default function TransactionsPage() {
       setDateFilter(null);
     }
     setFoldOnApply(search.fold_groups);
-    setGroupByFields((search.group_by || "").split(",").filter(Boolean) as GroupField[]);
+    // A "date" entry is stored as "date:<granularity>" (e.g. "date:week")
+    // since the granularity itself isn't a separate saved-search column.
+    const tokens = (search.group_by || "").split(",").filter(Boolean);
+    const dateToken = tokens.find((tok) => tok.startsWith("date:"));
+    if (dateToken) setDateGranularity(dateToken.slice(5) as DateGranularity);
+    setGroupByFields(tokens.map((tok) => (tok.startsWith("date:") ? "date" : tok)) as GroupField[]);
   }
 
   function loadSavedSearches() {
@@ -603,7 +684,7 @@ export default function TransactionsPage() {
           month: dateFilter?.month ?? "",
           date_from: dateFilter?.from ?? "",
           date_to: dateFilter?.to ?? "",
-          group_by: groupByFields.join(","),
+          group_by: groupByFields.map((f) => (f === "date" ? `date:${dateGranularity}` : f)).join(","),
           fold_groups: foldGroups,
           is_default: isDefault,
         }),
@@ -701,7 +782,7 @@ export default function TransactionsPage() {
   // render (React's documented escape hatch for resetting state when a
   // prop/derived value changes) rather than in an effect, so the reset
   // lands in the same render pass instead of a visible extra one.
-  const groupByKey = groupByFields.join(",");
+  const groupByKey = groupByFields.map((f) => (f === "date" ? `date:${dateGranularity}` : f)).join(",");
   const resetKey = `${filterCategoryIdsKey}|${dateFilter ? JSON.stringify(dateFilter) : ""}|${searchQuery}|${sortColumn}|${sortDir}|${groupByKey}`;
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (resetKey !== prevResetKey) {
@@ -710,7 +791,7 @@ export default function TransactionsPage() {
     setSelectedIds(new Set());
   }
 
-  const groups = groupByFields.length === 0 ? null : buildGroups(sortedRows, groupByFields, t);
+  const groups = groupByFields.length === 0 ? null : buildGroups(sortedRows, groupByFields, dateGranularity, t);
 
   // Groups start folded by default whenever Group By is newly turned on
   // or its chain of fields changes (e.g. Type -> Category) - only the
@@ -1328,7 +1409,7 @@ export default function TransactionsPage() {
           {groupByFields.length > 0 && (
             <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
-              {groupByFields.map((f) => t(GROUP_OPTIONS.find((opt) => opt.value === f)!.label)).join(" → ")}
+              {groupByFields.map((f) => groupFieldLabel(f, dateGranularity, t)).join(" → ")}
               <button
                 type="button"
                 onClick={() => setGroupByFields([])}
@@ -1365,6 +1446,8 @@ export default function TransactionsPage() {
             onDateFilterChange={setDateFilter}
             groupByFields={groupByFields}
             onToggleGroupField={toggleGroupField}
+            dateGranularity={dateGranularity}
+            onDateGranularityChange={setDateGranularity}
             savedSearches={savedSearches}
             onApplySavedSearch={applySavedSearch}
             onSaveCurrentSearch={handleSaveCurrentSearch}

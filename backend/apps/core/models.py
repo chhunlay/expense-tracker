@@ -145,7 +145,9 @@ class SavedSearch(models.Model):
     date_from = models.CharField(max_length=10, blank=True, default="")
     date_to = models.CharField(max_length=10, blank=True, default="")
     category_ids = models.CharField(max_length=255, blank=True, default="")
-    group_by = models.CharField(max_length=20, blank=True, default="")
+    # e.g. "category,date:quarter" - a "date" entry carries its
+    # granularity inline since there's no separate column for it.
+    group_by = models.CharField(max_length=50, blank=True, default="")
     # Whether applying this search should show its groups folded
     # (collapsed to just the totals line) or expanded - defaults to
     # folded, matching the page's own default behavior whenever

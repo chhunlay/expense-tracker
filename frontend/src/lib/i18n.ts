@@ -119,6 +119,11 @@ const km: Record<string, string> = {
   "This Month": "ខែនេះ",
   "Last Month": "ខែមុន",
   "Fold groups": "បត់ក្រុម",
+  Year: "ឆ្នាំ",
+  Quarter: "ត្រីមាស",
+  Week: "សប្តាហ៍",
+  Day: "ថ្ងៃ",
+  "Week of": "សប្តាហ៍នៃ",
 };
 
 const dictionaries: Record<Language, Record<string, string>> = { en: {}, km };
