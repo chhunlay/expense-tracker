@@ -18,9 +18,17 @@ from django.db import models
 
 
 class Category(models.Model):
+    EXPENSE = "expense"
+    INCOME = "income"
+    TYPE_CHOICES = [(EXPENSE, "Expense"), (INCOME, "Income")]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=100)
     color = models.CharField(max_length=7, default="#6366f1")
+    # Which side of a transaction this category is meant for - lets the
+    # transaction form narrow its category dropdown to just Expense or
+    # Income categories instead of listing both at once.
+    type = models.CharField(max_length=7, choices=TYPE_CHOICES, default=EXPENSE)
     budget_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
@@ -117,6 +125,35 @@ class Asset(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SavedSearch(models.Model):
+    """A saved combination of filters + a group-by choice for a given
+    page (currently only "transactions"), created from that page's
+    Favorites tab. One per user can be marked is_default, which the
+    page applies automatically on load instead of starting blank -
+    the equivalent of Odoo's "Favorites" search-panel column."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_searches")
+    page = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
+    # Filters, stored as plain strings rather than a real FK/JSON field
+    # since this only ever needs to round-trip back into the same
+    # querystring-shaped filters the Transactions page already sends -
+    # "" means "no filter on this", not "filter to an empty value".
+    month = models.CharField(max_length=7, blank=True, default="")
+    date_from = models.CharField(max_length=10, blank=True, default="")
+    date_to = models.CharField(max_length=10, blank=True, default="")
+    category_ids = models.CharField(max_length=255, blank=True, default="")
+    group_by = models.CharField(max_length=20, blank=True, default="")
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.user.username}'s '{self.name}' ({self.page})"
 
 
 class AuthToken(models.Model):

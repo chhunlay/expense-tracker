@@ -98,7 +98,6 @@ const km: Record<string, string> = {
   Export: "នាំចេញ",
   "Add transaction": "បន្ថែមប្រតិបត្តិការ",
   "What was it for?": "សម្រាប់អ្វី?",
-  "All categories": "ប្រភេទទាំងអស់",
   Filter: "តម្រង",
   Clear: "សម្អាត",
   Note: "កំណត់ចំណាំ",

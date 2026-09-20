@@ -7,6 +7,7 @@ export interface Category {
   id: number;
   name: string;
   color: string;
+  type: "expense" | "income";
   budget_limit: string | null;
   // Only populated by GET /api/categories (see backend's resolver) -
   // absent/0 from the create/update responses.
@@ -88,6 +89,18 @@ export interface TopCategory {
 export interface ReportsData {
   monthly_totals: MonthlyTotal[];
   top_categories: TopCategory[];
+}
+
+export interface SavedSearch {
+  id: number;
+  page: string;
+  name: string;
+  month: string;
+  date_from: string;
+  date_to: string;
+  category_ids: string;
+  group_by: string;
+  is_default: boolean;
 }
 
 export const ASSET_TYPES: { value: Asset["asset_type"]; label: string }[] = [

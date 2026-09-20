@@ -33,6 +33,7 @@ class CategoryOut(Schema):
     id: int
     name: str
     color: str
+    type: str
     budget_limit: Optional[str] = None
     # Not a model field - the list endpoint annotates each Category
     # instance with this before serializing (same pattern the old
@@ -52,12 +53,14 @@ class CategoryOut(Schema):
 class CategoryIn(Schema):
     name: str
     color: str = "#6366f1"
+    type: str = "expense"
     budget_limit: Optional[Decimal] = None
 
 
 class CategoryPatch(Schema):
     name: Optional[str] = None
     color: Optional[str] = None
+    type: Optional[str] = None
     budget_limit: Optional[Decimal] = None
 
 
@@ -103,6 +106,34 @@ class TransactionPatch(Schema):
     category: Optional[int] = None
     date: Optional[DateType] = None
     note: Optional[str] = None
+
+
+# ---------- Saved searches ----------
+class SavedSearchOut(Schema):
+    id: int
+    page: str
+    name: str
+    month: str
+    date_from: str
+    date_to: str
+    category_ids: str
+    group_by: str
+    is_default: bool
+
+
+class SavedSearchIn(Schema):
+    page: str
+    name: str
+    month: str = ""
+    date_from: str = ""
+    date_to: str = ""
+    category_ids: str = ""
+    group_by: str = ""
+    is_default: bool = False
+
+
+class SavedSearchPatch(Schema):
+    is_default: Optional[bool] = None
 
 
 # ---------- Assets ----------

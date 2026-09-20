@@ -25,7 +25,7 @@ from ninja.errors import HttpError
 from .constants import DEFAULT_CATEGORIES
 from .csv_io import export_transactions_csv, import_transactions_csv
 from .dates import month_bounds, shift_month
-from .models import Asset, AuthToken, Category, Transaction
+from .models import Asset, AuthToken, Category, SavedSearch, Transaction
 from .quick_add import parse_quick_add
 from .schemas import (
     AssetIn,
@@ -42,6 +42,9 @@ from .schemas import (
     QuickAddIn,
     RegisterIn,
     ReportsOut,
+    SavedSearchIn,
+    SavedSearchOut,
+    SavedSearchPatch,
     SummaryOut,
     TokenOut,
     TopCategory,
@@ -128,12 +131,33 @@ def delete_category(request, category_id: int):
 
 # ---------- Transactions ----------
 @router.get("/transactions", response=List[TransactionOut], auth=auth)
-def list_transactions(request, month: str = None, category_id: int = None, limit: int = None):
+def list_transactions(
+    request,
+    month: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    category_id: int = None,
+    category_ids: str = None,
+    limit: int = None,
+):
     qs = Transaction.objects.filter(user=request.auth).select_related("category")
     if month:
         start, end = month_bounds(month)
         qs = qs.filter(date__gte=start, date__lt=end)
-    if category_id:
+    elif date_from or date_to:
+        # Used by the Transactions page's Date filter for a quarter (a
+        # span month_bounds() can't express with a single YYYY-MM) -
+        # inclusive on both ends, unlike month's half-open range above.
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+    if category_ids:
+        # Multi-select filter from the Transactions page; category_id
+        # (singular) stays for any other caller that only ever needs one.
+        ids = [int(i) for i in category_ids.split(",") if i]
+        qs = qs.filter(category_id__in=ids)
+    elif category_id:
         qs = qs.filter(category_id=category_id)
     if limit:
         qs = qs[:limit]
@@ -204,6 +228,41 @@ def update_transaction(request, transaction_id: int, payload: TransactionPatch):
 def delete_transaction(request, transaction_id: int):
     txn = get_object_or_404(Transaction, id=transaction_id, user=request.auth)
     txn.delete()
+    return 204, None
+
+
+# ---------- Saved searches ----------
+@router.get("/saved-searches", response=List[SavedSearchOut], auth=auth)
+def list_saved_searches(request, page: str):
+    return SavedSearch.objects.filter(user=request.auth, page=page)
+
+
+@router.post("/saved-searches", response={201: SavedSearchOut}, auth=auth)
+def create_saved_search(request, payload: SavedSearchIn):
+    data = payload.dict()
+    if data["is_default"]:
+        # Only one default per page, per user - clear any existing one
+        # rather than ending up with two searches both claiming it.
+        SavedSearch.objects.filter(user=request.auth, page=data["page"], is_default=True).update(is_default=False)
+    saved = SavedSearch.objects.create(user=request.auth, **data)
+    return 201, saved
+
+
+@router.patch("/saved-searches/{search_id}", response=SavedSearchOut, auth=auth)
+def update_saved_search(request, search_id: int, payload: SavedSearchPatch):
+    saved = get_object_or_404(SavedSearch, id=search_id, user=request.auth)
+    if payload.is_default:
+        SavedSearch.objects.filter(user=request.auth, page=saved.page, is_default=True).update(is_default=False)
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(saved, field, value)
+    saved.save()
+    return saved
+
+
+@router.delete("/saved-searches/{search_id}", response={204: None}, auth=auth)
+def delete_saved_search(request, search_id: int):
+    saved = get_object_or_404(SavedSearch, id=search_id, user=request.auth)
+    saved.delete()
     return 204, None
 
 

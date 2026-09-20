@@ -40,7 +40,27 @@ const LANGUAGES: { code: Language; label: string }[] = [
 // Preset swatches for the accent color picker - the active sidebar
 // item, active mobile nav tab, etc. (see globals.css's --accent) all
 // follow whichever of these (or a custom color) is picked below.
-const ACCENT_PRESETS = ["#f97316", "#6366f1", "#ec4899", "#10b981", "#06b6d4", "#eab308"];
+// Wide enough that a custom native color-picker fallback (a separate
+// OS window needing its own close) is never needed - see ColorPicker's
+// PRESET_COLORS for the same reasoning.
+const ACCENT_PRESETS = [
+  "#f97316",
+  "#f59e0b",
+  "#eab308",
+  "#84cc16",
+  "#10b981",
+  "#14b8a6",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#d946ef",
+  "#ec4899",
+  "#f43f5e",
+  "#ef4444",
+  "#64748b",
+];
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -330,15 +350,6 @@ export default function SettingsPage() {
                   }}
                 />
               ))}
-              <label className="text-muted flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-current">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => handleAccentColorChange(e.target.value)}
-                  className="h-0 w-0 opacity-0"
-                />
-                +
-              </label>
             </div>
             <p className="text-faint mt-2.5 text-xs">Used for the active sidebar item and other highlights.</p>
           </div>

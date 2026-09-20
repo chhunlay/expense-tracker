@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
+import ColorPicker from "@/components/ColorPicker";
 import Modal from "@/components/Modal";
 import { useTranslation } from "@/lib/i18n";
 import { Category } from "@/types";
@@ -16,26 +17,29 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState(category.name);
   const [color, setColor] = useState(category.color);
+  const [type, setType] = useState(category.type);
   const [budget, setBudget] = useState(category.budget_limit ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const detailsRef = useRef<HTMLDetailsElement>(null);
   const { t } = useTranslation();
 
-  async function handleSave() {
+  // Saves immediately as each field changes - a color pick or type
+  // toggle fires right away, while name/budget (free text) wait for
+  // blur so a save isn't fired on every keystroke. Takes the changed
+  // value directly rather than reading it back off state, since a
+  // just-called setState hasn't landed yet when this runs.
+  async function saveField(overrides: Partial<{ name: string; color: string; type: "expense" | "income"; budget: string }>) {
+    const next = { name, color, type, budget, ...overrides };
     setError(null);
     setSaving(true);
     try {
       await apiFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name, color, budget_limit: budget || null }),
+        body: JSON.stringify({ name: next.name, color: next.color, type: next.type, budget_limit: next.budget || null }),
       });
-      // Collapse back to the default closed state - matching the old
-      // Django page, where saving was a full-page reload the <details>
-      // never survived open across.
-      if (detailsRef.current) detailsRef.current.open = false;
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save category");
@@ -55,61 +59,100 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   }
 
   return (
-    <details ref={detailsRef} className="input rounded-xl px-3 py-2.5">
-      <summary className="flex cursor-pointer items-center justify-between text-sm">
+    <div
+      className="input rounded-xl px-3 py-2.5"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full cursor-pointer items-center justify-between text-sm"
+      >
         <span className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
           {category.name}
+          <span className="text-muted rounded-md bg-[var(--track-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            {category.type === "income" ? t("Income") : t("Expense")}
+          </span>
         </span>
         <span className="text-muted text-xs">
           {money(category.spent_this_month)}
           {category.budget_limit && ` / ${money(parseFloat(category.budget_limit))}`} {t("this month")}
         </span>
-      </summary>
-      <div className="mt-3 space-y-2">
-        <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="h-9 w-10 rounded-lg border-0 bg-transparent"
-          />
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="input rounded-lg px-3 py-2 text-sm"
-          />
-        </div>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder={t("Monthly budget (optional)")}
-          value={budget}
-          onChange={(e) => setBudget(e.target.value)}
-          className="input w-full rounded-lg px-3 py-2 text-sm"
-        />
-      </div>
-      {error && <p className="text-neg mt-2 text-xs">{error}</p>}
-      <div className="mt-2 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
-        >
-          {t("Delete")}
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
-        >
-          {t("Save")}
-        </button>
-      </div>
-    </details>
+      </button>
+      {open && (
+        <>
+          <div className="mt-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="input flex cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "expense"}
+                  onChange={() => {
+                    setType("expense");
+                    saveField({ type: "expense" });
+                  }}
+                  className="accent-indigo-500 h-3 w-3"
+                />
+                {t("Expense")}
+              </label>
+              <label className="input flex cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "income"}
+                  onChange={() => {
+                    setType("income");
+                    saveField({ type: "income" });
+                  }}
+                  className="accent-indigo-500 h-3 w-3"
+                />
+                {t("Income")}
+              </label>
+            </div>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+              <ColorPicker
+                value={color}
+                onChange={(newColor) => {
+                  setColor(newColor);
+                  saveField({ color: newColor });
+                }}
+              />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => name !== category.name && saveField({})}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                className="input rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder={t("Monthly budget (optional)")}
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              onBlur={() => budget !== (category.budget_limit ?? "") && saveField({})}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              className="input w-full rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          {error && <p className="text-neg mt-2 text-xs">{error}</p>}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-faint text-xs">{saving ? t("Saving...") : ""}</span>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="text-neg rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/20"
+            >
+              {t("Delete")}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -120,6 +163,7 @@ export default function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6366f1");
+  const [type, setType] = useState<"expense" | "income">("expense");
   const [budget, setBudget] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -134,6 +178,7 @@ export default function CategoriesPage() {
   function openModal() {
     setName("");
     setColor("#6366f1");
+    setType("expense");
     setBudget("");
     setError(null);
     setModalOpen(true);
@@ -146,7 +191,7 @@ export default function CategoriesPage() {
     try {
       await apiFetch<Category>("/api/categories", {
         method: "POST",
-        body: JSON.stringify({ name, color, budget_limit: budget || null }),
+        body: JSON.stringify({ name, color, type, budget_limit: budget || null }),
       });
       setModalOpen(false);
       loadCategories();
@@ -173,16 +218,34 @@ export default function CategoriesPage() {
       <Modal id="addCategoryModal" open={modalOpen} onClose={() => setModalOpen(false)} title={t("Add a category")}>
         <form onSubmit={handleAdd} className="space-y-4">
           <div>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "expense"}
+                  onChange={() => setType("expense")}
+                  className="accent-indigo-500"
+                />
+                {t("Expense")}
+              </label>
+              <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "income"}
+                  onChange={() => setType("income")}
+                  className="accent-indigo-500"
+                />
+                {t("Income")}
+              </label>
+            </div>
+          </div>
+          <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
               {t("Name & color")}
             </label>
             <div className="grid grid-cols-[auto_1fr] gap-2">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-10 rounded-lg border-0 bg-transparent"
-              />
+              <ColorPicker value={color} onChange={setColor} swatchClassName="h-10 w-10" />
               <input
                 type="text"
                 required

@@ -11,8 +11,9 @@
   --bg-1: #1e2a4a;
   --bg-2: #0b0f1c;
   --bg-3: #05070d;
-  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-bg: #131b30;
   --card-border: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   --sidebar-bg: rgba(5, 7, 13, 0.5);
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --text-main: #f1f5f9;
@@ -35,8 +36,9 @@ html[data-theme="light"] {
   --bg-1: #eef2ff;
   --bg-2: #f8fafc;
   --bg-3: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-bg: #ffffff;
   --card-border: rgba(15, 23, 42, 0.08);
+  --card-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
   --sidebar-bg: rgba(255, 255, 255, 0.6);
   --sidebar-border: rgba(15, 23, 42, 0.08);
   --text-main: #0f172a;
@@ -74,10 +76,15 @@ body {
    (0,1,0). */
 @layer utilities {
 
+/* Kept the "glass-card" class name (used in ~30 places) even though
+   this is now a solid card, not a frosted one - a solid background
+   was requested instead, partly because backdrop-filter forces a new
+   CSS stacking context that was trapping dropdown z-index below
+   later sibling cards (see the Transactions filter dropdown fix). */
 .glass-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  backdrop-filter: blur(20px);
+  box-shadow: var(--card-shadow);
 }
 
 .input {
