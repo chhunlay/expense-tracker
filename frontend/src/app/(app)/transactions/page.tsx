@@ -397,7 +397,9 @@ function FilterPanel({
                       onClick={() => onToggleDefault(s)}
                       aria-label={s.is_default ? t("Unset as default") : t("Set as default")}
                       title={t("Default")}
-                      className={s.is_default ? "text-amber-400" : "text-faint opacity-0 hover:text-amber-400 group-hover/fav:opacity-100"}
+                      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md hover:bg-amber-400/15 ${
+                        s.is_default ? "text-amber-400" : "text-faint opacity-0 hover:text-amber-400 group-hover/fav:opacity-100"
+                      }`}
                     >
                       <StarIcon filled={s.is_default} className="h-3.5 w-3.5" />
                     </button>
@@ -405,7 +407,7 @@ function FilterPanel({
                       type="button"
                       onClick={() => onDeleteSavedSearch(s)}
                       aria-label={t("Delete")}
-                      className="text-faint opacity-0 hover:text-rose-400 group-hover/fav:opacity-100"
+                      className="text-faint flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md opacity-0 hover:bg-rose-500/15 hover:text-rose-400 group-hover/fav:opacity-100"
                     >
                       ✕
                     </button>
