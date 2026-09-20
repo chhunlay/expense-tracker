@@ -922,7 +922,7 @@ export default function TransactionsPage() {
           />
         </td>
         <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
-        <td className="py-2 pr-3">{r.category_name || t("Uncategorized")}</td>
+        <td className="whitespace-nowrap py-2 pr-3">{r.category_name || t("Uncategorized")}</td>
         <td className="text-muted w-full py-2 pr-3">{r.note || ""}</td>
         <td
           className={`whitespace-nowrap py-2 pr-3 text-right font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}
