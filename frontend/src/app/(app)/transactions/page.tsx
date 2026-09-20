@@ -604,6 +604,17 @@ export default function TransactionsPage() {
           }));
         })();
 
+  // Groups start folded by default whenever Group By is newly turned on
+  // (or switched to a different column) - only the totals line is
+  // useful at a glance for a dozen groups; expanding is an explicit
+  // per-group choice from there via toggleGroupCollapse. Adjusted
+  // during render (see resetKey above) rather than in an effect.
+  const [prevGroupByForCollapse, setPrevGroupByForCollapse] = useState(groupBy);
+  if (groupBy !== prevGroupByForCollapse) {
+    setPrevGroupByForCollapse(groupBy);
+    setCollapsedGroups(groups ? new Set(groups.map((g) => g.label)) : new Set());
+  }
+
   const visibleRows = groups ? sortedRows : pagedRows;
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((r) => selectedIds.has(r.id));
   const someVisibleSelected = visibleRows.some((r) => selectedIds.has(r.id));
@@ -845,7 +856,7 @@ export default function TransactionsPage() {
         </td>
         <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
         <td className="py-2 pr-3">{r.category_name || t("Uncategorized")}</td>
-        <td className="text-muted py-2 pr-3">{r.note || ""}</td>
+        <td className="text-muted w-full py-2 pr-3">{r.note || ""}</td>
         <td
           className={`whitespace-nowrap py-2 pr-3 text-right font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}
         >
@@ -1310,7 +1321,7 @@ export default function TransactionsPage() {
                       {sortIndicator("category")}
                     </button>
                   </th>
-                  <th className="pb-2 pr-3">
+                  <th className="w-full pb-2 pr-3">
                     <button
                       type="button"
                       onClick={() => toggleSort("note")}
