@@ -179,7 +179,7 @@ function FilterPanel({
         onClick={() => setOpen((o) => !o)}
         aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
         title={t("Filter")}
-        className="text-muted flex items-center rounded-lg bg-white/10 p-1 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
+        className="text-muted flex items-center rounded-lg bg-white/10 p-1 transition-colors hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
@@ -206,7 +206,7 @@ function FilterPanel({
                         type="checkbox"
                         checked={filterCategoryIds.has(c.id)}
                         onChange={() => toggleCategory(c.id)}
-                        className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
+                        className="accent-[var(--accent)] h-3.5 w-3.5 flex-shrink-0"
                       />
                       <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
                       {c.name}
@@ -241,7 +241,7 @@ function FilterPanel({
                       >
                         <span
                           className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
-                            active ? "border-indigo-400 bg-indigo-400" : "border-[var(--input-border)]"
+                            active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
                           }`}
                         />
                         {opt.label}
@@ -268,7 +268,7 @@ function FilterPanel({
                     >
                       <span
                         className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
-                          active ? "border-indigo-400 bg-indigo-400" : "border-[var(--input-border)]"
+                          active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
                         }`}
                       />
                       {t(opt.label)}
@@ -826,7 +826,7 @@ export default function TransactionsPage() {
         <div className="input flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
               <FilterIcon className="h-3 w-3 flex-shrink-0" />
               {categories
                 .filter((c) => filterCategoryIds.has(c.id))
@@ -843,7 +843,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {dateFilter && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
               <CalendarIcon className="h-3 w-3 flex-shrink-0" />
               {dateFilter.label}
               <button
@@ -857,7 +857,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {groupBy && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
               {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
               <button
