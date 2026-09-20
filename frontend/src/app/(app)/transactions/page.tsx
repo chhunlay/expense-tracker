@@ -549,9 +549,18 @@ export default function TransactionsPage() {
           .map((id) => Number(id))
       )
     );
-    if (search.month) setDateFilter(getDateOptions().find((o) => o.month === search.month) ?? { label: search.month, month: search.month });
-    else if (search.date_from || search.date_to) {
-      const match = getDateOptions().find((o) => o.from === search.date_from && o.to === search.date_to);
+    // Check the quick options (This Week/This Month/Last Month) before
+    // the full Date list - "This Month" and "September" can both carry
+    // the same month value, and whichever list is searched first wins
+    // the label shown as active, so the quick, more-specific label
+    // needs first refusal rather than always losing to the full list.
+    if (search.month) {
+      const match = getQuickDateOptions().find((o) => o.month === search.month) ?? getDateOptions().find((o) => o.month === search.month);
+      setDateFilter(match ?? { label: search.month, month: search.month });
+    } else if (search.date_from || search.date_to) {
+      const match =
+        getQuickDateOptions().find((o) => o.from === search.date_from && o.to === search.date_to) ??
+        getDateOptions().find((o) => o.from === search.date_from && o.to === search.date_to);
       setDateFilter(match ?? { label: t("Custom range"), from: search.date_from, to: search.date_to });
     } else {
       setDateFilter(null);
