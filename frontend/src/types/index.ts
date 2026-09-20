@@ -7,6 +7,7 @@ export interface Category {
   id: number;
   name: string;
   color: string;
+  type: "expense" | "income";
   budget_limit: string | null;
   // Only populated by GET /api/categories (see backend's resolver) -
   // absent/0 from the create/update responses.

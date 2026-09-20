@@ -5,8 +5,8 @@ from .models import Asset, AuthToken, Category, Profile, SavedSearch, Transactio
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "color", "budget_limit")
-    list_filter = ("user",)
+    list_display = ("name", "user", "type", "color", "budget_limit")
+    list_filter = ("type", "user")
     search_fields = ("name",)
 
 

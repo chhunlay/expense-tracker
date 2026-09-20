@@ -47,6 +47,8 @@ function useClickOutside(onOutside: () => void) {
 export type GroupBy = "" | "category" | "type" | "month";
 type SortColumn = "date" | "category" | "note" | "amount" | null;
 
+const DEFAULT_PAGE_SIZE = 40;
+
 const GROUP_OPTIONS: { value: Exclude<GroupBy, "">; label: string }[] = [
   { value: "category", label: "Category" },
   { value: "type", label: "Type" },
@@ -180,7 +182,7 @@ function FilterPanel({
         onClick={() => setOpen((o) => !o)}
         aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
         title={t("Filter")}
-        className="text-muted flex items-center rounded-lg bg-[var(--track-bg)] p-1 transition-colors hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
+        className="text-muted flex items-center rounded-lg bg-[var(--track-bg)] p-[3px] transition-colors hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
@@ -376,12 +378,24 @@ export default function TransactionsPage() {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [rangeStart, setRangeStart] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [editingRange, setEditingRange] = useState(false);
+  const [rangeInput, setRangeInput] = useState("");
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const appliedDefaultSearch = useRef(false);
+
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [bulkEditIds, setBulkEditIds] = useState<number[] | null>(null);
+  const [bulkFields, setBulkFields] = useState({ type: false, amount: false, category: false, date: false, note: false });
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const actionsMenuRef = useClickOutside(() => setActionsMenuOpen(false));
 
   const filterCategoryIdsKey = Array.from(filterCategoryIds).sort().join(",");
 
@@ -401,6 +415,7 @@ export default function TransactionsPage() {
       .then(([txns, cats]) => {
         setRows(txns);
         setCategories(cats);
+        setSelectedIds(new Set());
       })
       .catch(() => setError("Couldn't load transactions"));
   }
@@ -534,13 +549,35 @@ export default function TransactionsPage() {
           return sortDir === "asc" ? cmp : -cmp;
         });
 
-  function toggleGroupCollapse(label: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
+  const totalRows = sortedRows.length;
+  const clampedRangeStart = Math.min(rangeStart, Math.max(1, totalRows));
+  const rangeEnd = Math.min(clampedRangeStart + pageSize - 1, totalRows);
+  const pagedRows = sortedRows.slice(clampedRangeStart - 1, rangeEnd);
+  const hasPrev = clampedRangeStart > 1;
+  const hasNext = rangeEnd < totalRows;
+
+  function commitRangeInput() {
+    setEditingRange(false);
+    const typedEnd = parseInt(rangeInput, 10);
+    if (!Number.isFinite(typedEnd) || typedEnd < clampedRangeStart) return;
+    setPageSize(Math.min(typedEnd, totalRows) - clampedRangeStart + 1);
+  }
+
+  // Whenever the filtered/sorted/grouped row set changes shape, snap
+  // back to the first page - staying on a later range after narrowing
+  // a filter down would otherwise show an empty table. The page size
+  // itself is left alone, since it's a manually-set viewing preference.
+  // Any row selection is dropped too, since the ids it references may
+  // no longer even be in the visible set. Adjusted directly during
+  // render (React's documented escape hatch for resetting state when a
+  // prop/derived value changes) rather than in an effect, so the reset
+  // lands in the same render pass instead of a visible extra one.
+  const resetKey = `${filterCategoryIdsKey}|${dateFilter ? JSON.stringify(dateFilter) : ""}|${searchQuery}|${sortColumn}|${sortDir}|${groupBy}`;
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
+    setRangeStart(1);
+    setSelectedIds(new Set());
   }
 
   const groups =
@@ -567,15 +604,80 @@ export default function TransactionsPage() {
           }));
         })();
 
+  const visibleRows = groups ? sortedRows : pagedRows;
+  const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((r) => selectedIds.has(r.id));
+  const someVisibleSelected = visibleRows.some((r) => selectedIds.has(r.id));
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (headerCheckboxRef.current) headerCheckboxRef.current.indeterminate = someVisibleSelected && !allVisibleSelected;
+  }, [someVisibleSelected, allVisibleSelected]);
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) visibleRows.forEach((r) => next.delete(r.id));
+      else visibleRows.forEach((r) => next.add(r.id));
+      return next;
+    });
+  }
+
+  function toggleSelectRow(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => apiFetch(`/api/transactions/${id}`, { method: "DELETE" })));
+      setBulkDeleteOpen(false);
+      loadData();
+    } catch {
+      setError("Couldn't delete the selected transactions");
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  function toggleGroupCollapse(label: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
+  function firstCategoryId(type: "expense" | "income"): string {
+    const match = categories.find((c) => c.type === type) ?? categories[0];
+    return match ? String(match.id) : "";
+  }
+
+  function selectType(type: "expense" | "income") {
+    setForm((prev) => ({
+      ...prev,
+      type,
+      categoryId: categories.some((c) => String(c.id) === prev.categoryId && c.type === type)
+        ? prev.categoryId
+        : firstCategoryId(type),
+    }));
+  }
+
   function openAddModal() {
     setEditingId(null);
-    setForm({ ...emptyForm(), categoryId: categories[0] ? String(categories[0].id) : "" });
+    setBulkEditIds(null);
+    setForm({ ...emptyForm(), categoryId: firstCategoryId("expense") });
     setError(null);
     setModalOpen(true);
   }
 
   function openEditModal(r: Transaction) {
     setEditingId(r.id);
+    setBulkEditIds(null);
     setForm({
       type: r.type,
       amount: r.amount,
@@ -587,9 +689,62 @@ export default function TransactionsPage() {
     setModalOpen(true);
   }
 
+  function fieldHeader(label: string, key: keyof typeof bulkFields) {
+    return (
+      <div className="mb-1.5 flex items-center justify-between">
+        <label className="text-muted text-xs font-semibold uppercase tracking-wider">{label}</label>
+        {bulkEditIds && (
+          <label className="text-muted flex cursor-pointer items-center gap-1.5 text-xs font-semibold">
+            <input
+              type="checkbox"
+              checked={bulkFields[key]}
+              onChange={(e) => setBulkFields({ ...bulkFields, [key]: e.target.checked })}
+              className="accent-indigo-500 h-3.5 w-3.5"
+            />
+            {t("Change")}
+          </label>
+        )}
+      </div>
+    );
+  }
+
+  function openBulkEditModal() {
+    setEditingId(null);
+    setBulkEditIds(Array.from(selectedIds));
+    setForm({ ...emptyForm(), categoryId: firstCategoryId("expense") });
+    setBulkFields({ type: false, amount: false, category: false, date: false, note: false });
+    setError(null);
+    setModalOpen(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (bulkEditIds) {
+      const partialBody: Record<string, unknown> = {};
+      if (bulkFields.type) partialBody.type = form.type;
+      if (bulkFields.amount) partialBody.amount = form.amount;
+      if (bulkFields.category) partialBody.category = form.categoryId ? Number(form.categoryId) : null;
+      if (bulkFields.date) partialBody.date = form.date;
+      if (bulkFields.note) partialBody.note = form.note || null;
+      if (Object.keys(partialBody).length === 0) {
+        setError("Check at least one field to change");
+        return;
+      }
+      setSaving(true);
+      try {
+        const body = JSON.stringify(partialBody);
+        await Promise.all(bulkEditIds.map((id) => apiFetch<Transaction>(`/api/transactions/${id}`, { method: "PATCH", body })));
+        setModalOpen(false);
+        setBulkEditIds(null);
+        loadData();
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Couldn't update the selected transactions");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     setSaving(true);
     try {
       const body = JSON.stringify({
@@ -678,7 +833,16 @@ export default function TransactionsPage() {
 
   function renderRow(r: Transaction) {
     return (
-      <tr key={r.id} className="hover:bg-[var(--track-bg)]">
+      <tr key={r.id} className={`hover:bg-[var(--track-bg)] ${selectedIds.has(r.id) ? "bg-[var(--track-bg)]" : ""}`}>
+        <td className="py-2 pr-3">
+          <input
+            type="checkbox"
+            checked={selectedIds.has(r.id)}
+            onChange={() => toggleSelectRow(r.id)}
+            aria-label={t("Select row")}
+            className="accent-[var(--accent)] h-3.5 w-3.5 flex-shrink-0"
+          />
+        </td>
         <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
         <td className="py-2 pr-3">{r.category_name || t("Uncategorized")}</td>
         <td className="text-muted py-2 pr-3">{r.note || ""}</td>
@@ -756,18 +920,22 @@ export default function TransactionsPage() {
       <Modal
         id="addModal"
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingId ? t("Edit transaction") : t("Add transaction")}
+        onClose={() => {
+          setModalOpen(false);
+          setBulkEditIds(null);
+        }}
+        title={bulkEditIds ? `${t("Edit")} ${bulkEditIds.length} ${t("transactions")}` : editingId ? t("Edit transaction") : t("Add transaction")}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Type</label>
+          <div className={bulkEditIds && !bulkFields.type ? "opacity-50" : ""}>
+            {fieldHeader("Type", "type")}
             <div className="grid grid-cols-2 gap-2">
               <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
                 <input
                   type="radio"
                   checked={form.type === "expense"}
-                  onChange={() => setForm({ ...form, type: "expense" })}
+                  disabled={!!bulkEditIds && !bulkFields.type}
+                  onChange={() => selectType("expense")}
                   className="accent-indigo-500"
                 />{" "}
                 {t("Expense")}
@@ -776,60 +944,68 @@ export default function TransactionsPage() {
                 <input
                   type="radio"
                   checked={form.type === "income"}
-                  onChange={() => setForm({ ...form, type: "income" })}
+                  disabled={!!bulkEditIds && !bulkFields.type}
+                  onChange={() => selectType("income")}
                   className="accent-indigo-500"
                 />{" "}
                 {t("Income")}
               </label>
             </div>
           </div>
-          <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              {t("Amount")}
-            </label>
+          <div className={bulkEditIds && !bulkFields.amount ? "opacity-50" : ""}>
+            {fieldHeader(t("Amount"), "amount")}
             <input
               type="number"
               step="0.01"
               min="0"
-              required
+              required={!bulkEditIds || bulkFields.amount}
+              disabled={!!bulkEditIds && !bulkFields.amount}
               placeholder="0.00"
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               className="input w-full rounded-xl px-3 py-2.5"
             />
           </div>
-          <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              {t("Category")}
-            </label>
+          <div className={bulkEditIds && !bulkFields.category ? "opacity-50" : ""}>
+            {fieldHeader(t("Category"), "category")}
             <select
               value={form.categoryId}
+              disabled={!!bulkEditIds && !bulkFields.category}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
               className="input w-full rounded-xl px-3 py-2.5"
             >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {categories
+                // Narrowed to the matching side (Expense/Income) so the
+                // dropdown doesn't mix in categories meant for the other
+                // type - except the transaction's own already-assigned
+                // category, kept visible even if it's a mismatch (e.g.
+                // data from before categories had a type) so switching
+                // it open never silently swaps the selection out from
+                // under the user.
+                .filter((c) => c.type === form.type || String(c.id) === form.categoryId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
-          <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">{t("Date")}</label>
+          <div className={bulkEditIds && !bulkFields.date ? "opacity-50" : ""}>
+            {fieldHeader(t("Date"), "date")}
             <input
               type="date"
-              required
+              required={!bulkEditIds || bulkFields.date}
+              disabled={!!bulkEditIds && !bulkFields.date}
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
               className="input w-full rounded-xl px-3 py-2.5"
             />
           </div>
-          <div>
-            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              {t("Note (optional)")}
-            </label>
+          <div className={bulkEditIds && !bulkFields.note ? "opacity-50" : ""}>
+            {fieldHeader(t("Note (optional)"), "note")}
             <input
               type="text"
+              disabled={!!bulkEditIds && !bulkFields.note}
               placeholder={t("What was it for?")}
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
@@ -867,11 +1043,99 @@ export default function TransactionsPage() {
         </form>
       </Modal>
 
+      <Modal
+        id="bulkDeleteModal"
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title={t("Delete transactions")}
+      >
+        <div className="space-y-4">
+          <p className="text-sm">
+            {t("Are you sure you want to delete")} {selectedIds.size} {t("transaction(s)? This action cannot be undone.")}
+          </p>
+          {error && bulkDeleteOpen && <p className="text-neg text-sm">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setBulkDeleteOpen(false)}
+              className="action-btn text-muted flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-white/15"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="action-btn text-neg flex-1 rounded-xl bg-white/10 py-3 font-semibold hover:bg-rose-500/20 disabled:opacity-60"
+            >
+              {t("Delete")}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2 text-sm">
+        {selectedIds.size > 0 ? (
+          <div className="flex h-[38px] flex-1 flex-wrap items-center justify-center gap-2 text-sm">
+            <span className="flex h-full items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 text-sm font-semibold text-[var(--accent)]">
+              {selectedIds.size} {t("selected")}
+              {selectedIds.size < sortedRows.length && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set(sortedRows.map((r) => r.id)))}
+                  className="rounded-md bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-white hover:bg-[var(--accent)]/80"
+                >
+                  {t("Select all")} {sortedRows.length}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                aria-label={t("Clear selection")}
+                className="hover:text-main"
+              >
+                ✕
+              </button>
+            </span>
+            <div ref={actionsMenuRef} className="relative h-full">
+              <button
+                type="button"
+                onClick={() => setActionsMenuOpen((v) => !v)}
+                className="action-btn text-main flex h-full items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-3 text-sm font-semibold hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
+              >
+                {t("Actions")} <ChevronIcon className="h-3 w-3" />
+              </button>
+              {actionsMenuOpen && (
+                <div className="glass-card absolute left-0 top-full z-10 mt-2 w-36 space-y-1 rounded-xl p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      openBulkEditModal();
+                    }}
+                    className="nav-link block w-full rounded-lg px-3 py-2 text-left text-sm"
+                  >
+                    {t("Edit")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      setBulkDeleteOpen(true);
+                    }}
+                    className="text-neg block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-rose-500/10"
+                  >
+                    {t("Delete")}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+        <div className="flex min-h-[38px] min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-1 text-xs font-semibold">
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <FilterIcon className="h-3 w-3 flex-shrink-0" />
               {categories
                 .filter((c) => filterCategoryIds.has(c.id))
@@ -888,7 +1152,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {dateFilter && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-1 text-xs font-semibold">
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <CalendarIcon className="h-3 w-3 flex-shrink-0" />
               {dateFilter.label}
               <button
@@ -902,7 +1166,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {groupBy && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-1 text-xs font-semibold">
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
               {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
               <button
@@ -949,6 +1213,59 @@ export default function TransactionsPage() {
             t={t}
           />
         </div>
+        )}
+        {!groups && totalRows > pageSize && (
+          <div className="flex h-[38px] flex-shrink-0 items-center gap-2 text-sm font-semibold">
+            {editingRange ? (
+              <input
+                type="number"
+                min={clampedRangeStart}
+                max={totalRows}
+                autoFocus
+                value={rangeInput}
+                onChange={(e) => setRangeInput(e.target.value)}
+                onBlur={commitRangeInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitRangeInput();
+                  else if (e.key === "Escape") setEditingRange(false);
+                }}
+                className="input h-full w-16 rounded-lg px-2 text-center text-sm"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setRangeInput(String(rangeEnd));
+                  setEditingRange(true);
+                }}
+                title={t("Click to set page size")}
+                className="text-muted hover:text-main"
+              >
+                {clampedRangeStart}-{rangeEnd} / {totalRows}
+              </button>
+            )}
+            <div className="flex h-full items-center rounded-lg bg-[var(--track-bg)]">
+              <button
+                type="button"
+                onClick={() => setRangeStart(Math.max(1, clampedRangeStart - pageSize))}
+                disabled={!hasPrev}
+                aria-label={t("Previous page")}
+                className="text-muted flex h-full items-center rounded-lg px-2.5 hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--muted)]"
+              >
+                <ChevronIcon className="h-3.5 w-3.5 rotate-90" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setRangeStart(rangeEnd + 1)}
+                disabled={!hasNext}
+                aria-label={t("Next page")}
+                className="text-muted flex h-full items-center rounded-lg px-2.5 hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--muted)]"
+              >
+                <ChevronIcon className="h-3.5 w-3.5 -rotate-90" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {importMessage && <p className="text-pos mb-3 text-sm">{importMessage}</p>}
@@ -958,10 +1275,21 @@ export default function TransactionsPage() {
         {searchedRows.length === 0 ? (
           <p className="text-faint text-sm">{t("No transactions match this filter.")}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="txn-table w-full text-left text-sm">
               <thead>
                 <tr className="text-main text-xs uppercase tracking-wider">
+                  <th className="pb-2 pr-3">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      aria-label={t("Select all")}
+                      className="accent-[var(--accent)] h-3.5 w-3.5 flex-shrink-0"
+                    />
+                  </th>
                   <th className="pb-2 pr-3">
                     <button
                       type="button"
@@ -998,8 +1326,8 @@ export default function TransactionsPage() {
                       onClick={() => toggleSort("amount")}
                       className="group flex w-full items-center justify-end gap-1 uppercase tracking-wider"
                     >
-                      {t("Amount")}
                       {sortIndicator("amount")}
+                      {t("Amount")}
                     </button>
                   </th>
                   <th className="pb-2"></th>
@@ -1015,6 +1343,7 @@ export default function TransactionsPage() {
                             className="cursor-pointer bg-white/[0.03] hover:bg-white/[0.06]"
                             onClick={() => toggleGroupCollapse(g.label)}
                           >
+                            <td></td>
                             <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
                               <span className="inline-flex items-center gap-1.5">
                                 <ChevronIcon className={`h-3 w-3 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
@@ -1033,10 +1362,11 @@ export default function TransactionsPage() {
                         </Fragment>
                       );
                     })
-                  : sortedRows.map(renderRow)}
+                  : pagedRows.map(renderRow)}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </>

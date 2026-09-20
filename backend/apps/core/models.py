@@ -18,9 +18,17 @@ from django.db import models
 
 
 class Category(models.Model):
+    EXPENSE = "expense"
+    INCOME = "income"
+    TYPE_CHOICES = [(EXPENSE, "Expense"), (INCOME, "Income")]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=100)
     color = models.CharField(max_length=7, default="#6366f1")
+    # Which side of a transaction this category is meant for - lets the
+    # transaction form narrow its category dropdown to just Expense or
+    # Income categories instead of listing both at once.
+    type = models.CharField(max_length=7, choices=TYPE_CHOICES, default=EXPENSE)
     budget_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:

@@ -20,6 +20,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(category.name);
   const [color, setColor] = useState(category.color);
+  const [type, setType] = useState(category.type);
   const [budget, setBudget] = useState(category.budget_limit ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -31,7 +32,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
     try {
       await apiFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name, color, budget_limit: budget || null }),
+        body: JSON.stringify({ name, color, type, budget_limit: budget || null }),
       });
       setOpen(false);
       onSaved();
@@ -66,6 +67,9 @@ function CategoryRow({ category, onSaved, onDeleted }: {
         <span className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
           {category.name}
+          <span className="text-muted rounded-md bg-[var(--track-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            {category.type === "income" ? t("Income") : t("Expense")}
+          </span>
         </span>
         <span className="text-muted text-xs">
           {money(category.spent_this_month)}
@@ -75,6 +79,26 @@ function CategoryRow({ category, onSaved, onDeleted }: {
       {open && (
         <>
           <div className="mt-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="input flex cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "expense"}
+                  onChange={() => setType("expense")}
+                  className="accent-indigo-500 h-3 w-3"
+                />
+                {t("Expense")}
+              </label>
+              <label className="input flex cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "income"}
+                  onChange={() => setType("income")}
+                  className="accent-indigo-500 h-3 w-3"
+                />
+                {t("Income")}
+              </label>
+            </div>
             <div className="grid grid-cols-[auto_1fr] items-center gap-2">
               <ColorPicker value={color} onChange={setColor} />
               <input
@@ -125,6 +149,7 @@ export default function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6366f1");
+  const [type, setType] = useState<"expense" | "income">("expense");
   const [budget, setBudget] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -139,6 +164,7 @@ export default function CategoriesPage() {
   function openModal() {
     setName("");
     setColor("#6366f1");
+    setType("expense");
     setBudget("");
     setError(null);
     setModalOpen(true);
@@ -151,7 +177,7 @@ export default function CategoriesPage() {
     try {
       await apiFetch<Category>("/api/categories", {
         method: "POST",
-        body: JSON.stringify({ name, color, budget_limit: budget || null }),
+        body: JSON.stringify({ name, color, type, budget_limit: budget || null }),
       });
       setModalOpen(false);
       loadCategories();
@@ -177,6 +203,29 @@ export default function CategoriesPage() {
 
       <Modal id="addCategoryModal" open={modalOpen} onClose={() => setModalOpen(false)} title={t("Add a category")}>
         <form onSubmit={handleAdd} className="space-y-4">
+          <div>
+            <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "expense"}
+                  onChange={() => setType("expense")}
+                  className="accent-indigo-500"
+                />
+                {t("Expense")}
+              </label>
+              <label className="input flex cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 has-[:checked]:border-indigo-400">
+                <input
+                  type="radio"
+                  checked={type === "income"}
+                  onChange={() => setType("income")}
+                  className="accent-indigo-500"
+                />
+                {t("Income")}
+              </label>
+            </div>
+          </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
               {t("Name & color")}
