@@ -226,7 +226,7 @@ function FilterPanel({
   const activeCount = filterCategoryIds.size + (dateFilter ? 1 : 0) + (groupByFields.length > 0 ? 1 : 0);
 
   return (
-    <div ref={ref} className="relative inline-block flex-shrink-0">
+    <div ref={ref} className="inline-block flex-shrink-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -238,7 +238,7 @@ function FilterPanel({
       </button>
       {open && (
         <div className="absolute right-0 top-full z-20 pt-1.5">
-          <div className="glass-card grid w-[min(640px,90vw)] grid-cols-1 gap-4 rounded-xl p-4 shadow-lg sm:grid-cols-3">
+          <div className="glass-card grid w-[min(640px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-xl p-4 shadow-lg sm:grid-cols-3">
             <div>
               <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
                 <FilterIcon className="h-3 w-3" /> {t("Filters")}
@@ -1152,7 +1152,7 @@ export default function TransactionsPage() {
         </div>
       </Modal>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="relative mb-4 flex flex-wrap items-center gap-2">
         {selectedIds.size > 0 ? (
           <div className="flex h-[38px] flex-1 flex-wrap items-center justify-center gap-2 text-sm">
             <span className="flex h-full items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 text-sm font-semibold text-[var(--accent)]">
