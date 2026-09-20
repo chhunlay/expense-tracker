@@ -826,7 +826,7 @@ export default function TransactionsPage() {
         <div className="flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white shadow-md">
               <FilterIcon className="h-3 w-3 flex-shrink-0" />
               {categories
                 .filter((c) => filterCategoryIds.has(c.id))
@@ -843,7 +843,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {dateFilter && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white shadow-md">
               <CalendarIcon className="h-3 w-3 flex-shrink-0" />
               {dateFilter.label}
               <button
@@ -857,7 +857,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {groupBy && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
+            <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white shadow-md">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
               {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
               <button
