@@ -708,14 +708,24 @@ export default function TransactionsPage() {
   // Every level's path is folded, not just the top one, so switching
   // to a two-level chain doesn't leave the new inner groups expanded.
   // A saved search can override this via its own fold_groups choice
-  // (see applySavedSearch, which stashes it in foldOnApplyRef right
-  // before changing groupByFields). Adjusted during render (see
-  // resetKey above) rather than in an effect.
-  const [prevGroupByForCollapse, setPrevGroupByForCollapse] = useState(groupByKey);
-  if (groupByKey !== prevGroupByForCollapse) {
-    setPrevGroupByForCollapse(groupByKey);
+  // (see applySavedSearch, which sets foldOnApply right before changing
+  // groupByFields). This also re-triggers on the empty-to-loaded edge
+  // of `rows` (not just on groupByKey), because the default saved
+  // search can apply before the initial transactions fetch resolves -
+  // group paths computed against zero rows are just "", so without
+  // this, groups would render as if never folded once the real rows
+  // (and their real group labels) show up a moment later. foldOnApply
+  // itself is only cleared once it's been applied against real rows,
+  // so this second pass reuses the same decision instead of resetting
+  // to the folded default. Adjusted during render (see resetKey above)
+  // rather than in an effect.
+  const hasRows = rows.length > 0;
+  const foldTriggerKey = `${groupByKey}|${hasRows}`;
+  const [prevFoldTriggerKey, setPrevFoldTriggerKey] = useState(foldTriggerKey);
+  if (foldTriggerKey !== prevFoldTriggerKey) {
+    setPrevFoldTriggerKey(foldTriggerKey);
     const shouldFold = foldOnApply ?? true;
-    if (foldOnApply !== null) setFoldOnApply(null);
+    if (hasRows && foldOnApply !== null) setFoldOnApply(null);
     setCollapsedGroups(groups && shouldFold ? new Set(collectGroupPaths(groups)) : new Set());
   }
 
