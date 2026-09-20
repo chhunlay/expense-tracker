@@ -179,7 +179,7 @@ function FilterPanel({
         onClick={() => setOpen((o) => !o)}
         aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
         title={t("Filter")}
-        className="text-muted flex items-center rounded-lg bg-white/10 p-1 transition-colors hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
+        className="text-muted flex items-center rounded-lg bg-[var(--track-bg)] p-1 transition-colors hover:bg-[var(--accent)]/15 hover:text-[var(--accent)]"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
@@ -823,7 +823,7 @@ export default function TransactionsPage() {
       </Modal>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="input flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-sm">
+        <div className="flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-[var(--input-border)] bg-[var(--card-bg)] px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
             <span className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
