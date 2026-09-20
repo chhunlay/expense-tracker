@@ -3,6 +3,77 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.2.0] - 2026-09-20
+### Added
+- **Transactions gained an Odoo-style search panel**: a single Filter
+  icon (merged into the search bar itself, with a visible grey/accent
+  hover state) opens a three-column panel:
+  - **Filters** - category checklist and a new **Date** picker (this
+    month + the two before it, plus this year's four quarters,
+    recomputed live from today's date) - both collapsed by default
+    unless already active. Backend `GET /api/transactions` gained
+    `category_ids` (comma-separated, replacing single-category
+    filtering), `date_from`/`date_to` (a quarter can't be expressed as
+    one `month`).
+  - **Group By** - bucket the table by Category, Type, or Month
+    (toggle a choice on/off by clicking it again; no "None" option
+    needed), with a colored subtotal row per group.
+  - **Favorites** - save the current filter+group combo by name,
+    optionally marking it default (checkable at save time or via a
+    star afterward) so it auto-applies on the next page load. New
+    `SavedSearch` model + `GET/POST/PATCH/DELETE /api/saved-searches`.
+  - Active filters/group-by show as removable, solid-accent-colored
+    chips inside the search box (Backspace clears the last one, same
+    convention as Gmail's To field); the box also now filters by note
+    text.
+  - The Amount column header is now clickable to sort
+    ascending/descending/off, replacing a separate Min/Max range pair.
+- Category rows expand into their edit form on hover instead of
+  requiring a click, and their color swatch opens a small in-app
+  preset palette (dismissible by moving the mouse away) instead of the
+  native OS color picker, which needed its own explicit close.
+- **A real client-side translation system** (`frontend/src/lib/i18n.ts`):
+  Settings' Language picker is now radio buttons, and picking Khmer
+  (ភាសាខ្មែរ) actually translates the sidebar nav, headings, and common
+  actions across the app - it previously only patched the profile
+  record with no visible effect. Sourced from the original pre-Next.js
+  Django app's leftover `.po` catalog rather than re-translated from
+  scratch; newer features added since that version intentionally fall
+  back to English.
+- Logging out now asks for confirmation (Yes/No modal) instead of
+  signing out immediately on click.
+- Settings' success/error messages are now a small fading toast in the
+  top-right corner instead of an inline paragraph; per-account favicon
+  upload; Dashboard's Analytics "Avg" stat is labeled with its actual
+  unit (day/week/month, matching the Trend filter's granularity).
+- The Dashboard trend chart's Income and Expense lines now fill under
+  the curve the same way Net already did, instead of being outlined
+  only.
+### Changed
+- Every card across the app (`glass-card`) switched from a frosted-
+  glass blur to a solid background + soft shadow - besides the look,
+  `backdrop-filter` forces a new CSS stacking context, which was
+  trapping the Transactions filter dropdown's `z-index` below the
+  table card that followed it in the DOM.
+- The "Trend chart series" checkboxes in Settings (and the chart's own
+  legend) now look like radio buttons while keeping independent
+  multi-select semantics, with at least one series always required to
+  stay selected; per-series accent coloring on that row was dropped.
+- Settings' profile section is auto-save on blur (no manual Save
+  button); a field that hasn't actually changed no longer re-saves and
+  re-flashes a toast just from clicking in and out of it.
+### Fixed
+- The sidebar (and the auth-check/profile-fetch it runs) no longer
+  fully remounts on every navigation - every page used to wrap itself
+  in its own `<AppShell>`, so Next.js tore down and rebuilt the whole
+  shell on each route change. Fixed via a `(app)` route group sharing
+  one `layout.tsx`/`AppShell` instance across `dashboard/`,
+  `transactions/`, `categories/`, `reports/`, `assets/`, `settings/`.
+- The Trend chart's legend kept listing a series as struck-through
+  after hiding it, because datasets were marked `hidden` but never
+  actually removed from the array passed to Chart.js - now filtered
+  out entirely.
+
 ## [3.1.0] - 2026-09-19
 ### Added
 - **Dashboard reaches full parity with the original Django-template
