@@ -425,7 +425,12 @@ export default function TransactionsPage() {
         </form>
       </Modal>
 
-      <div className="glass-card mb-4 flex flex-wrap items-center gap-2 rounded-2xl p-4">
+      {/* relative z-10: .glass-card's backdrop-filter makes this its own
+          stacking context, which would otherwise trap the category
+          dropdown's z-20 below the transactions table card that follows
+          it in the DOM - lifting the whole filter row above it here is
+          what actually lets the dropdown paint on top. */}
+      <div className="glass-card relative z-10 mb-4 flex flex-wrap items-center gap-2 rounded-2xl p-4">
         <input
           type="month"
           value={filterMonth}
