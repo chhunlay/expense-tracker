@@ -96,7 +96,7 @@ function FilterPanel({
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-20 pt-1.5">
+        <div className="absolute right-0 top-full z-20 pt-1.5">
           <div className="glass-card grid w-[min(640px,90vw)] grid-cols-1 gap-4 rounded-xl p-4 shadow-lg sm:grid-cols-3">
             <div>
               <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
@@ -668,7 +668,7 @@ export default function TransactionsPage() {
         <div className="input flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-300">
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
               <FilterIcon className="h-3 w-3 flex-shrink-0" />
               {categories
                 .filter((c) => filterCategoryIds.has(c.id))
@@ -685,7 +685,7 @@ export default function TransactionsPage() {
             </span>
           )}
           {groupBy && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-teal-500/15 px-2 py-1 text-xs font-semibold text-teal-300">
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
               {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
               <button type="button" onClick={() => setGroupBy("")} aria-label={t("Clear")} className="hover:text-main">
@@ -697,6 +697,16 @@ export default function TransactionsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Backspace" && e.key !== "Delete") return;
+              if (searchQuery) return;
+              // Same "backspace clears the last chip" convention as
+              // Gmail's To field - only kicks in once the text itself
+              // is already empty, so it never eats a keystroke while
+              // typing.
+              if (groupBy) setGroupBy("");
+              else if (filterCategoryIds.size > 0) setFilterCategoryIds(new Set());
+            }}
             placeholder={t("Search notes...")}
             className="min-w-[80px] flex-1 bg-transparent outline-none"
           />
