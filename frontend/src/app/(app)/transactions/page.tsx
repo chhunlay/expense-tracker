@@ -120,15 +120,27 @@ function isoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** The current month plus the two before it, then this year's four
- * quarters (most recent first) - the same relative, always-fresh
- * options Odoo's own "Date" filter group offers, recomputed from
- * today's date rather than stored anywhere. */
+/** This week, the current month plus the two before it, then this
+ * year's four quarters (most recent first) - the same relative,
+ * always-fresh options Odoo's own "Date" filter group offers,
+ * recomputed from today's date rather than stored anywhere. */
 function getDateOptions(): DateOption[] {
   const now = new Date();
+
+  // Monday-start week, matching the calendar convention the rest of
+  // the app's date pickers use.
+  const mondayOffset = (now.getDay() + 6) % 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  const week: DateOption = { label: "This Week", from: isoDate(monday), to: isoDate(sunday) };
+
+  const monthLabels = ["This Month", "Last Month"];
   const months: DateOption[] = [0, 1, 2].map((offset) => {
     const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    return { label: d.toLocaleString("default", { month: "long" }), month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}` };
+    return {
+      label: monthLabels[offset] ?? d.toLocaleString("default", { month: "long" }),
+      month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`,
+    };
   });
   const quarters: DateOption[] = [4, 3, 2, 1].map((q) => {
     const startMonth = (q - 1) * 3;
@@ -136,7 +148,7 @@ function getDateOptions(): DateOption[] {
     const to = new Date(now.getFullYear(), startMonth + 3, 0);
     return { label: `Q${q}`, from: isoDate(from), to: isoDate(to) };
   });
-  return [...months, ...quarters];
+  return [week, ...months, ...quarters];
 }
 
 function sameDateOption(a: DateOption | null, b: DateOption): boolean {
@@ -297,7 +309,7 @@ function FilterPanel({
                             active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
                           }`}
                         />
-                        {opt.label}
+                        {t(opt.label)}
                       </button>
                     );
                   })}
@@ -1232,7 +1244,7 @@ export default function TransactionsPage() {
           {dateFilter && (
             <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-              {dateFilter.label}
+              {t(dateFilter.label)}
               <button
                 type="button"
                 onClick={() => setDateFilter(null)}
