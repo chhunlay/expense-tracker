@@ -826,7 +826,7 @@ export default function TransactionsPage() {
         <div className="input flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-sm">
           <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
           {filterCategoryIds.size > 0 && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
               <FilterIcon className="h-3 w-3 flex-shrink-0" />
               {categories
                 .filter((c) => filterCategoryIds.has(c.id))
@@ -836,26 +836,36 @@ export default function TransactionsPage() {
                 type="button"
                 onClick={() => setFilterCategoryIds(new Set())}
                 aria-label={t("Clear")}
-                className="hover:text-main"
+                className="text-white/70 hover:text-white"
               >
                 ✕
               </button>
             </span>
           )}
           {dateFilter && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
               <CalendarIcon className="h-3 w-3 flex-shrink-0" />
               {dateFilter.label}
-              <button type="button" onClick={() => setDateFilter(null)} aria-label={t("Clear")} className="hover:text-main">
+              <button
+                type="button"
+                onClick={() => setDateFilter(null)}
+                aria-label={t("Clear")}
+                className="text-white/70 hover:text-white"
+              >
                 ✕
               </button>
             </span>
           )}
           {groupBy && (
-            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-semibold text-white">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
               {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
-              <button type="button" onClick={() => setGroupBy("")} aria-label={t("Clear")} className="hover:text-main">
+              <button
+                type="button"
+                onClick={() => setGroupBy("")}
+                aria-label={t("Clear")}
+                className="text-white/70 hover:text-white"
+              >
                 ✕
               </button>
             </span>
