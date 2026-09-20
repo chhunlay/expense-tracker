@@ -128,13 +128,30 @@ def delete_category(request, category_id: int):
 
 # ---------- Transactions ----------
 @router.get("/transactions", response=List[TransactionOut], auth=auth)
-def list_transactions(request, month: str = None, category_id: int = None, limit: int = None):
+def list_transactions(
+    request,
+    month: str = None,
+    category_id: int = None,
+    category_ids: str = None,
+    min_amount: float = None,
+    max_amount: float = None,
+    limit: int = None,
+):
     qs = Transaction.objects.filter(user=request.auth).select_related("category")
     if month:
         start, end = month_bounds(month)
         qs = qs.filter(date__gte=start, date__lt=end)
-    if category_id:
+    if category_ids:
+        # Multi-select filter from the Transactions page; category_id
+        # (singular) stays for any other caller that only ever needs one.
+        ids = [int(i) for i in category_ids.split(",") if i]
+        qs = qs.filter(category_id__in=ids)
+    elif category_id:
         qs = qs.filter(category_id=category_id)
+    if min_amount is not None:
+        qs = qs.filter(amount__gte=min_amount)
+    if max_amount is not None:
+        qs = qs.filter(amount__lte=max_amount)
     if limit:
         qs = qs[:limit]
     return qs

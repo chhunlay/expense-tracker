@@ -12,6 +12,100 @@ function money(value: string): string {
   return `$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** A "Categories" filter button that opens a checklist of every
+ * category on click - unlike ColorPicker's palette, selecting one item
+ * shouldn't close this, since picking several is the whole point.
+ * Closes on an outside click instead of mouse-leave: hover-to-close
+ * doesn't hold up here because selecting a category can insert the
+ * neighboring "Clear" button into this flex-wrap row, which reflows
+ * this dropdown right out from under a stationary pointer - Chrome
+ * then reports that as a real mouseleave. Click-away has no such
+ * dependency on layout staying put. */
+function useClickOutside(onOutside: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onOutside();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onOutside]);
+  return ref;
+}
+
+function CategoryFilter({
+  categories,
+  selected,
+  onChange,
+  t,
+}: {
+  categories: Category[];
+  selected: Set<number>;
+  onChange: (ids: Set<number>) => void;
+  t: (text: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useClickOutside(() => setOpen(false));
+
+  function toggle(id: number) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(next);
+  }
+
+  const label =
+    selected.size === 0
+      ? t("All categories")
+      : selected.size === 1
+        ? categories.find((c) => selected.has(c.id))?.name || t("All categories")
+        : `${selected.size} categories`;
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="input rounded-xl px-3 py-2 text-left text-sm"
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 pt-1.5">
+          <div className="glass-card w-56 rounded-xl p-2 shadow-lg">
+            <div className="max-h-64 space-y-0.5 overflow-y-auto">
+              {categories.map((c) => (
+                <label
+                  key={c.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.has(c.id)}
+                    onChange={() => toggle(c.id)}
+                    className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
+                  />
+                  <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+            {selected.size > 0 && (
+              <button
+                type="button"
+                onClick={() => onChange(new Set())}
+                className="text-muted mt-1 w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
+              >
+                {t("Clear")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const emptyForm = () => ({
   type: "expense" as "expense" | "income",
   amount: "",
@@ -32,15 +126,34 @@ export default function TransactionsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [filterMonth, setFilterMonth] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
+  const [minAmountInput, setMinAmountInput] = useState("");
+  const [maxAmountInput, setMaxAmountInput] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Debounce the amount-range inputs so typing a number doesn't fire a
+  // request on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setMinAmount(minAmountInput), 400);
+    return () => clearTimeout(timer);
+  }, [minAmountInput]);
+  useEffect(() => {
+    const timer = setTimeout(() => setMaxAmount(maxAmountInput), 400);
+    return () => clearTimeout(timer);
+  }, [maxAmountInput]);
+
+  const filterCategoryIdsKey = Array.from(filterCategoryIds).sort().join(",");
+
   function loadData() {
     const params = new URLSearchParams();
     if (filterMonth) params.set("month", filterMonth);
-    if (filterCategory) params.set("category_id", filterCategory);
+    if (filterCategoryIdsKey) params.set("category_ids", filterCategoryIdsKey);
+    if (minAmount) params.set("min_amount", minAmount);
+    if (maxAmount) params.set("max_amount", maxAmount);
     const qs = params.toString();
     Promise.all([
       apiFetch<Transaction[]>(`/api/transactions${qs ? `?${qs}` : ""}`),
@@ -53,7 +166,7 @@ export default function TransactionsPage() {
       .catch(() => setError("Couldn't load transactions"));
   }
 
-  useEffect(loadData, [filterMonth, filterCategory]);
+  useEffect(loadData, [filterMonth, filterCategoryIdsKey, minAmount, maxAmount]);
 
   function openAddModal() {
     setEditingId(null);
@@ -312,31 +425,43 @@ export default function TransactionsPage() {
         </form>
       </Modal>
 
-      <div className="glass-card mb-4 flex flex-wrap gap-2 rounded-2xl p-4">
+      <div className="glass-card mb-4 flex flex-wrap items-center gap-2 rounded-2xl p-4">
         <input
           type="month"
           value={filterMonth}
           onChange={(e) => setFilterMonth(e.target.value)}
           className="input rounded-xl px-3 py-2 text-sm"
         />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="input rounded-xl px-3 py-2 text-sm"
-        >
-          <option value="">{t("All categories")}</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        {(filterMonth || filterCategory) && (
+        <CategoryFilter categories={categories} selected={filterCategoryIds} onChange={setFilterCategoryIds} t={t} />
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder={t("Min")}
+            value={minAmountInput}
+            onChange={(e) => setMinAmountInput(e.target.value)}
+            className="input w-24 rounded-xl px-3 py-2 text-sm"
+          />
+          <span className="text-muted text-sm">–</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder={t("Max")}
+            value={maxAmountInput}
+            onChange={(e) => setMaxAmountInput(e.target.value)}
+            className="input w-24 rounded-xl px-3 py-2 text-sm"
+          />
+        </div>
+        {(filterMonth || filterCategoryIds.size > 0 || minAmountInput || maxAmountInput) && (
           <button
             type="button"
             onClick={() => {
               setFilterMonth("");
-              setFilterCategory("");
+              setFilterCategoryIds(new Set());
+              setMinAmountInput("");
+              setMaxAmountInput("");
             }}
             className="action-btn text-muted rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
           >
