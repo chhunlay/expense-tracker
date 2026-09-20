@@ -217,6 +217,30 @@ export function SunIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function GroupIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <polygon points="12 2 21 7.5 12 13 3 7.5 12 2" />
+      <polyline points="3 12 12 17.5 21 12" />
+      <polyline points="3 16.5 12 22 21 16.5" />
+    </Icon>
+  );
+}
+
+export function StarIcon({ filled, ...props }: SVGProps<SVGSVGElement> & { filled?: boolean }) {
+  const points =
+    "12 2.5 15.09 8.76 22 9.77 17 14.64 18.18 21.52 12 18.27 5.82 21.52 7 14.64 2 9.77 8.91 8.76 12 2.5";
+  return filled ? (
+    <FilledIcon {...props}>
+      <polygon points={points} />
+    </FilledIcon>
+  ) : (
+    <Icon {...props}>
+      <polygon points={points} />
+    </Icon>
+  );
+}
+
 export function EyeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

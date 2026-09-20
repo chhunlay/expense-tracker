@@ -90,6 +90,16 @@ export interface ReportsData {
   top_categories: TopCategory[];
 }
 
+export interface SavedSearch {
+  id: number;
+  page: string;
+  name: string;
+  month: string;
+  category_ids: string;
+  group_by: string;
+  is_default: boolean;
+}
+
 export const ASSET_TYPES: { value: Asset["asset_type"]; label: string }[] = [
   { value: "bank", label: "Bank account" },
   { value: "cash", label: "Cash" },

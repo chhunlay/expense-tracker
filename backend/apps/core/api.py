@@ -25,7 +25,7 @@ from ninja.errors import HttpError
 from .constants import DEFAULT_CATEGORIES
 from .csv_io import export_transactions_csv, import_transactions_csv
 from .dates import month_bounds, shift_month
-from .models import Asset, AuthToken, Category, Transaction
+from .models import Asset, AuthToken, Category, SavedSearch, Transaction
 from .quick_add import parse_quick_add
 from .schemas import (
     AssetIn,
@@ -42,6 +42,9 @@ from .schemas import (
     QuickAddIn,
     RegisterIn,
     ReportsOut,
+    SavedSearchIn,
+    SavedSearchOut,
+    SavedSearchPatch,
     SummaryOut,
     TokenOut,
     TopCategory,
@@ -215,6 +218,41 @@ def update_transaction(request, transaction_id: int, payload: TransactionPatch):
 def delete_transaction(request, transaction_id: int):
     txn = get_object_or_404(Transaction, id=transaction_id, user=request.auth)
     txn.delete()
+    return 204, None
+
+
+# ---------- Saved searches ----------
+@router.get("/saved-searches", response=List[SavedSearchOut], auth=auth)
+def list_saved_searches(request, page: str):
+    return SavedSearch.objects.filter(user=request.auth, page=page)
+
+
+@router.post("/saved-searches", response={201: SavedSearchOut}, auth=auth)
+def create_saved_search(request, payload: SavedSearchIn):
+    data = payload.dict()
+    if data["is_default"]:
+        # Only one default per page, per user - clear any existing one
+        # rather than ending up with two searches both claiming it.
+        SavedSearch.objects.filter(user=request.auth, page=data["page"], is_default=True).update(is_default=False)
+    saved = SavedSearch.objects.create(user=request.auth, **data)
+    return 201, saved
+
+
+@router.patch("/saved-searches/{search_id}", response=SavedSearchOut, auth=auth)
+def update_saved_search(request, search_id: int, payload: SavedSearchPatch):
+    saved = get_object_or_404(SavedSearch, id=search_id, user=request.auth)
+    if payload.is_default:
+        SavedSearch.objects.filter(user=request.auth, page=saved.page, is_default=True).update(is_default=False)
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(saved, field, value)
+    saved.save()
+    return saved
+
+
+@router.delete("/saved-searches/{search_id}", response={204: None}, auth=auth)
+def delete_saved_search(request, search_id: int):
+    saved = get_object_or_404(SavedSearch, id=search_id, user=request.auth)
+    saved.delete()
     return 204, None
 
 

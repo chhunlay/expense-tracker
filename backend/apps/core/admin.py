@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Asset, AuthToken, Category, Profile, Transaction
+from .models import Asset, AuthToken, Category, Profile, SavedSearch, Transaction
 
 
 @admin.register(Category)
@@ -27,6 +27,13 @@ class ProfileAdmin(admin.ModelAdmin):
 class AssetAdmin(admin.ModelAdmin):
     list_display = ("name", "user", "asset_type", "value")
     list_filter = ("asset_type", "user")
+    search_fields = ("name",)
+
+
+@admin.register(SavedSearch)
+class SavedSearchAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "page", "group_by", "is_default")
+    list_filter = ("page", "user")
     search_fields = ("name",)
 
 

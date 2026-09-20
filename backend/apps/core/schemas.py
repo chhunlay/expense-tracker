@@ -105,6 +105,30 @@ class TransactionPatch(Schema):
     note: Optional[str] = None
 
 
+# ---------- Saved searches ----------
+class SavedSearchOut(Schema):
+    id: int
+    page: str
+    name: str
+    month: str
+    category_ids: str
+    group_by: str
+    is_default: bool
+
+
+class SavedSearchIn(Schema):
+    page: str
+    name: str
+    month: str = ""
+    category_ids: str = ""
+    group_by: str = ""
+    is_default: bool = False
+
+
+class SavedSearchPatch(Schema):
+    is_default: Optional[bool] = None
+
+
 # ---------- Assets ----------
 class AssetOut(Schema):
     id: int

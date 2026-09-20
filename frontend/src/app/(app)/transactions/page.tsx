@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
-import { DownloadIcon, EditIcon, FilterIcon, UploadIcon } from "@/components/icons";
+import { DownloadIcon, EditIcon, FilterIcon, GroupIcon, SearchIcon, StarIcon, UploadIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
-import { Category, Transaction } from "@/types";
+import { Category, SavedSearch, Transaction } from "@/types";
 
 function money(value: string): string {
   return `$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -33,73 +33,184 @@ function useClickOutside(onOutside: () => void) {
   return ref;
 }
 
-function CategoryFilter({
+export type GroupBy = "" | "category" | "type" | "month";
+
+const GROUP_OPTIONS: { value: Exclude<GroupBy, "">; label: string }[] = [
+  { value: "category", label: "Category" },
+  { value: "type", label: "Type" },
+  { value: "month", label: "Month" },
+];
+
+/** The Filter button's dropdown - an Odoo-style search panel with
+ * three columns: Filters (the existing month/category filters),
+ * Group By (how the table below is bucketed), and Favorites (named
+ * combinations of the two, saved server-side so they follow the user
+ * across devices; one can be marked default to auto-apply on load). */
+function FilterPanel({
   categories,
-  selected,
-  onChange,
+  filterCategoryIds,
+  onFilterCategoryIdsChange,
+  groupBy,
+  onGroupByChange,
+  savedSearches,
+  onApplySavedSearch,
+  onSaveCurrentSearch,
+  onToggleDefault,
+  onDeleteSavedSearch,
   t,
 }: {
   categories: Category[];
-  selected: Set<number>;
-  onChange: (ids: Set<number>) => void;
+  filterCategoryIds: Set<number>;
+  onFilterCategoryIdsChange: (ids: Set<number>) => void;
+  groupBy: GroupBy;
+  onGroupByChange: (groupBy: GroupBy) => void;
+  savedSearches: SavedSearch[];
+  onApplySavedSearch: (search: SavedSearch) => void;
+  onSaveCurrentSearch: (name: string) => void;
+  onToggleDefault: (search: SavedSearch) => void;
+  onDeleteSavedSearch: (search: SavedSearch) => void;
   t: (text: string) => string;
 }) {
   const [open, setOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const ref = useClickOutside(() => setOpen(false));
 
-  function toggle(id: number) {
-    const next = new Set(selected);
+  function toggleCategory(id: number) {
+    const next = new Set(filterCategoryIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    onChange(next);
+    onFilterCategoryIdsChange(next);
   }
 
-  const label =
-    selected.size === 0
-      ? t("Filter")
-      : selected.size === 1
-        ? categories.find((c) => selected.has(c.id))?.name || t("Filter")
-        : `${selected.size} categories`;
+  const activeCount = filterCategoryIds.size + (groupBy ? 1 : 0);
 
   return (
     <div ref={ref} className="relative inline-block">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="input flex items-center gap-1.5 rounded-xl px-3 py-2 text-left text-sm"
+        aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
+        title={t("Filter")}
+        className="input flex items-center rounded-xl px-3 py-2"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
-        {label}
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 pt-1.5">
-          <div className="glass-card w-56 rounded-xl p-2 shadow-lg">
-            <div className="max-h-64 space-y-0.5 overflow-y-auto">
-              {categories.map((c) => (
-                <label
-                  key={c.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+          <div className="glass-card grid w-[min(640px,90vw)] grid-cols-1 gap-4 rounded-xl p-4 shadow-lg sm:grid-cols-3">
+            <div>
+              <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                <FilterIcon className="h-3 w-3" /> {t("Filters")}
+              </h4>
+              <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                {categories.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filterCategoryIds.has(c.id)}
+                      onChange={() => toggleCategory(c.id)}
+                      className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
+                    />
+                    <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+              {filterCategoryIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onFilterCategoryIdsChange(new Set())}
+                  className="text-muted mt-1 w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(c.id)}
-                    onChange={() => toggle(c.id)}
-                    className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
-                  />
-                  <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
-                  {c.name}
-                </label>
-              ))}
+                  {t("Clear")}
+                </button>
+              )}
             </div>
-            {selected.size > 0 && (
-              <button
-                type="button"
-                onClick={() => onChange(new Set())}
-                className="text-muted mt-1 w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
-              >
-                {t("Clear")}
-              </button>
-            )}
+
+            <div>
+              <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                <GroupIcon className="h-3 w-3" /> {t("Group By")}
+              </h4>
+              <div className="space-y-0.5">
+                {GROUP_OPTIONS.map((opt) => {
+                  const active = groupBy === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => onGroupByChange(active ? "" : opt.value)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
+                    >
+                      <span
+                        className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
+                          active ? "border-indigo-400 bg-indigo-400" : "border-[var(--input-border)]"
+                        }`}
+                      />
+                      {t(opt.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                <StarIcon filled className="h-3 w-3" /> {t("Favorites")}
+              </h4>
+              <div className="max-h-32 space-y-0.5 overflow-y-auto">
+                {savedSearches.length === 0 && <p className="text-faint px-2 text-xs">{t("No saved searches yet.")}</p>}
+                {savedSearches.map((s) => (
+                  <div
+                    key={s.id}
+                    className="group/fav flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+                  >
+                    <button type="button" onClick={() => onApplySavedSearch(s)} className="flex-1 truncate text-left">
+                      {s.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggleDefault(s)}
+                      aria-label={s.is_default ? t("Unset as default") : t("Set as default")}
+                      title={t("Default")}
+                      className={s.is_default ? "text-amber-400" : "text-faint opacity-0 hover:text-amber-400 group-hover/fav:opacity-100"}
+                    >
+                      <StarIcon filled={s.is_default} className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteSavedSearch(s)}
+                      aria-label={t("Delete")}
+                      className="text-faint opacity-0 hover:text-rose-400 group-hover/fav:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-1">
+                <input
+                  type="text"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  placeholder={t("Save current search")}
+                  className="input min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs"
+                />
+                <button
+                  type="button"
+                  disabled={!saveName.trim()}
+                  onClick={() => {
+                    onSaveCurrentSearch(saveName.trim());
+                    setSaveName("");
+                  }}
+                  className="rounded-lg bg-indigo-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-40"
+                >
+                  {t("Save")}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -126,18 +237,20 @@ export default function TransactionsPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [filterMonth, setFilterMonth] = useState("");
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
+  const [groupBy, setGroupBy] = useState<GroupBy>("");
   const [amountSort, setAmountSort] = useState<"asc" | "desc" | null>(null);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const appliedDefaultSearch = useRef(false);
 
   const filterCategoryIdsKey = Array.from(filterCategoryIds).sort().join(",");
 
   function loadData() {
     const params = new URLSearchParams();
-    if (filterMonth) params.set("month", filterMonth);
     if (filterCategoryIdsKey) params.set("category_ids", filterCategoryIdsKey);
     const qs = params.toString();
     Promise.all([
@@ -151,20 +264,116 @@ export default function TransactionsPage() {
       .catch(() => setError("Couldn't load transactions"));
   }
 
-  useEffect(loadData, [filterMonth, filterCategoryIdsKey]);
+  useEffect(loadData, [filterCategoryIdsKey]);
+
+  function applySavedSearch(search: SavedSearch) {
+    setFilterCategoryIds(
+      new Set(
+        search.category_ids
+          .split(",")
+          .filter(Boolean)
+          .map((id) => Number(id))
+      )
+    );
+    setGroupBy((search.group_by || "") as GroupBy);
+  }
+
+  function loadSavedSearches() {
+    apiFetch<SavedSearch[]>("/api/saved-searches?page=transactions")
+      .then((searches) => {
+        setSavedSearches(searches);
+        if (!appliedDefaultSearch.current) {
+          appliedDefaultSearch.current = true;
+          const defaultSearch = searches.find((s) => s.is_default);
+          if (defaultSearch) applySavedSearch(defaultSearch);
+        }
+      })
+      .catch(() => {
+        // Not worth surfacing an error banner for - Favorites just
+        // starts empty and the rest of the page still works fine.
+      });
+  }
+
+  useEffect(loadSavedSearches, []);
+
+  async function handleSaveCurrentSearch(name: string) {
+    try {
+      const saved = await apiFetch<SavedSearch>("/api/saved-searches", {
+        method: "POST",
+        body: JSON.stringify({
+          page: "transactions",
+          name,
+          category_ids: filterCategoryIdsKey,
+          group_by: groupBy,
+        }),
+      });
+      setSavedSearches((prev) => [...prev, saved].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch {
+      setError("Couldn't save this search");
+    }
+  }
+
+  async function handleToggleDefault(search: SavedSearch) {
+    try {
+      const updated = await apiFetch<SavedSearch>(`/api/saved-searches/${search.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_default: !search.is_default }),
+      });
+      setSavedSearches((prev) => prev.map((s) => (s.id === updated.id ? updated : { ...s, is_default: false })));
+    } catch {
+      setError("Couldn't update this search");
+    }
+  }
+
+  async function handleDeleteSavedSearch(search: SavedSearch) {
+    try {
+      await apiFetch(`/api/saved-searches/${search.id}`, { method: "DELETE" });
+      setSavedSearches((prev) => prev.filter((s) => s.id !== search.id));
+    } catch {
+      setError("Couldn't delete this search");
+    }
+  }
 
   function toggleAmountSort() {
     setAmountSort((prev) => (prev === null ? "asc" : prev === "asc" ? "desc" : null));
   }
 
+  const searchedRows = searchQuery.trim()
+    ? rows.filter((r) => r.note?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : rows;
+
   const sortedRows =
     amountSort === null
-      ? rows
-      : [...rows].sort((a, b) => {
+      ? searchedRows
+      : [...searchedRows].sort((a, b) => {
           const signedA = parseFloat(a.amount) * (a.type === "income" ? 1 : -1);
           const signedB = parseFloat(b.amount) * (b.type === "income" ? 1 : -1);
           return amountSort === "asc" ? signedA - signedB : signedB - signedA;
         });
+
+  const groups =
+    groupBy === ""
+      ? null
+      : (() => {
+          const map = new Map<string, Transaction[]>();
+          for (const r of sortedRows) {
+            const key =
+              groupBy === "category"
+                ? r.category_name || t("Uncategorized")
+                : groupBy === "type"
+                  ? r.type === "income"
+                    ? t("Income")
+                    : t("Expense")
+                  : r.date.slice(0, 7);
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(r);
+          }
+          return Array.from(map.entries()).map(([label, groupRows]) => ({
+            label,
+            rows: groupRows,
+            total: groupRows.reduce((sum, r) => sum + parseFloat(r.amount) * (r.type === "income" ? 1 : -1), 0),
+          }));
+        })();
 
   function openAddModal() {
     setEditingId(null);
@@ -257,6 +466,38 @@ export default function TransactionsPage() {
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  function renderRow(r: Transaction) {
+    return (
+      <tr key={r.id}>
+        <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
+        <td className="py-2 pr-3">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: r.category_color || "#94a3b8" }} />
+            {r.category_name || t("Uncategorized")}
+          </span>
+        </td>
+        <td className="text-muted py-2 pr-3">{r.note || ""}</td>
+        <td
+          className={`whitespace-nowrap py-2 pr-3 text-right font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}
+        >
+          {r.type === "income" ? "+" : "-"}
+          {money(r.amount)}
+        </td>
+        <td className="whitespace-nowrap py-2 text-right">
+          <button
+            type="button"
+            onClick={() => openEditModal(r)}
+            aria-label={t("Edit transaction")}
+            title="Edit"
+            className="text-muted inline-flex rounded-lg p-1.5 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
+          >
+            <EditIcon />
+          </button>
+        </td>
+      </tr>
+    );
   }
 
   return (
@@ -423,38 +664,63 @@ export default function TransactionsPage() {
         </form>
       </Modal>
 
-      {/* relative z-10: .glass-card's backdrop-filter makes this its own
-          stacking context, which would otherwise trap the category
-          dropdown's z-20 below the transactions table card that follows
-          it in the DOM - lifting the whole filter row above it here is
-          what actually lets the dropdown paint on top. */}
-      <div className="glass-card relative z-10 mb-4 flex flex-wrap items-center gap-2 rounded-2xl p-4">
-        <input
-          type="month"
-          value={filterMonth}
-          onChange={(e) => setFilterMonth(e.target.value)}
-          className="input rounded-xl px-3 py-2 text-sm"
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="input flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-sm">
+          <SearchIcon className="text-faint h-3.5 w-3.5 flex-shrink-0" />
+          {filterCategoryIds.size > 0 && (
+            <span className="flex items-center gap-1.5 rounded-lg bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-300">
+              <FilterIcon className="h-3 w-3 flex-shrink-0" />
+              {categories
+                .filter((c) => filterCategoryIds.has(c.id))
+                .map((c) => c.name)
+                .join(" or ")}
+              <button
+                type="button"
+                onClick={() => setFilterCategoryIds(new Set())}
+                aria-label={t("Clear")}
+                className="hover:text-main"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+          {groupBy && (
+            <span className="flex items-center gap-1.5 rounded-lg bg-teal-500/15 px-2 py-1 text-xs font-semibold text-teal-300">
+              <GroupIcon className="h-3 w-3 flex-shrink-0" />
+              {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
+              <button type="button" onClick={() => setGroupBy("")} aria-label={t("Clear")} className="hover:text-main">
+                ✕
+              </button>
+            </span>
+          )}
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("Search notes...")}
+            className="min-w-[80px] flex-1 bg-transparent outline-none"
+          />
+        </div>
+        <FilterPanel
+          categories={categories}
+          filterCategoryIds={filterCategoryIds}
+          onFilterCategoryIdsChange={setFilterCategoryIds}
+          groupBy={groupBy}
+          onGroupByChange={setGroupBy}
+          savedSearches={savedSearches}
+          onApplySavedSearch={applySavedSearch}
+          onSaveCurrentSearch={handleSaveCurrentSearch}
+          onToggleDefault={handleToggleDefault}
+          onDeleteSavedSearch={handleDeleteSavedSearch}
+          t={t}
         />
-        <CategoryFilter categories={categories} selected={filterCategoryIds} onChange={setFilterCategoryIds} t={t} />
-        {(filterMonth || filterCategoryIds.size > 0) && (
-          <button
-            type="button"
-            onClick={() => {
-              setFilterMonth("");
-              setFilterCategoryIds(new Set());
-            }}
-            className="action-btn text-muted rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
-          >
-            {t("Clear")}
-          </button>
-        )}
       </div>
 
       {importMessage && <p className="text-pos mb-3 text-sm">{importMessage}</p>}
       {error && !modalOpen && <p className="text-neg mb-3 text-sm">{error}</p>}
 
       <div className="glass-card rounded-2xl p-5">
-        {rows.length === 0 ? (
+        {searchedRows.length === 0 ? (
           <p className="text-faint text-sm">{t("No transactions match this filter.")}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -486,40 +752,25 @@ export default function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
-                    <td className="py-2 pr-3">
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="h-2 w-2 flex-shrink-0 rounded-full"
-                          style={{ background: r.category_color || "#94a3b8" }}
-                        />
-                        {r.category_name || t("Uncategorized")}
-                      </span>
-                    </td>
-                    <td className="text-muted py-2 pr-3">{r.note || ""}</td>
-                    <td
-                      className={`whitespace-nowrap py-2 pr-3 text-right font-semibold ${
-                        r.type === "income" ? "text-pos" : "text-neg"
-                      }`}
-                    >
-                      {r.type === "income" ? "+" : "-"}
-                      {money(r.amount)}
-                    </td>
-                    <td className="whitespace-nowrap py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(r)}
-                        aria-label={t("Edit transaction")}
-                        title="Edit"
-                        className="text-muted inline-flex rounded-lg p-1.5 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
-                      >
-                        <EditIcon />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {groups
+                  ? groups.map((g) => (
+                      <Fragment key={g.label}>
+                        <tr className="bg-white/[0.03]">
+                          <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
+                            {g.label}
+                          </td>
+                          <td
+                            className={`whitespace-nowrap py-1.5 pr-3 text-right text-xs font-bold ${g.total >= 0 ? "text-pos" : "text-neg"}`}
+                          >
+                            {g.total >= 0 ? "+" : "-"}
+                            {money(String(Math.abs(g.total)))}
+                          </td>
+                          <td></td>
+                        </tr>
+                        {g.rows.map(renderRow)}
+                      </Fragment>
+                    ))
+                  : sortedRows.map(renderRow)}
               </tbody>
             </table>
           </div>
