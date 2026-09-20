@@ -133,8 +133,6 @@ def list_transactions(
     month: str = None,
     category_id: int = None,
     category_ids: str = None,
-    min_amount: float = None,
-    max_amount: float = None,
     limit: int = None,
 ):
     qs = Transaction.objects.filter(user=request.auth).select_related("category")
@@ -148,10 +146,6 @@ def list_transactions(
         qs = qs.filter(category_id__in=ids)
     elif category_id:
         qs = qs.filter(category_id=category_id)
-    if min_amount is not None:
-        qs = qs.filter(amount__gte=min_amount)
-    if max_amount is not None:
-        qs = qs.filter(amount__lte=max_amount)
     if limit:
         qs = qs[:limit]
     return qs

@@ -100,8 +100,6 @@ const km: Record<string, string> = {
   "What was it for?": "សម្រាប់អ្វី?",
   "All categories": "ប្រភេទទាំងអស់",
   Filter: "តម្រង",
-  Min: "អប្បបរមា",
-  Max: "អតិបរមា",
   Clear: "សម្អាត",
   Note: "កំណត់ចំណាំ",
   Edit: "កែសម្រួល",

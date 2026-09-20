@@ -127,24 +127,10 @@ export default function TransactionsPage() {
 
   const [filterMonth, setFilterMonth] = useState("");
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
-  const [minAmountInput, setMinAmountInput] = useState("");
-  const [maxAmountInput, setMaxAmountInput] = useState("");
-  const [minAmount, setMinAmount] = useState("");
-  const [maxAmount, setMaxAmount] = useState("");
+  const [amountSort, setAmountSort] = useState<"asc" | "desc" | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Debounce the amount-range inputs so typing a number doesn't fire a
-  // request on every keystroke.
-  useEffect(() => {
-    const timer = setTimeout(() => setMinAmount(minAmountInput), 400);
-    return () => clearTimeout(timer);
-  }, [minAmountInput]);
-  useEffect(() => {
-    const timer = setTimeout(() => setMaxAmount(maxAmountInput), 400);
-    return () => clearTimeout(timer);
-  }, [maxAmountInput]);
 
   const filterCategoryIdsKey = Array.from(filterCategoryIds).sort().join(",");
 
@@ -152,8 +138,6 @@ export default function TransactionsPage() {
     const params = new URLSearchParams();
     if (filterMonth) params.set("month", filterMonth);
     if (filterCategoryIdsKey) params.set("category_ids", filterCategoryIdsKey);
-    if (minAmount) params.set("min_amount", minAmount);
-    if (maxAmount) params.set("max_amount", maxAmount);
     const qs = params.toString();
     Promise.all([
       apiFetch<Transaction[]>(`/api/transactions${qs ? `?${qs}` : ""}`),
@@ -166,7 +150,20 @@ export default function TransactionsPage() {
       .catch(() => setError("Couldn't load transactions"));
   }
 
-  useEffect(loadData, [filterMonth, filterCategoryIdsKey, minAmount, maxAmount]);
+  useEffect(loadData, [filterMonth, filterCategoryIdsKey]);
+
+  function toggleAmountSort() {
+    setAmountSort((prev) => (prev === null ? "asc" : prev === "asc" ? "desc" : null));
+  }
+
+  const sortedRows =
+    amountSort === null
+      ? rows
+      : [...rows].sort((a, b) => {
+          const signedA = parseFloat(a.amount) * (a.type === "income" ? 1 : -1);
+          const signedB = parseFloat(b.amount) * (b.type === "income" ? 1 : -1);
+          return amountSort === "asc" ? signedA - signedB : signedB - signedA;
+        });
 
   function openAddModal() {
     setEditingId(null);
@@ -438,35 +435,12 @@ export default function TransactionsPage() {
           className="input rounded-xl px-3 py-2 text-sm"
         />
         <CategoryFilter categories={categories} selected={filterCategoryIds} onChange={setFilterCategoryIds} t={t} />
-        <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder={t("Min")}
-            value={minAmountInput}
-            onChange={(e) => setMinAmountInput(e.target.value)}
-            className="input w-24 rounded-xl px-3 py-2 text-sm"
-          />
-          <span className="text-muted text-sm">–</span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder={t("Max")}
-            value={maxAmountInput}
-            onChange={(e) => setMaxAmountInput(e.target.value)}
-            className="input w-24 rounded-xl px-3 py-2 text-sm"
-          />
-        </div>
-        {(filterMonth || filterCategoryIds.size > 0 || minAmountInput || maxAmountInput) && (
+        {(filterMonth || filterCategoryIds.size > 0) && (
           <button
             type="button"
             onClick={() => {
               setFilterMonth("");
               setFilterCategoryIds(new Set());
-              setMinAmountInput("");
-              setMaxAmountInput("");
             }}
             className="action-btn text-muted rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
           >
@@ -489,12 +463,21 @@ export default function TransactionsPage() {
                   <th className="pb-2 pr-3">{t("Date")}</th>
                   <th className="pb-2 pr-3">{t("Category")}</th>
                   <th className="pb-2 pr-3">{t("Note")}</th>
-                  <th className="pb-2 pr-3 text-right">{t("Amount")}</th>
+                  <th className="pb-2 pr-3 text-right">
+                    <button
+                      type="button"
+                      onClick={toggleAmountSort}
+                      className="hover:text-main inline-flex items-center gap-1 uppercase tracking-wider"
+                    >
+                      {t("Amount")}
+                      <span className="w-3 text-left">{amountSort === "asc" ? "↑" : amountSort === "desc" ? "↓" : ""}</span>
+                    </button>
+                  </th>
                   <th className="pb-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {sortedRows.map((r) => (
                   <tr key={r.id}>
                     <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
                     <td className="py-2 pr-3">
