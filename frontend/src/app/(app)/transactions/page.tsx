@@ -66,13 +66,14 @@ function FilterPanel({
   onGroupByChange: (groupBy: GroupBy) => void;
   savedSearches: SavedSearch[];
   onApplySavedSearch: (search: SavedSearch) => void;
-  onSaveCurrentSearch: (name: string) => void;
+  onSaveCurrentSearch: (name: string, isDefault: boolean) => void;
   onToggleDefault: (search: SavedSearch) => void;
   onDeleteSavedSearch: (search: SavedSearch) => void;
   t: (text: string) => string;
 }) {
   const [open, setOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
 
   function toggleCategory(id: number) {
@@ -85,13 +86,13 @@ function FilterPanel({
   const activeCount = filterCategoryIds.size + (groupBy ? 1 : 0);
 
   return (
-    <div ref={ref} className="relative inline-block">
+    <div ref={ref} className="relative inline-block flex-shrink-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
         title={t("Filter")}
-        className="input flex items-center rounded-xl px-3 py-2"
+        className="text-faint hover:text-main flex items-center rounded-lg p-1 transition-colors hover:bg-white/10"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
@@ -202,14 +203,24 @@ function FilterPanel({
                   type="button"
                   disabled={!saveName.trim()}
                   onClick={() => {
-                    onSaveCurrentSearch(saveName.trim());
+                    onSaveCurrentSearch(saveName.trim(), saveAsDefault);
                     setSaveName("");
+                    setSaveAsDefault(false);
                   }}
                   className="rounded-lg bg-indigo-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-40"
                 >
                   {t("Save")}
                 </button>
               </div>
+              <label className="text-muted mt-1.5 flex cursor-pointer items-center gap-1.5 px-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={saveAsDefault}
+                  onChange={(e) => setSaveAsDefault(e.target.checked)}
+                  className="accent-indigo-500 h-3 w-3 flex-shrink-0"
+                />
+                {t("Use as default on load")}
+              </label>
             </div>
           </div>
         </div>
@@ -296,7 +307,7 @@ export default function TransactionsPage() {
 
   useEffect(loadSavedSearches, []);
 
-  async function handleSaveCurrentSearch(name: string) {
+  async function handleSaveCurrentSearch(name: string, isDefault: boolean) {
     try {
       const saved = await apiFetch<SavedSearch>("/api/saved-searches", {
         method: "POST",
@@ -305,9 +316,14 @@ export default function TransactionsPage() {
           name,
           category_ids: filterCategoryIdsKey,
           group_by: groupBy,
+          is_default: isDefault,
         }),
       });
-      setSavedSearches((prev) => [...prev, saved].sort((a, b) => a.name.localeCompare(b.name)));
+      setSavedSearches((prev) =>
+        [...prev.map((s) => (isDefault ? { ...s, is_default: false } : s)), saved].sort((a, b) =>
+          a.name.localeCompare(b.name)
+        )
+      );
     } catch {
       setError("Couldn't save this search");
     }
@@ -710,20 +726,20 @@ export default function TransactionsPage() {
             placeholder={t("Search notes...")}
             className="min-w-[80px] flex-1 bg-transparent outline-none"
           />
+          <FilterPanel
+            categories={categories}
+            filterCategoryIds={filterCategoryIds}
+            onFilterCategoryIdsChange={setFilterCategoryIds}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
+            savedSearches={savedSearches}
+            onApplySavedSearch={applySavedSearch}
+            onSaveCurrentSearch={handleSaveCurrentSearch}
+            onToggleDefault={handleToggleDefault}
+            onDeleteSavedSearch={handleDeleteSavedSearch}
+            t={t}
+          />
         </div>
-        <FilterPanel
-          categories={categories}
-          filterCategoryIds={filterCategoryIds}
-          onFilterCategoryIdsChange={setFilterCategoryIds}
-          groupBy={groupBy}
-          onGroupByChange={setGroupBy}
-          savedSearches={savedSearches}
-          onApplySavedSearch={applySavedSearch}
-          onSaveCurrentSearch={handleSaveCurrentSearch}
-          onToggleDefault={handleToggleDefault}
-          onDeleteSavedSearch={handleDeleteSavedSearch}
-          t={t}
-        />
       </div>
 
       {importMessage && <p className="text-pos mb-3 text-sm">{importMessage}</p>}
