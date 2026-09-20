@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
-import { DownloadIcon, EditIcon, UploadIcon } from "@/components/icons";
+import { DownloadIcon, EditIcon, FilterIcon, UploadIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
 import { Category, Transaction } from "@/types";
 
@@ -56,9 +56,9 @@ function CategoryFilter({
 
   const label =
     selected.size === 0
-      ? t("All categories")
+      ? t("Filter")
       : selected.size === 1
-        ? categories.find((c) => selected.has(c.id))?.name || t("All categories")
+        ? categories.find((c) => selected.has(c.id))?.name || t("Filter")
         : `${selected.size} categories`;
 
   return (
@@ -66,8 +66,9 @@ function CategoryFilter({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="input rounded-xl px-3 py-2 text-left text-sm"
+        className="input flex items-center gap-1.5 rounded-xl px-3 py-2 text-left text-sm"
       >
+        <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
         {label}
       </button>
       {open && (
@@ -467,10 +468,18 @@ export default function TransactionsPage() {
                     <button
                       type="button"
                       onClick={toggleAmountSort}
-                      className="hover:text-main inline-flex items-center gap-1 uppercase tracking-wider"
+                      className="group hover:text-main inline-flex items-center gap-1 uppercase tracking-wider"
                     >
                       {t("Amount")}
-                      <span className="w-3 text-left">{amountSort === "asc" ? "↑" : amountSort === "desc" ? "↓" : ""}</span>
+                      <span className="w-3 text-left">
+                        {amountSort === "asc" ? (
+                          "↑"
+                        ) : amountSort === "desc" ? (
+                          "↓"
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-50">↕</span>
+                        )}
+                      </span>
                     </button>
                   </th>
                   <th className="pb-2"></th>

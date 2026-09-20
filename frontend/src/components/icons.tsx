@@ -107,6 +107,14 @@ export function SearchIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function FilterIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4" />
+    </Icon>
+  );
+}
+
 export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
