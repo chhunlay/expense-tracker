@@ -120,27 +120,15 @@ function isoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** This week, the current month plus the two before it, then this
- * year's four quarters (most recent first) - the same relative,
- * always-fresh options Odoo's own "Date" filter group offers,
- * recomputed from today's date rather than stored anywhere. */
+/** The current month plus the two before it, then this year's four
+ * quarters (most recent first) - the same relative, always-fresh
+ * options Odoo's own "Date" filter group offers, recomputed from
+ * today's date rather than stored anywhere. */
 function getDateOptions(): DateOption[] {
   const now = new Date();
-
-  // Monday-start week, matching the calendar convention the rest of
-  // the app's date pickers use.
-  const mondayOffset = (now.getDay() + 6) % 7;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-  const week: DateOption = { label: "This Week", from: isoDate(monday), to: isoDate(sunday) };
-
-  const monthLabels = ["This Month", "Last Month"];
   const months: DateOption[] = [0, 1, 2].map((offset) => {
     const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    return {
-      label: monthLabels[offset] ?? d.toLocaleString("default", { month: "long" }),
-      month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`,
-    };
+    return { label: d.toLocaleString("default", { month: "long" }), month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}` };
   });
   const quarters: DateOption[] = [4, 3, 2, 1].map((q) => {
     const startMonth = (q - 1) * 3;
@@ -148,7 +136,24 @@ function getDateOptions(): DateOption[] {
     const to = new Date(now.getFullYear(), startMonth + 3, 0);
     return { label: `Q${q}`, from: isoDate(from), to: isoDate(to) };
   });
-  return [week, ...months, ...quarters];
+  return [...months, ...quarters];
+}
+
+/** This Week/This Month/Last Month - quick one-click shortcuts shown
+ * above the full Date list rather than folded inside it, since they're
+ * the ranges people reach for most often. */
+function getQuickDateOptions(): DateOption[] {
+  const now = new Date();
+  const mondayOffset = (now.getDay() + 6) % 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return [
+    { label: "This Week", from: isoDate(monday), to: isoDate(sunday) },
+    { label: "This Month", month: `${thisMonth.getFullYear()}-${pad(thisMonth.getMonth() + 1)}` },
+    { label: "Last Month", month: `${lastMonth.getFullYear()}-${pad(lastMonth.getMonth() + 1)}` },
+  ];
 }
 
 function sameDateOption(a: DateOption | null, b: DateOption): boolean {
@@ -288,6 +293,27 @@ function FilterPanel({
                   </button>
                 )}
               </CollapsibleSection>
+
+              <div className="space-y-0.5 border-t border-[var(--card-border)] pt-2">
+                {getQuickDateOptions().map((opt) => {
+                  const active = sameDateOption(dateFilter, opt);
+                  return (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => onDateFilterChange(active ? null : opt)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
+                    >
+                      <span
+                        className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
+                          active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
+                        }`}
+                      />
+                      {t(opt.label)}
+                    </button>
+                  );
+                })}
+              </div>
 
               <CollapsibleSection
                 label={t("Date")}
