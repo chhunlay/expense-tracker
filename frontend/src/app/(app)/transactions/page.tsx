@@ -44,16 +44,66 @@ function useClickOutside(onOutside: () => void) {
   return ref;
 }
 
-export type GroupBy = "" | "category" | "type" | "month";
+export type GroupField = "category" | "type" | "month";
 type SortColumn = "date" | "category" | "note" | "amount" | null;
 
 const DEFAULT_PAGE_SIZE = 40;
 
-const GROUP_OPTIONS: { value: Exclude<GroupBy, "">; label: string }[] = [
+const GROUP_OPTIONS: { value: GroupField; label: string }[] = [
   { value: "category", label: "Category" },
   { value: "type", label: "Type" },
   { value: "month", label: "Month" },
 ];
+
+interface GroupNode {
+  label: string;
+  path: string;
+  rows: Transaction[];
+  total: number;
+  children: GroupNode[] | null;
+}
+
+function groupKeyFor(r: Transaction, field: GroupField, t: (text: string) => string): string {
+  switch (field) {
+    case "category":
+      return r.category_name || t("Uncategorized");
+    case "type":
+      return r.type === "income" ? t("Income") : t("Expense");
+    case "month":
+      return r.date.slice(0, 7);
+  }
+}
+
+/** Builds one level of groups, then recurses into the remaining fields
+ * for each group's rows - "Type -> Category" nests every Category
+ * group inside its Type group, rather than flattening both into one
+ * level. `path` threads the full chain of labels down to each node
+ * (e.g. "Expense>Food & Dining") so fold state and React keys stay
+ * unique across sibling branches that happen to share a label. */
+function buildGroups(rows: Transaction[], fields: GroupField[], t: (text: string) => string, parentPath = ""): GroupNode[] {
+  if (fields.length === 0) return [];
+  const [field, ...rest] = fields;
+  const map = new Map<string, Transaction[]>();
+  for (const r of rows) {
+    const key = groupKeyFor(r, field, t);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(r);
+  }
+  return Array.from(map.entries()).map(([label, groupRows]) => {
+    const path = parentPath ? `${parentPath}>${label}` : label;
+    return {
+      label,
+      path,
+      rows: groupRows,
+      total: groupRows.reduce((sum, r) => sum + parseFloat(r.amount) * (r.type === "income" ? 1 : -1), 0),
+      children: rest.length > 0 ? buildGroups(groupRows, rest, t, path) : null,
+    };
+  });
+}
+
+function collectGroupPaths(nodes: GroupNode[]): string[] {
+  return nodes.flatMap((n) => [n.path, ...(n.children ? collectGroupPaths(n.children) : [])]);
+}
 
 export interface DateOption {
   label: string;
@@ -137,8 +187,8 @@ function FilterPanel({
   onFilterCategoryIdsChange,
   dateFilter,
   onDateFilterChange,
-  groupBy,
-  onGroupByChange,
+  groupByFields,
+  onToggleGroupField,
   savedSearches,
   onApplySavedSearch,
   onSaveCurrentSearch,
@@ -151,8 +201,8 @@ function FilterPanel({
   onFilterCategoryIdsChange: (ids: Set<number>) => void;
   dateFilter: DateOption | null;
   onDateFilterChange: (date: DateOption | null) => void;
-  groupBy: GroupBy;
-  onGroupByChange: (groupBy: GroupBy) => void;
+  groupByFields: GroupField[];
+  onToggleGroupField: (field: GroupField) => void;
   savedSearches: SavedSearch[];
   onApplySavedSearch: (search: SavedSearch) => void;
   onSaveCurrentSearch: (name: string, isDefault: boolean) => void;
@@ -173,7 +223,7 @@ function FilterPanel({
   }
 
   const dateOptions = getDateOptions();
-  const activeCount = filterCategoryIds.size + (dateFilter ? 1 : 0) + (groupBy ? 1 : 0);
+  const activeCount = filterCategoryIds.size + (dateFilter ? 1 : 0) + (groupByFields.length > 0 ? 1 : 0);
 
   return (
     <div ref={ref} className="relative inline-block flex-shrink-0">
@@ -261,24 +311,32 @@ function FilterPanel({
               </h4>
               <div className="space-y-0.5">
                 {GROUP_OPTIONS.map((opt) => {
-                  const active = groupBy === opt.value;
+                  const position = groupByFields.indexOf(opt.value);
+                  const active = position !== -1;
                   return (
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => onGroupByChange(active ? "" : opt.value)}
+                      onClick={() => onToggleGroupField(opt.value)}
                       className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
                     >
                       <span
-                        className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
-                          active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--input-border)]"
+                        className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded border text-[9px] font-bold leading-none ${
+                          active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--input-border)]"
                         }`}
-                      />
+                      >
+                        {active ? position + 1 : ""}
+                      </span>
                       {t(opt.label)}
                     </button>
                   );
                 })}
               </div>
+              {groupByFields.length > 0 && (
+                <p className="text-faint mt-1.5 px-2 text-xs">
+                  {groupByFields.map((f) => t(GROUP_OPTIONS.find((o) => o.value === f)!.label)).join(" → ")}
+                </p>
+              )}
             </div>
 
             <div>
@@ -374,7 +432,11 @@ export default function TransactionsPage() {
 
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
   const [dateFilter, setDateFilter] = useState<DateOption | null>(null);
-  const [groupBy, setGroupBy] = useState<GroupBy>("");
+  const [groupByFields, setGroupByFields] = useState<GroupField[]>([]);
+
+  function toggleGroupField(field: GroupField) {
+    setGroupByFields((prev) => (prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]));
+  }
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -438,7 +500,7 @@ export default function TransactionsPage() {
     } else {
       setDateFilter(null);
     }
-    setGroupBy((search.group_by || "") as GroupBy);
+    setGroupByFields((search.group_by || "").split(",").filter(Boolean) as GroupField[]);
   }
 
   function loadSavedSearches() {
@@ -475,7 +537,7 @@ export default function TransactionsPage() {
           month: dateFilter?.month ?? "",
           date_from: dateFilter?.from ?? "",
           date_to: dateFilter?.to ?? "",
-          group_by: groupBy,
+          group_by: groupByFields.join(","),
           is_default: isDefault,
         }),
       });
@@ -572,7 +634,8 @@ export default function TransactionsPage() {
   // render (React's documented escape hatch for resetting state when a
   // prop/derived value changes) rather than in an effect, so the reset
   // lands in the same render pass instead of a visible extra one.
-  const resetKey = `${filterCategoryIdsKey}|${dateFilter ? JSON.stringify(dateFilter) : ""}|${searchQuery}|${sortColumn}|${sortDir}|${groupBy}`;
+  const groupByKey = groupByFields.join(",");
+  const resetKey = `${filterCategoryIdsKey}|${dateFilter ? JSON.stringify(dateFilter) : ""}|${searchQuery}|${sortColumn}|${sortDir}|${groupByKey}`;
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (resetKey !== prevResetKey) {
     setPrevResetKey(resetKey);
@@ -580,39 +643,19 @@ export default function TransactionsPage() {
     setSelectedIds(new Set());
   }
 
-  const groups =
-    groupBy === ""
-      ? null
-      : (() => {
-          const map = new Map<string, Transaction[]>();
-          for (const r of sortedRows) {
-            const key =
-              groupBy === "category"
-                ? r.category_name || t("Uncategorized")
-                : groupBy === "type"
-                  ? r.type === "income"
-                    ? t("Income")
-                    : t("Expense")
-                  : r.date.slice(0, 7);
-            if (!map.has(key)) map.set(key, []);
-            map.get(key)!.push(r);
-          }
-          return Array.from(map.entries()).map(([label, groupRows]) => ({
-            label,
-            rows: groupRows,
-            total: groupRows.reduce((sum, r) => sum + parseFloat(r.amount) * (r.type === "income" ? 1 : -1), 0),
-          }));
-        })();
+  const groups = groupByFields.length === 0 ? null : buildGroups(sortedRows, groupByFields, t);
 
   // Groups start folded by default whenever Group By is newly turned on
-  // (or switched to a different column) - only the totals line is
-  // useful at a glance for a dozen groups; expanding is an explicit
-  // per-group choice from there via toggleGroupCollapse. Adjusted
-  // during render (see resetKey above) rather than in an effect.
-  const [prevGroupByForCollapse, setPrevGroupByForCollapse] = useState(groupBy);
-  if (groupBy !== prevGroupByForCollapse) {
-    setPrevGroupByForCollapse(groupBy);
-    setCollapsedGroups(groups ? new Set(groups.map((g) => g.label)) : new Set());
+  // or its chain of fields changes (e.g. Type -> Category) - only the
+  // totals line is useful at a glance for a dozen groups; expanding is
+  // an explicit per-group choice from there via toggleGroupCollapse.
+  // Every level's path is folded, not just the top one, so switching
+  // to a two-level chain doesn't leave the new inner groups expanded.
+  // Adjusted during render (see resetKey above) rather than in an effect.
+  const [prevGroupByForCollapse, setPrevGroupByForCollapse] = useState(groupByKey);
+  if (groupByKey !== prevGroupByForCollapse) {
+    setPrevGroupByForCollapse(groupByKey);
+    setCollapsedGroups(groups ? new Set(collectGroupPaths(groups)) : new Set());
   }
 
   const visibleRows = groups ? sortedRows : pagedRows;
@@ -654,13 +697,37 @@ export default function TransactionsPage() {
     }
   }
 
-  function toggleGroupCollapse(label: string) {
+  function toggleGroupCollapse(path: string) {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
       return next;
     });
+  }
+
+  function renderGroupNode(node: GroupNode, depth: number) {
+    const collapsed = collapsedGroups.has(node.path);
+    return (
+      <Fragment key={node.path}>
+        <tr className="cursor-pointer bg-white/[0.03] hover:bg-white/[0.06]" onClick={() => toggleGroupCollapse(node.path)}>
+          <td></td>
+          <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5" style={{ paddingLeft: `${depth * 1.25}rem` }}>
+              <ChevronIcon className={`h-3 w-3 flex-shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+              {node.label}
+            </span>
+          </td>
+          <td className={`whitespace-nowrap py-1.5 pr-3 text-right text-xs font-bold ${node.total >= 0 ? "text-pos" : "text-neg"}`}>
+            {node.total >= 0 ? "+" : "-"}
+            {money(String(Math.abs(node.total)))}
+          </td>
+          <td></td>
+        </tr>
+        {!collapsed &&
+          (node.children ? node.children.map((child) => renderGroupNode(child, depth + 1)) : node.rows.map(renderRow))}
+      </Fragment>
+    );
   }
 
   function firstCategoryId(type: "expense" | "income"): string {
@@ -845,7 +912,7 @@ export default function TransactionsPage() {
   function renderRow(r: Transaction) {
     return (
       <tr key={r.id} className={`hover:bg-[var(--track-bg)] ${selectedIds.has(r.id) ? "bg-[var(--track-bg)]" : ""}`}>
-        <td className="py-2 pr-3">
+        <td className="py-2 pl-3 pr-3">
           <input
             type="checkbox"
             checked={selectedIds.has(r.id)}
@@ -1176,13 +1243,13 @@ export default function TransactionsPage() {
               </button>
             </span>
           )}
-          {groupBy && (
+          {groupByFields.length > 0 && (
             <span className="text-muted flex items-center gap-1.5 rounded-lg bg-[var(--track-bg)] px-2 py-0.5 text-xs font-semibold">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
-              {t(GROUP_OPTIONS.find((opt) => opt.value === groupBy)?.label ?? "")}
+              {groupByFields.map((f) => t(GROUP_OPTIONS.find((opt) => opt.value === f)!.label)).join(" → ")}
               <button
                 type="button"
-                onClick={() => setGroupBy("")}
+                onClick={() => setGroupByFields([])}
                 aria-label={t("Clear")}
                 className="hover:text-main"
               >
@@ -1201,7 +1268,7 @@ export default function TransactionsPage() {
               // Gmail's To field - only kicks in once the text itself
               // is already empty, so it never eats a keystroke while
               // typing.
-              if (groupBy) setGroupBy("");
+              if (groupByFields.length > 0) setGroupByFields([]);
               else if (dateFilter) setDateFilter(null);
               else if (filterCategoryIds.size > 0) setFilterCategoryIds(new Set());
             }}
@@ -1214,8 +1281,8 @@ export default function TransactionsPage() {
             onFilterCategoryIdsChange={setFilterCategoryIds}
             dateFilter={dateFilter}
             onDateFilterChange={setDateFilter}
-            groupBy={groupBy}
-            onGroupByChange={setGroupBy}
+            groupByFields={groupByFields}
+            onToggleGroupField={toggleGroupField}
             savedSearches={savedSearches}
             onApplySavedSearch={applySavedSearch}
             onSaveCurrentSearch={handleSaveCurrentSearch}
@@ -1291,7 +1358,7 @@ export default function TransactionsPage() {
             <table className="txn-table w-full text-left text-sm">
               <thead>
                 <tr className="text-main text-xs uppercase tracking-wider">
-                  <th className="pb-2 pr-3">
+                  <th className="pb-2 pl-3 pr-3">
                     <input
                       ref={headerCheckboxRef}
                       type="checkbox"
@@ -1344,37 +1411,7 @@ export default function TransactionsPage() {
                   <th className="pb-2"></th>
                 </tr>
               </thead>
-              <tbody>
-                {groups
-                  ? groups.map((g) => {
-                      const collapsed = collapsedGroups.has(g.label);
-                      return (
-                        <Fragment key={g.label}>
-                          <tr
-                            className="cursor-pointer bg-white/[0.03] hover:bg-white/[0.06]"
-                            onClick={() => toggleGroupCollapse(g.label)}
-                          >
-                            <td></td>
-                            <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
-                              <span className="inline-flex items-center gap-1.5">
-                                <ChevronIcon className={`h-3 w-3 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-                                {g.label}
-                              </span>
-                            </td>
-                            <td
-                              className={`whitespace-nowrap py-1.5 pr-3 text-right text-xs font-bold ${g.total >= 0 ? "text-pos" : "text-neg"}`}
-                            >
-                              {g.total >= 0 ? "+" : "-"}
-                              {money(String(Math.abs(g.total)))}
-                            </td>
-                            <td></td>
-                          </tr>
-                          {!collapsed && g.rows.map(renderRow)}
-                        </Fragment>
-                      );
-                    })
-                  : pagedRows.map(renderRow)}
-              </tbody>
+              <tbody>{groups ? groups.map((g) => renderGroupNode(g, 0)) : pagedRows.map(renderRow)}</tbody>
             </table>
             </div>
           </>
