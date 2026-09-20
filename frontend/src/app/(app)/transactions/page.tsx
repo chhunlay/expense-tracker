@@ -45,6 +45,7 @@ function useClickOutside(onOutside: () => void) {
 }
 
 export type GroupBy = "" | "category" | "type" | "month";
+type SortColumn = "date" | "category" | "note" | "amount" | null;
 
 const GROUP_OPTIONS: { value: Exclude<GroupBy, "">; label: string }[] = [
   { value: "category", label: "Category" },
@@ -372,7 +373,9 @@ export default function TransactionsPage() {
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
   const [dateFilter, setDateFilter] = useState<DateOption | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("");
-  const [amountSort, setAmountSort] = useState<"asc" | "desc" | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -492,22 +495,53 @@ export default function TransactionsPage() {
     }
   }
 
-  function toggleAmountSort() {
-    setAmountSort((prev) => (prev === null ? "asc" : prev === "asc" ? "desc" : null));
+  function toggleSort(column: SortColumn) {
+    if (sortColumn !== column) {
+      setSortColumn(column);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortColumn(null);
+      setSortDir(null);
+    }
   }
 
   const searchedRows = searchQuery.trim()
     ? rows.filter((r) => r.note?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : rows;
 
+  function sortValue(r: Transaction, column: Exclude<SortColumn, null>): string | number {
+    switch (column) {
+      case "date":
+        return r.date;
+      case "category":
+        return (r.category_name || t("Uncategorized")).toLowerCase();
+      case "note":
+        return (r.note || "").toLowerCase();
+      case "amount":
+        return parseFloat(r.amount) * (r.type === "income" ? 1 : -1);
+    }
+  }
+
   const sortedRows =
-    amountSort === null
+    sortColumn === null
       ? searchedRows
       : [...searchedRows].sort((a, b) => {
-          const signedA = parseFloat(a.amount) * (a.type === "income" ? 1 : -1);
-          const signedB = parseFloat(b.amount) * (b.type === "income" ? 1 : -1);
-          return amountSort === "asc" ? signedA - signedB : signedB - signedA;
+          const va = sortValue(a, sortColumn);
+          const vb = sortValue(b, sortColumn);
+          const cmp = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
+          return sortDir === "asc" ? cmp : -cmp;
         });
+
+  function toggleGroupCollapse(label: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
 
   const groups =
     groupBy === ""
@@ -626,16 +660,27 @@ export default function TransactionsPage() {
     }
   }
 
+  function sortIndicator(column: SortColumn) {
+    return (
+      <span className="w-3 text-left">
+        {sortColumn === column ? (
+          sortDir === "asc" ? (
+            "↑"
+          ) : (
+            "↓"
+          )
+        ) : (
+          <span className="opacity-0 group-hover:opacity-50">↕</span>
+        )}
+      </span>
+    );
+  }
+
   function renderRow(r: Transaction) {
     return (
-      <tr key={r.id}>
+      <tr key={r.id} className="hover:bg-[var(--track-bg)]">
         <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
-        <td className="py-2 pr-3">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: r.category_color || "#94a3b8" }} />
-            {r.category_name || t("Uncategorized")}
-          </span>
-        </td>
+        <td className="py-2 pr-3">{r.category_name || t("Uncategorized")}</td>
         <td className="text-muted py-2 pr-3">{r.note || ""}</td>
         <td
           className={`whitespace-nowrap py-2 pr-3 text-right font-semibold ${r.type === "income" ? "text-pos" : "text-neg"}`}
@@ -916,26 +961,45 @@ export default function TransactionsPage() {
           <div className="overflow-x-auto">
             <table className="txn-table w-full text-left text-sm">
               <thead>
-                <tr className="text-muted text-xs uppercase tracking-wider">
-                  <th className="pb-2 pr-3">{t("Date")}</th>
-                  <th className="pb-2 pr-3">{t("Category")}</th>
-                  <th className="pb-2 pr-3">{t("Note")}</th>
+                <tr className="text-main text-xs uppercase tracking-wider">
+                  <th className="pb-2 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("date")}
+                      className="group inline-flex items-center gap-1 uppercase tracking-wider"
+                    >
+                      {t("Date")}
+                      {sortIndicator("date")}
+                    </button>
+                  </th>
+                  <th className="pb-2 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("category")}
+                      className="group inline-flex items-center gap-1 uppercase tracking-wider"
+                    >
+                      {t("Category")}
+                      {sortIndicator("category")}
+                    </button>
+                  </th>
+                  <th className="pb-2 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("note")}
+                      className="group inline-flex items-center gap-1 uppercase tracking-wider"
+                    >
+                      {t("Note")}
+                      {sortIndicator("note")}
+                    </button>
+                  </th>
                   <th className="pb-2 pr-3 text-right">
                     <button
                       type="button"
-                      onClick={toggleAmountSort}
-                      className="group hover:text-main inline-flex items-center gap-1 uppercase tracking-wider"
+                      onClick={() => toggleSort("amount")}
+                      className="group flex w-full items-center justify-end gap-1 uppercase tracking-wider"
                     >
                       {t("Amount")}
-                      <span className="w-3 text-left">
-                        {amountSort === "asc" ? (
-                          "↑"
-                        ) : amountSort === "desc" ? (
-                          "↓"
-                        ) : (
-                          <span className="opacity-0 group-hover:opacity-50">↕</span>
-                        )}
-                      </span>
+                      {sortIndicator("amount")}
                     </button>
                   </th>
                   <th className="pb-2"></th>
@@ -943,23 +1007,32 @@ export default function TransactionsPage() {
               </thead>
               <tbody>
                 {groups
-                  ? groups.map((g) => (
-                      <Fragment key={g.label}>
-                        <tr className="bg-white/[0.03]">
-                          <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
-                            {g.label}
-                          </td>
-                          <td
-                            className={`whitespace-nowrap py-1.5 pr-3 text-right text-xs font-bold ${g.total >= 0 ? "text-pos" : "text-neg"}`}
+                  ? groups.map((g) => {
+                      const collapsed = collapsedGroups.has(g.label);
+                      return (
+                        <Fragment key={g.label}>
+                          <tr
+                            className="cursor-pointer bg-white/[0.03] hover:bg-white/[0.06]"
+                            onClick={() => toggleGroupCollapse(g.label)}
                           >
-                            {g.total >= 0 ? "+" : "-"}
-                            {money(String(Math.abs(g.total)))}
-                          </td>
-                          <td></td>
-                        </tr>
-                        {g.rows.map(renderRow)}
-                      </Fragment>
-                    ))
+                            <td colSpan={3} className="py-1.5 pr-3 text-xs font-bold uppercase tracking-wider">
+                              <span className="inline-flex items-center gap-1.5">
+                                <ChevronIcon className={`h-3 w-3 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+                                {g.label}
+                              </span>
+                            </td>
+                            <td
+                              className={`whitespace-nowrap py-1.5 pr-3 text-right text-xs font-bold ${g.total >= 0 ? "text-pos" : "text-neg"}`}
+                            >
+                              {g.total >= 0 ? "+" : "-"}
+                              {money(String(Math.abs(g.total)))}
+                            </td>
+                            <td></td>
+                          </tr>
+                          {!collapsed && g.rows.map(renderRow)}
+                        </Fragment>
+                      );
+                    })
                   : sortedRows.map(renderRow)}
               </tbody>
             </table>
