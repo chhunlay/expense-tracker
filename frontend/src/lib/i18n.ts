@@ -115,6 +115,15 @@ const km: Record<string, string> = {
   "Asset added": "បានបន្ថែមទ្រព្យសកម្ម",
   "Asset updated": "បានធ្វើបច្ចុប្បន្នភាពទ្រព្យសកម្ម",
   "Asset deleted": "បានលុបទ្រព្យសកម្ម",
+  "This Week": "សប្តាហ៍នេះ",
+  "This Month": "ខែនេះ",
+  "Last Month": "ខែមុន",
+  "Fold groups": "បត់ក្រុម",
+  Year: "ឆ្នាំ",
+  Quarter: "ត្រីមាស",
+  Week: "សប្តាហ៍",
+  Day: "ថ្ងៃ",
+  "Week of": "សប្តាហ៍នៃ",
 };
 
 const dictionaries: Record<Language, Record<string, string>> = { en: {}, km };
