@@ -111,6 +111,8 @@ class SavedSearchOut(Schema):
     page: str
     name: str
     month: str
+    date_from: str
+    date_to: str
     category_ids: str
     group_by: str
     is_default: bool
@@ -120,6 +122,8 @@ class SavedSearchIn(Schema):
     page: str
     name: str
     month: str = ""
+    date_from: str = ""
+    date_to: str = ""
     category_ids: str = ""
     group_by: str = ""
     is_default: bool = False

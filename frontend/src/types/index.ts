@@ -95,6 +95,8 @@ export interface SavedSearch {
   page: string;
   name: string;
   month: string;
+  date_from: string;
+  date_to: string;
   category_ids: string;
   group_by: string;
   is_default: boolean;

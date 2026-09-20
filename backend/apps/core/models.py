@@ -134,6 +134,8 @@ class SavedSearch(models.Model):
     # querystring-shaped filters the Transactions page already sends -
     # "" means "no filter on this", not "filter to an empty value".
     month = models.CharField(max_length=7, blank=True, default="")
+    date_from = models.CharField(max_length=10, blank=True, default="")
+    date_to = models.CharField(max_length=10, blank=True, default="")
     category_ids = models.CharField(max_length=255, blank=True, default="")
     group_by = models.CharField(max_length=20, blank=True, default="")
     is_default = models.BooleanField(default=False)

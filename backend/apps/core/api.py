@@ -134,6 +134,8 @@ def delete_category(request, category_id: int):
 def list_transactions(
     request,
     month: str = None,
+    date_from: str = None,
+    date_to: str = None,
     category_id: int = None,
     category_ids: str = None,
     limit: int = None,
@@ -142,6 +144,14 @@ def list_transactions(
     if month:
         start, end = month_bounds(month)
         qs = qs.filter(date__gte=start, date__lt=end)
+    elif date_from or date_to:
+        # Used by the Transactions page's Date filter for a quarter (a
+        # span month_bounds() can't express with a single YYYY-MM) -
+        # inclusive on both ends, unlike month's half-open range above.
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
     if category_ids:
         # Multi-select filter from the Transactions page; category_id
         # (singular) stays for any other caller that only ever needs one.

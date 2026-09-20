@@ -4,7 +4,18 @@ import { Fragment, useEffect, useRef, useState } from "react";
 
 import { apiFetch, apiDownload, ApiError } from "@/lib/api";
 import Modal from "@/components/Modal";
-import { DownloadIcon, EditIcon, FilterIcon, GroupIcon, SearchIcon, StarIcon, UploadIcon } from "@/components/icons";
+import {
+  CalendarIcon,
+  CategoriesIcon,
+  ChevronIcon,
+  DownloadIcon,
+  EditIcon,
+  FilterIcon,
+  GroupIcon,
+  SearchIcon,
+  StarIcon,
+  UploadIcon,
+} from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
 import { Category, SavedSearch, Transaction } from "@/types";
 
@@ -41,6 +52,77 @@ const GROUP_OPTIONS: { value: Exclude<GroupBy, "">; label: string }[] = [
   { value: "month", label: "Month" },
 ];
 
+export interface DateOption {
+  label: string;
+  month?: string;
+  from?: string;
+  to?: string;
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The current month plus the two before it, then this year's four
+ * quarters (most recent first) - the same relative, always-fresh
+ * options Odoo's own "Date" filter group offers, recomputed from
+ * today's date rather than stored anywhere. */
+function getDateOptions(): DateOption[] {
+  const now = new Date();
+  const months: DateOption[] = [0, 1, 2].map((offset) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    return { label: d.toLocaleString("default", { month: "long" }), month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}` };
+  });
+  const quarters: DateOption[] = [4, 3, 2, 1].map((q) => {
+    const startMonth = (q - 1) * 3;
+    const from = new Date(now.getFullYear(), startMonth, 1);
+    const to = new Date(now.getFullYear(), startMonth + 3, 0);
+    return { label: `Q${q}`, from: isoDate(from), to: isoDate(to) };
+  });
+  return [...months, ...quarters];
+}
+
+function sameDateOption(a: DateOption | null, b: DateOption): boolean {
+  return !!a && a.label === b.label && a.month === b.month && a.from === b.from && a.to === b.to;
+}
+
+/** A collapsed-by-default group within the Filters column (Categories,
+ * Date) - starts open only when it already has an active selection
+ * (e.g. applying a favorite), otherwise stays out of the way until
+ * clicked open. */
+function CollapsibleSection({
+  label,
+  icon,
+  startOpen,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  startOpen: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(startOpen);
+  return (
+    <div className="border-t border-[var(--card-border)] pt-2 first:border-t-0 first:pt-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="text-muted flex w-full items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-white/5"
+      >
+        <span className="flex items-center gap-1.5">
+          {icon} {label}
+        </span>
+        <ChevronIcon className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="mt-1">{children}</div>}
+    </div>
+  );
+}
+
 /** The Filter button's dropdown - an Odoo-style search panel with
  * three columns: Filters (the existing month/category filters),
  * Group By (how the table below is bucketed), and Favorites (named
@@ -50,6 +132,8 @@ function FilterPanel({
   categories,
   filterCategoryIds,
   onFilterCategoryIdsChange,
+  dateFilter,
+  onDateFilterChange,
   groupBy,
   onGroupByChange,
   savedSearches,
@@ -62,6 +146,8 @@ function FilterPanel({
   categories: Category[];
   filterCategoryIds: Set<number>;
   onFilterCategoryIdsChange: (ids: Set<number>) => void;
+  dateFilter: DateOption | null;
+  onDateFilterChange: (date: DateOption | null) => void;
   groupBy: GroupBy;
   onGroupByChange: (groupBy: GroupBy) => void;
   savedSearches: SavedSearch[];
@@ -83,7 +169,8 @@ function FilterPanel({
     onFilterCategoryIdsChange(next);
   }
 
-  const activeCount = filterCategoryIds.size + (groupBy ? 1 : 0);
+  const dateOptions = getDateOptions();
+  const activeCount = filterCategoryIds.size + (dateFilter ? 1 : 0) + (groupBy ? 1 : 0);
 
   return (
     <div ref={ref} className="relative inline-block flex-shrink-0">
@@ -92,7 +179,7 @@ function FilterPanel({
         onClick={() => setOpen((o) => !o)}
         aria-label={activeCount === 0 ? t("Filter") : `${t("Filter")} (${activeCount})`}
         title={t("Filter")}
-        className="text-faint hover:text-main flex items-center rounded-lg p-1 transition-colors hover:bg-white/10"
+        className="text-muted flex items-center rounded-lg bg-white/10 p-1 transition-colors hover:bg-indigo-500/15 hover:text-indigo-400"
       >
         <FilterIcon className="h-3.5 w-3.5 flex-shrink-0" />
       </button>
@@ -103,32 +190,66 @@ function FilterPanel({
               <h4 className="text-muted mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
                 <FilterIcon className="h-3 w-3" /> {t("Filters")}
               </h4>
-              <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                {categories.map((c) => (
-                  <label
-                    key={c.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+
+              <CollapsibleSection
+                label={t("Categories")}
+                icon={<CategoriesIcon className="h-3.5 w-3.5" />}
+                startOpen={filterCategoryIds.size > 0}
+              >
+                <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                  {categories.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filterCategoryIds.has(c.id)}
+                        onChange={() => toggleCategory(c.id)}
+                        className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
+                      />
+                      <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
+                      {c.name}
+                    </label>
+                  ))}
+                </div>
+                {filterCategoryIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterCategoryIdsChange(new Set())}
+                    className="text-muted mt-1 w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
                   >
-                    <input
-                      type="checkbox"
-                      checked={filterCategoryIds.has(c.id)}
-                      onChange={() => toggleCategory(c.id)}
-                      className="accent-indigo-500 h-3.5 w-3.5 flex-shrink-0"
-                    />
-                    <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.color }} />
-                    {c.name}
-                  </label>
-                ))}
-              </div>
-              {filterCategoryIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onFilterCategoryIdsChange(new Set())}
-                  className="text-muted mt-1 w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-white/5"
-                >
-                  {t("Clear")}
-                </button>
-              )}
+                    {t("Clear")}
+                  </button>
+                )}
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                label={t("Date")}
+                icon={<CalendarIcon className="h-3.5 w-3.5" />}
+                startOpen={dateFilter !== null}
+              >
+                <div className="space-y-0.5">
+                  {dateOptions.map((opt) => {
+                    const active = sameDateOption(dateFilter, opt);
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => onDateFilterChange(active ? null : opt)}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/5"
+                      >
+                        <span
+                          className={`h-3.5 w-3.5 flex-shrink-0 rounded border ${
+                            active ? "border-indigo-400 bg-indigo-400" : "border-[var(--input-border)]"
+                          }`}
+                        />
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CollapsibleSection>
             </div>
 
             <div>
@@ -249,6 +370,7 @@ export default function TransactionsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<number>>(new Set());
+  const [dateFilter, setDateFilter] = useState<DateOption | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("");
   const [amountSort, setAmountSort] = useState<"asc" | "desc" | null>(null);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -263,6 +385,11 @@ export default function TransactionsPage() {
   function loadData() {
     const params = new URLSearchParams();
     if (filterCategoryIdsKey) params.set("category_ids", filterCategoryIdsKey);
+    if (dateFilter?.month) params.set("month", dateFilter.month);
+    else if (dateFilter?.from || dateFilter?.to) {
+      if (dateFilter.from) params.set("date_from", dateFilter.from);
+      if (dateFilter.to) params.set("date_to", dateFilter.to);
+    }
     const qs = params.toString();
     Promise.all([
       apiFetch<Transaction[]>(`/api/transactions${qs ? `?${qs}` : ""}`),
@@ -275,7 +402,7 @@ export default function TransactionsPage() {
       .catch(() => setError("Couldn't load transactions"));
   }
 
-  useEffect(loadData, [filterCategoryIdsKey]);
+  useEffect(loadData, [filterCategoryIdsKey, dateFilter]);
 
   function applySavedSearch(search: SavedSearch) {
     setFilterCategoryIds(
@@ -286,6 +413,13 @@ export default function TransactionsPage() {
           .map((id) => Number(id))
       )
     );
+    if (search.month) setDateFilter(getDateOptions().find((o) => o.month === search.month) ?? { label: search.month, month: search.month });
+    else if (search.date_from || search.date_to) {
+      const match = getDateOptions().find((o) => o.from === search.date_from && o.to === search.date_to);
+      setDateFilter(match ?? { label: t("Custom range"), from: search.date_from, to: search.date_to });
+    } else {
+      setDateFilter(null);
+    }
     setGroupBy((search.group_by || "") as GroupBy);
   }
 
@@ -305,6 +439,11 @@ export default function TransactionsPage() {
       });
   }
 
+  // Runs once on mount only, to auto-apply whichever saved search is
+  // marked default - re-running it on every applySavedSearch identity
+  // change (a new closure every render) would refetch on every filter
+  // tweak instead of just once at load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(loadSavedSearches, []);
 
   async function handleSaveCurrentSearch(name: string, isDefault: boolean) {
@@ -315,6 +454,9 @@ export default function TransactionsPage() {
           page: "transactions",
           name,
           category_ids: filterCategoryIdsKey,
+          month: dateFilter?.month ?? "",
+          date_from: dateFilter?.from ?? "",
+          date_to: dateFilter?.to ?? "",
           group_by: groupBy,
           is_default: isDefault,
         }),
@@ -700,6 +842,15 @@ export default function TransactionsPage() {
               </button>
             </span>
           )}
+          {dateFilter && (
+            <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
+              <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+              {dateFilter.label}
+              <button type="button" onClick={() => setDateFilter(null)} aria-label={t("Clear")} className="hover:text-main">
+                ✕
+              </button>
+            </span>
+          )}
           {groupBy && (
             <span className="text-muted flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold">
               <GroupIcon className="h-3 w-3 flex-shrink-0" />
@@ -721,6 +872,7 @@ export default function TransactionsPage() {
               // is already empty, so it never eats a keystroke while
               // typing.
               if (groupBy) setGroupBy("");
+              else if (dateFilter) setDateFilter(null);
               else if (filterCategoryIds.size > 0) setFilterCategoryIds(new Set());
             }}
             placeholder={t("Search notes...")}
@@ -730,6 +882,8 @@ export default function TransactionsPage() {
             categories={categories}
             filterCategoryIds={filterCategoryIds}
             onFilterCategoryIdsChange={setFilterCategoryIds}
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
             groupBy={groupBy}
             onGroupByChange={setGroupBy}
             savedSearches={savedSearches}
