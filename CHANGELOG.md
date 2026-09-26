@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.4.0] - 2026-09-26
+### Added
+- Dashboard's Analytics card gained Line/Bar/Pie tabs next to the
+  range dropdown - Line is the existing trend chart, Bar shows the
+  same Income/Expense/Net series as grouped bars, and Pie shows the
+  Income vs. Expense split for the selected range.
+
 ## [3.3.4] - 2026-09-26
 ### Fixed
 - A category's name/budget edit could be silently lost: both only
