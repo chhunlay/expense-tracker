@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import ColorPicker from "@/components/ColorPicker";
+import IconPicker from "@/components/IconPicker";
 import Modal from "@/components/Modal";
+import { CategoryIcon } from "@/lib/categoryIcons";
 import { useTranslation } from "@/lib/i18n";
 import { Category } from "@/types";
 
@@ -20,6 +22,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(category.name);
   const [color, setColor] = useState(category.color);
+  const [icon, setIcon] = useState(category.icon);
   const [type, setType] = useState(category.type);
   const [budget, setBudget] = useState(category.budget_limit ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +34,14 @@ function CategoryRow({ category, onSaved, onDeleted }: {
   // blur so a save isn't fired on every keystroke. Takes the changed
   // value directly rather than reading it back off state, since a
   // just-called setState hasn't landed yet when this runs.
-  async function saveField(overrides: Partial<{ name: string; color: string; type: "expense" | "income"; budget: string }>) {
-    const next = { name, color, type, budget, ...overrides };
+  async function saveField(overrides: Partial<{ name: string; color: string; icon: string; type: "expense" | "income"; budget: string }>) {
+    const next = { name, color, icon, type, budget, ...overrides };
     setError(null);
     setSaving(true);
     try {
       await apiFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: next.name, color: next.color, type: next.type, budget_limit: next.budget || null }),
+        body: JSON.stringify({ name: next.name, color: next.color, icon: next.icon, type: next.type, budget_limit: next.budget || null }),
       });
       onSaved();
     } catch (err) {
@@ -47,6 +50,25 @@ function CategoryRow({ category, onSaved, onDeleted }: {
       setSaving(false);
     }
   }
+
+  // Backstop for name/budget's blur-based save above: blur never fires
+  // if the mouse leaves the row (collapsing it) or the page is
+  // reloaded right after typing, silently dropping the edit. This
+  // saves it a moment after typing stops regardless, so it's never
+  // depending on blur alone to happen.
+  useEffect(() => {
+    if (name === category.name) return;
+    const timer = setTimeout(() => saveField({}), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
+
+  useEffect(() => {
+    if (budget === (category.budget_limit ?? "")) return;
+    const timer = setTimeout(() => saveField({}), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budget]);
 
   async function handleDelete() {
     if (!confirm(t("Delete this category? Its past transactions become Uncategorized."))) return;
@@ -70,7 +92,7 @@ function CategoryRow({ category, onSaved, onDeleted }: {
         className="flex w-full cursor-pointer items-center justify-between text-sm"
       >
         <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
+          <CategoryIcon icon={category.icon} width={16} height={16} style={{ color: category.color }} />
           {category.name}
           <span className="text-muted rounded-md bg-[var(--track-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
             {category.type === "income" ? t("Income") : t("Expense")}
@@ -110,12 +132,19 @@ function CategoryRow({ category, onSaved, onDeleted }: {
                 {t("Income")}
               </label>
             </div>
-            <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+            <div className="grid grid-cols-[auto_auto_1fr] items-center gap-2">
               <ColorPicker
                 value={color}
                 onChange={(newColor) => {
                   setColor(newColor);
                   saveField({ color: newColor });
+                }}
+              />
+              <IconPicker
+                value={icon}
+                onChange={(newIcon) => {
+                  setIcon(newIcon);
+                  saveField({ icon: newIcon });
                 }}
               />
               <input
@@ -163,6 +192,7 @@ export default function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6366f1");
+  const [icon, setIcon] = useState("tag");
   const [type, setType] = useState<"expense" | "income">("expense");
   const [budget, setBudget] = useState("");
   const [saving, setSaving] = useState(false);
@@ -178,6 +208,7 @@ export default function CategoriesPage() {
   function openModal() {
     setName("");
     setColor("#6366f1");
+    setIcon("tag");
     setType("expense");
     setBudget("");
     setError(null);
@@ -191,7 +222,7 @@ export default function CategoriesPage() {
     try {
       await apiFetch<Category>("/api/categories", {
         method: "POST",
-        body: JSON.stringify({ name, color, type, budget_limit: budget || null }),
+        body: JSON.stringify({ name, color, icon, type, budget_limit: budget || null }),
       });
       setModalOpen(false);
       loadCategories();
@@ -242,10 +273,11 @@ export default function CategoriesPage() {
           </div>
           <div>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
-              {t("Name & color")}
+              {t("Name, color & icon")}
             </label>
-            <div className="grid grid-cols-[auto_1fr] gap-2">
+            <div className="grid grid-cols-[auto_auto_1fr] gap-2">
               <ColorPicker value={color} onChange={setColor} swatchClassName="h-10 w-10" />
+              <IconPicker value={icon} onChange={setIcon} swatchClassName="h-10 w-10" />
               <input
                 type="text"
                 required

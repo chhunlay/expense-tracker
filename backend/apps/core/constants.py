@@ -7,14 +7,14 @@ that one only ever ran once, for the original single-user setup before
 accounts existed.
 """
 DEFAULT_CATEGORIES = [
-    ("Food & Drink", "#f97316"),
-    ("Groceries", "#22c55e"),
-    ("Transport", "#38bdf8"),
-    ("Rent", "#a855f7"),
-    ("Subscriptions", "#ec4899"),
-    ("Bills & Utilities", "#eab308"),
-    ("Health", "#ef4444"),
-    ("Shopping", "#6366f1"),
-    ("Entertainment", "#14b8a6"),
-    ("Other", "#94a3b8"),
+    ("Food & Drink", "#f97316", "food"),
+    ("Groceries", "#22c55e", "groceries"),
+    ("Transport", "#38bdf8", "transport"),
+    ("Rent", "#a855f7", "home"),
+    ("Subscriptions", "#ec4899", "subscriptions"),
+    ("Bills & Utilities", "#eab308", "bills"),
+    ("Health", "#ef4444", "health"),
+    ("Shopping", "#6366f1", "shopping"),
+    ("Entertainment", "#14b8a6", "entertainment"),
+    ("Other", "#94a3b8", "tag"),
 ]

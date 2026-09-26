@@ -3,6 +3,75 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.5.0] - 2026-09-26
+### Added
+- Assets can now track depreciation and installment payments. Setting
+  a purchase price, purchase date, and useful life on an asset makes
+  its value auto-depreciate straight-line to 0 over that period
+  (`Asset.computed_value()`), feeding into both the Assets page and
+  net worth everywhere else. Setting just a purchase price (with or
+  without depreciation) turns on payment tracking: transactions can be
+  tagged to an asset (`Transaction.asset`), and the Assets page shows
+  a Paid/Remaining progress bar, an inline "add a payment" form, and
+  the payment history for that asset - mirroring an installment
+  tracker, but built on the existing transactions ledger instead of a
+  separate payments table. `GET /api/transactions` gained an
+  `asset_id` filter.
+### Removed
+- Dropped the Pie tab added in 3.4.0's Analytics card - Line and Bar
+  are the only chart modes now.
+
+## [3.4.0] - 2026-09-26
+### Added
+- Dashboard's Analytics card gained Line/Bar/Pie tabs next to the
+  range dropdown - Line is the existing trend chart, Bar shows the
+  same Income/Expense/Net series as grouped bars, and Pie shows the
+  Income vs. Expense split for the selected range.
+
+## [3.3.4] - 2026-09-26
+### Fixed
+- A category's name/budget edit could be silently lost: both only
+  saved on blur, so moving the mouse off the row (which collapses it)
+  or refreshing right after typing never triggered a save. They now
+  also save on their own shortly after typing stops, independent of
+  blur.
+
+## [3.3.3] - 2026-09-26
+### Fixed
+- Budgets list icons were plain grey instead of tinted with the
+  category's color, unlike the breakdown and Recent lists added in
+  3.3.2.
+
+## [3.3.2] - 2026-09-26
+### Changed
+- Dashboard's "Where it went" breakdown and "Recent" transactions list
+  now show each category's icon (tinted with its color) instead of a
+  plain colored dot, matching the Budgets list. Backend's `breakdown`
+  and transaction responses now include an `icon` field.
+
+## [3.3.1] - 2026-09-26
+### Fixed
+- Categories created before the icon picker (3.3.0) all defaulted to
+  the same generic tag icon. A data migration now backfills a sensible
+  icon per existing category by matching keywords in its name (e.g.
+  "Food & Dining" -> food, "Salary"/"Cash Advanced" -> cash,
+  "Rent"/"Household Items" -> home) - anything already picked by a
+  user going forward is unaffected.
+
+## [3.3.0] - 2026-09-26
+### Added
+- Categories can now be given an icon (a fixed set of stroke-outline
+  icons matching the sidebar's own style, picked from a new IconPicker
+  popover next to the existing color swatch on the Categories page,
+  both when adding a category and when editing one inline). New
+  `Category.icon` field (`backend/apps/core/models.py`), included in
+  `GET/POST/PATCH /api/categories` and in the Dashboard summary's
+  `budget_progress` entries.
+### Changed
+- Dashboard Budgets list now shows each category's icon next to its
+  name and sorts rows by amount spent, highest first, instead of
+  category name order.
+
 ## [3.2.0] - 2026-09-20
 ### Added
 - **Transactions gained an Odoo-style search panel**: a single Filter

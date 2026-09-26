@@ -277,3 +277,155 @@ export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+// Category icons for the dashboard's Budgets list - same plain
+// stroke-only outline style as the sidebar icons above (currentColor,
+// no fixed hue) rather than platform emoji, so they inherit the
+// theme/text color instead of carrying their own.
+export function FoodIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M7 2v7a2 2 0 0 0 2 2v11" />
+      <path d="M7 2v6M11 2v6" />
+      <path d="M17 2c-1.5 1.5-2 3.5-2 6a3 3 0 0 0 3 3v11" />
+    </Icon>
+  );
+}
+
+export function GroceriesIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 4h2l1.68 10.39A2 2 0 0 0 9.65 16h7.7a2 2 0 0 0 1.97-1.61L21 8H6" />
+      <circle cx="10" cy="20" r="1.25" />
+      <circle cx="17" cy="20" r="1.25" />
+    </Icon>
+  );
+}
+
+export function TransportIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3 15h18M5 15l1.5-6a2 2 0 0 1 2-1.5h7a2 2 0 0 1 2 1.5L19 15" />
+      <path d="M3 15v3a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h12v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-3" />
+      <circle cx="7.5" cy="15" r="1.25" />
+      <circle cx="16.5" cy="15" r="1.25" />
+    </Icon>
+  );
+}
+
+export function RentIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3 11 12 3l9 8" />
+      <path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10" />
+      <path d="M10 21v-6h4v6" />
+    </Icon>
+  );
+}
+
+export function SubscriptionsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3 12a9 9 0 0 1 15.4-6.36L21 8" />
+      <polyline points="21 3 21 8 16 8" />
+      <path d="M21 12a9 9 0 0 1-15.4 6.36L3 16" />
+      <polyline points="3 21 3 16 8 16" />
+    </Icon>
+  );
+}
+
+export function BillsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <polygon points="13 2 4 14 11 14 10 22 20 9 13 9 13 2" />
+    </Icon>
+  );
+}
+
+export function HealthIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.4 4.4 0 0 1 8-2.5 4.4 4.4 0 0 1 9.6.5Z" />
+      <path d="M9 10h2l1-2 2 4 1-2h2" />
+    </Icon>
+  );
+}
+
+export function ShoppingIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M6 8h12l1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </Icon>
+  );
+}
+
+export function EntertainmentIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polygon points="10 9 16 12 10 15 10 9" />
+    </Icon>
+  );
+}
+
+export function TagIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1.25" />
+    </Icon>
+  );
+}
+
+export function TravelIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-3 2v1.5l4.5-1.5 4.5 1.5V21l-3-2v-5.5z" />
+    </Icon>
+  );
+}
+
+export function EducationIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2 9 12 4l10 5-10 5-10-5Z" />
+      <path d="M6 11.5V17c0 1.5 2.5 3 6 3s6-1.5 6-3v-5.5" />
+      <path d="M22 9v6" />
+    </Icon>
+  );
+}
+
+export function GiftIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="9" width="18" height="4" rx="1" />
+      <path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+      <line x1="12" y1="9" x2="12" y2="21" />
+      <path d="M12 9C9 9 7.5 7.5 7.5 6a2.5 2.5 0 0 1 5 0v3ZM12 9c3 0 4.5-1.5 4.5-3a2.5 2.5 0 0 0-5 0v3Z" />
+    </Icon>
+  );
+}
+
+export function CashIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+      <line x1="6" y1="10" x2="6" y2="10.01" />
+      <line x1="18" y1="14" x2="18" y2="14.01" />
+    </Icon>
+  );
+}
+
+export function PetIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="5.5" cy="10.5" r="1.75" />
+      <circle cx="10" cy="7" r="1.75" />
+      <circle cx="14" cy="7" r="1.75" />
+      <circle cx="18.5" cy="10.5" r="1.75" />
+      <path d="M8 14c0-2 1.5-3 4-3s4 1 4 3c0 2.5-2 4.5-4 4.5S8 16.5 8 14Z" />
+    </Icon>
+  );
+}

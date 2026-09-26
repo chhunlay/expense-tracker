@@ -8,6 +8,7 @@ export interface Category {
   name: string;
   color: string;
   type: "expense" | "income";
+  icon: string;
   budget_limit: string | null;
   // Only populated by GET /api/categories (see backend's resolver) -
   // absent/0 from the create/update responses.
@@ -21,6 +22,9 @@ export interface Transaction {
   category: number | null;
   category_name: string | null;
   category_color: string | null;
+  category_icon: string | null;
+  asset: number | null;
+  asset_name: string | null;
   date: string; // YYYY-MM-DD
   note: string | null;
 }
@@ -30,6 +34,11 @@ export interface Asset {
   name: string;
   asset_type: "bank" | "cash" | "investment" | "property" | "vehicle" | "other";
   value: string;
+  purchase_price: string | null;
+  purchase_date: string | null; // YYYY-MM-DD
+  useful_life_years: number | null;
+  paid_amount: number;
+  remaining_balance: number | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -39,11 +48,13 @@ export interface BreakdownItem {
   name: string;
   amount: number;
   color: string;
+  icon: string;
 }
 
 export interface BudgetProgressItem {
   name: string;
   color: string;
+  icon: string;
   spent: number;
   limit: number;
   pct: number;

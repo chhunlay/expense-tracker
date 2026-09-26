@@ -74,7 +74,7 @@ def register(request, payload: RegisterIn):
 
     user = User.objects.create_user(username=payload.username, password=payload.password)
     Category.objects.bulk_create(
-        [Category(user=user, name=name, color=color) for name, color in DEFAULT_CATEGORIES]
+        [Category(user=user, name=name, color=color, icon=icon) for name, color, icon in DEFAULT_CATEGORIES]
     )
     token = AuthToken.objects.create(user=user)
     return 201, {"token": token.key}
@@ -138,9 +138,10 @@ def list_transactions(
     date_to: str = None,
     category_id: int = None,
     category_ids: str = None,
+    asset_id: int = None,
     limit: int = None,
 ):
-    qs = Transaction.objects.filter(user=request.auth).select_related("category")
+    qs = Transaction.objects.filter(user=request.auth).select_related("category", "asset")
     if month:
         start, end = month_bounds(month)
         qs = qs.filter(date__gte=start, date__lt=end)
@@ -159,6 +160,9 @@ def list_transactions(
         qs = qs.filter(category_id__in=ids)
     elif category_id:
         qs = qs.filter(category_id=category_id)
+    if asset_id:
+        # Used by the Assets page to list an asset's own payments.
+        qs = qs.filter(asset_id=asset_id)
     if limit:
         qs = qs[:limit]
     return qs
@@ -171,14 +175,23 @@ def _validated_category(user, category_id):
     return category
 
 
+def _validated_asset(user, asset_id):
+    if asset_id is None:
+        return None
+    asset = get_object_or_404(Asset, id=asset_id, user=user)
+    return asset
+
+
 @router.post("/transactions", response={201: TransactionOut}, auth=auth)
 def create_transaction(request, payload: TransactionIn):
     category = _validated_category(request.auth, payload.category)
+    asset = _validated_asset(request.auth, payload.asset)
     txn = Transaction.objects.create(
         user=request.auth,
         type=payload.type,
         amount=payload.amount,
         category=category,
+        asset=asset,
         date=payload.date,
         note=payload.note,
     )
@@ -218,6 +231,8 @@ def update_transaction(request, transaction_id: int, payload: TransactionPatch):
     data = payload.dict(exclude_unset=True)
     if "category" in data:
         data["category"] = _validated_category(request.auth, data["category"])
+    if "asset" in data:
+        data["asset"] = _validated_asset(request.auth, data["asset"])
     for field, value in data.items():
         setattr(txn, field, value)
     txn.save()
@@ -269,7 +284,18 @@ def delete_saved_search(request, search_id: int):
 # ---------- Assets ----------
 @router.get("/assets", response=List[AssetOut], auth=auth)
 def list_assets(request):
-    return Asset.objects.filter(user=request.auth)
+    assets = list(Asset.objects.filter(user=request.auth))
+    paid_by_asset = {
+        row["asset_id"]: float(row["total"])
+        for row in Transaction.objects.filter(
+            user=request.auth, asset__isnull=False, type=Transaction.EXPENSE
+        )
+        .values("asset_id")
+        .annotate(total=Sum("amount"))
+    }
+    for a in assets:
+        a.paid_amount = paid_by_asset.get(a.id, 0.0)
+    return assets
 
 
 @router.post("/assets", response={201: AssetOut}, auth=auth)
@@ -426,7 +452,10 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     )
     income = sum(float(t.amount) for t in rows if t.type == Transaction.INCOME)
     expense = sum(float(t.amount) for t in rows if t.type == Transaction.EXPENSE)
-    net_worth = float(Asset.objects.filter(user=request.auth).aggregate(t=Sum("value"))["t"] or 0)
+    # Summed in Python via computed_value(), not a DB Sum("value") -
+    # a depreciating asset's current worth isn't the raw stored `value`
+    # column (see Asset.computed_value()).
+    net_worth = sum(float(a.computed_value()) for a in Asset.objects.filter(user=request.auth))
 
     # Budgets stay scoped to the navigated calendar month (a monthly
     # budget_limit compared against anything else wouldn't mean much),
@@ -447,6 +476,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
         budget_progress.append({
             "name": c.name,
             "color": c.color,
+            "icon": c.icon,
             "spent": spent,
             "limit": limit,
             "pct": min(100, round(spent / limit * 100)) if limit else 0,
@@ -462,12 +492,14 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     ).select_related("category")
     breakdown_totals: dict[str, float] = {}
     breakdown_colors: dict[str, str] = {}
+    breakdown_icons: dict[str, str] = {}
     for t in breakdown_rows:
         name = t.category.name if t.category else "Uncategorized"
         breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
         breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
+        breakdown_icons[name] = t.category.icon if t.category else "tag"
     breakdown = [
-        {"name": name, "amount": amount, "color": breakdown_colors[name]}
+        {"name": name, "amount": amount, "color": breakdown_colors[name], "icon": breakdown_icons[name]}
         for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
     ]
     trend_label = format_trend_label(trend_range, trend_start, trend_end)

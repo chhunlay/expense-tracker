@@ -2,6 +2,7 @@
 
 import {
   ArcElement,
+  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Filler,
@@ -14,16 +15,43 @@ import {
 import type { Plugin } from "chart.js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Doughnut, Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
+import { CategoryIcon } from "@/lib/categoryIcons";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
 import { getStoredTrendHidden, setStoredTrendHidden } from "@/lib/theme";
 import { Summary, Transaction } from "@/types";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
+ChartJS.register(
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  ArcElement,
+  BarElement,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+// The Analytics card's own three series, shared by its Line/Bar chart
+// modes - a single source for each series' key/label/color instead of
+// repeating them per chart type.
+const ANALYTICS_SERIES = [
+  { key: "income", label: "Income", color: "#10b981", fillAlpha: 0.08 },
+  { key: "expense", label: "Expense", color: "#f43f5e", fillAlpha: 0.08 },
+  { key: "net", label: "Net", color: "#6366f1", fillAlpha: 0.15 },
+] as const;
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // Which trend-chart point is "today" - can't be inferred from the
 // label text alone now that This Week (Mon-Sun) and This Month (1st
@@ -112,6 +140,7 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const [monthStr, setMonthStr] = useState(currentMonth);
   const [trendRange, setTrendRange] = useState<string>("this_month");
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -337,77 +366,47 @@ export default function DashboardPage() {
                     })()}
                   </div>
                 </div>
-                <select
-                  value={trendRange}
-                  onChange={(e) => setTrendRange(e.target.value)}
-                  className="input rounded-lg px-2 py-1 text-xs"
-                >
-                  {TREND_RANGES.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <div className="input flex gap-0.5 rounded-lg p-0.5 text-xs">
+                    {(
+                      [
+                        ["line", "Line"],
+                        ["bar", "Bar"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setChartType(value)}
+                        className={`rounded-md px-2 py-1 font-medium transition-colors ${
+                          chartType === value ? "bg-indigo-500 text-white" : "text-muted hover:text-main"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={trendRange}
+                    onChange={(e) => setTrendRange(e.target.value)}
+                    className="input rounded-lg px-2 py-1 text-xs"
+                  >
+                    {TREND_RANGES.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <Line
-                data={{
-                  labels: summary.mini_trend.map((m) => m.month),
-                  // Same accent colors as the KPI cards above
-                  // (.kpi-income/.kpi-expense/.kpi-net in globals.css)
-                  // so the chart reads as an extension of them, not a
-                  // separate palette. Net is listed last so it draws
-                  // on top of (and legends after) Income/Expense.
-                  // cubicInterpolationMode: "monotone" instead of a
-                  // fixed tension - a tension-based (Catmull-Rom)
-                  // curve overshoots past flat/zero stretches of data
-                  // to stay smooth everywhere, which reads as the line
-                  // "curving" even where nothing changed. Monotone
-                  // interpolation stays flat where the data is flat
-                  // and only curves where there's an actual change.
-                  // Filtered out entirely, not just marked `hidden` -
-                  // Chart.js's default legend renders an entry (struck
-                  // through) for every dataset regardless of `hidden`,
-                  // which still reads as "3 series" even when only one
-                  // line is actually drawn. Leaving a hidden series out
-                  // of the array altogether means its legend entry
-                  // disappears too; re-enabling it only through
-                  // Settings/here (see toggleTrendDataset's min-1
-                  // guard) is an acceptable tradeoff for that.
-                  datasets: [
-                    {
-                      label: "Income",
-                      data: summary.mini_trend.map((m) => m.income),
-                      borderColor: "#10b981",
-                      backgroundColor: "rgba(16, 185, 129, 0.08)",
-                      fill: true,
-                      cubicInterpolationMode: "monotone" as const,
-                      pointRadius: 3,
-                      pointBackgroundColor: "#10b981",
-                    },
-                    {
-                      label: "Expense",
-                      data: summary.mini_trend.map((m) => m.expense),
-                      borderColor: "#f43f5e",
-                      backgroundColor: "rgba(244, 63, 94, 0.08)",
-                      fill: true,
-                      cubicInterpolationMode: "monotone" as const,
-                      pointRadius: 3,
-                      pointBackgroundColor: "#f43f5e",
-                    },
-                    {
-                      label: "Net",
-                      data: summary.mini_trend.map((m) => m.net),
-                      borderColor: "#6366f1",
-                      backgroundColor: "rgba(99, 102, 241, 0.15)",
-                      fill: true,
-                      cubicInterpolationMode: "monotone" as const,
-                      pointRadius: 3,
-                      pointBackgroundColor: "#6366f1",
-                    },
-                  ].filter((d) => !hiddenDatasets.has(d.label)),
-                }}
-                options={{
-                  layout: { padding: { top: 16 } },
+              {(() => {
+                // Shared by Line/Bar.
+                const visibleSeries = ANALYTICS_SERIES.filter((s) => !hiddenDatasets.has(s.label)).map((s) => ({
+                  ...s,
+                  data: summary.mini_trend.map((m) => m[s.key]),
+                }));
+
+                const sharedOptions = {
                   scales: {
                     x: { grid: { display: false } },
                     y: { grid: { color: "rgba(148,163,184,0.15)" } },
@@ -416,7 +415,7 @@ export default function DashboardPage() {
                     legend: {
                       display: true,
                       labels: { boxWidth: 10, usePointStyle: true },
-                      // Persists which lines are toggled off to
+                      // Persists which series are toggled off to
                       // localStorage (via toggleTrendDataset), instead
                       // of only living in Chart.js's own in-memory
                       // legend state, which reset on every reload. The
@@ -426,20 +425,82 @@ export default function DashboardPage() {
                       // chart.hide()/show() needed, React just
                       // re-renders with one fewer dataset (or refuses
                       // to, via toggleTrendDataset's min-1 guard).
-                      onClick: (_e, legendItem) => {
+                      onClick: (_e: unknown, legendItem: { text?: string }) => {
                         if (legendItem.text) toggleTrendDataset(legendItem.text);
                       },
                     },
                   },
-                }}
-                // Only meaningful when looking at the actual current
-                // month - Prev/Next now shifts every trend_range's
-                // anchor to the navigated month server-side (see
-                // month_anchor() in api.py), so a past/future month
-                // has no "today" point to mark at all.
-                plugins={isCurrentMonth ? [createTodayLinePlugin(getTodayIndexForRange(trendRange))] : []}
-                height={140}
-              />
+                };
+
+                if (chartType === "bar") {
+                  return (
+                    <Bar
+                      data={{
+                        labels: summary.mini_trend.map((m) => m.month),
+                        datasets: visibleSeries.map((s) => ({
+                          label: s.label,
+                          data: s.data,
+                          backgroundColor: s.color,
+                          borderRadius: 4,
+                        })),
+                      }}
+                      options={sharedOptions}
+                      height={140}
+                    />
+                  );
+                }
+
+                return (
+                  <Line
+                    data={{
+                      labels: summary.mini_trend.map((m) => m.month),
+                      // Same accent colors as the KPI cards above
+                      // (.kpi-income/.kpi-expense/.kpi-net in
+                      // globals.css) so the chart reads as an
+                      // extension of them, not a separate palette. Net
+                      // is listed last so it draws on top of (and
+                      // legends after) Income/Expense.
+                      // cubicInterpolationMode: "monotone" instead of
+                      // a fixed tension - a tension-based (Catmull-
+                      // Rom) curve overshoots past flat/zero stretches
+                      // of data to stay smooth everywhere, which reads
+                      // as the line "curving" even where nothing
+                      // changed. Monotone interpolation stays flat
+                      // where the data is flat and only curves where
+                      // there's an actual change. Filtered out
+                      // entirely, not just marked `hidden` - Chart.js's
+                      // default legend renders an entry (struck
+                      // through) for every dataset regardless of
+                      // `hidden`, which still reads as "3 series" even
+                      // when only one line is actually drawn. Leaving
+                      // a hidden series out of the array altogether
+                      // means its legend entry disappears too; re-
+                      // enabling it only through Settings/here (see
+                      // toggleTrendDataset's min-1 guard) is an
+                      // acceptable tradeoff for that.
+                      datasets: visibleSeries.map((s) => ({
+                        label: s.label,
+                        data: s.data,
+                        borderColor: s.color,
+                        backgroundColor: hexToRgba(s.color, s.fillAlpha),
+                        fill: true,
+                        cubicInterpolationMode: "monotone" as const,
+                        pointRadius: 3,
+                        pointBackgroundColor: s.color,
+                      })),
+                    }}
+                    options={{ layout: { padding: { top: 16 } }, ...sharedOptions }}
+                    // Only meaningful when looking at the actual
+                    // current month - Prev/Next now shifts every
+                    // trend_range's anchor to the navigated month
+                    // server-side (see month_anchor() in api.py), so a
+                    // past/future month has no "today" point to mark
+                    // at all.
+                    plugins={isCurrentMonth ? [createTodayLinePlugin(getTodayIndexForRange(trendRange))] : []}
+                    height={140}
+                  />
+                );
+              })()}
             </div>
 
             <div className="glass-card rounded-2xl p-5">
@@ -466,7 +527,7 @@ export default function DashboardPage() {
                     {summary.breakdown.map((b) => (
                       <div key={b.name} className="flex items-center justify-between text-sm">
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: b.color }} />
+                          <CategoryIcon icon={b.icon} width={15} height={15} className="flex-shrink-0" style={{ color: b.color }} />
                           <span className="truncate">{b.name}</span>
                         </span>
                         <span className="text-muted ml-2 flex-shrink-0">{money(b.amount)}</span>
@@ -487,10 +548,15 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {summary.budget_progress.map((b) => (
+                  {[...summary.budget_progress]
+                    .sort((a, b) => b.spent - a.spent)
+                    .map((b) => (
                     <div key={b.name}>
                       <div className="mb-1 flex justify-between text-sm">
-                        <span>{b.name}</span>
+                        <span className="flex items-center gap-1.5">
+                          <CategoryIcon icon={b.icon} width={15} height={15} style={{ color: b.color }} />
+                          {b.name}
+                        </span>
                         <span className="text-muted">
                           {money(b.spent)} / {money(b.limit)}
                         </span>
@@ -528,9 +594,12 @@ export default function DashboardPage() {
                   {recent.map((r) => (
                     <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                          style={{ background: r.category_color || "#94a3b8" }}
+                        <CategoryIcon
+                          icon={r.category_icon || "tag"}
+                          width={15}
+                          height={15}
+                          className="flex-shrink-0"
+                          style={{ color: r.category_color || "#94a3b8" }}
                         />
                         <div className="min-w-0">
                           {/* Only the "Uncategorized" fallback gets
