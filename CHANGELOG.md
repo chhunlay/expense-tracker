@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.3.1] - 2026-09-26
+### Fixed
+- Categories created before the icon picker (3.3.0) all defaulted to
+  the same generic tag icon. A data migration now backfills a sensible
+  icon per existing category by matching keywords in its name (e.g.
+  "Food & Dining" -> food, "Salary"/"Cash Advanced" -> cash,
+  "Rent"/"Household Items" -> home) - anything already picked by a
+  user going forward is unaffected.
+
 ## [3.3.0] - 2026-09-26
 ### Added
 - Categories can now be given an icon (a fixed set of stroke-outline
