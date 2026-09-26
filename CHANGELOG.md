@@ -3,7 +3,20 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
-## [3.4.1] - 2026-09-26
+## [3.5.0] - 2026-09-26
+### Added
+- Assets can now track depreciation and installment payments. Setting
+  a purchase price, purchase date, and useful life on an asset makes
+  its value auto-depreciate straight-line to 0 over that period
+  (`Asset.computed_value()`), feeding into both the Assets page and
+  net worth everywhere else. Setting just a purchase price (with or
+  without depreciation) turns on payment tracking: transactions can be
+  tagged to an asset (`Transaction.asset`), and the Assets page shows
+  a Paid/Remaining progress bar, an inline "add a payment" form, and
+  the payment history for that asset - mirroring an installment
+  tracker, but built on the existing transactions ledger instead of a
+  separate payments table. `GET /api/transactions` gained an
+  `asset_id` filter.
 ### Removed
 - Dropped the Pie tab added in 3.4.0's Analytics card - Line and Bar
   are the only chart modes now.

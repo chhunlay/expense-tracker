@@ -76,6 +76,8 @@ class TransactionOut(Schema):
     category_name: Optional[str] = None
     category_color: Optional[str] = None
     category_icon: Optional[str] = None
+    asset: Optional[int] = None
+    asset_name: Optional[str] = None
     date: DateType
     note: Optional[str] = None
 
@@ -99,11 +101,20 @@ class TransactionOut(Schema):
     def resolve_category_icon(obj) -> Optional[str]:
         return obj.category.icon if obj.category_id else None
 
+    @staticmethod
+    def resolve_asset(obj) -> Optional[int]:
+        return obj.asset_id
+
+    @staticmethod
+    def resolve_asset_name(obj) -> Optional[str]:
+        return obj.asset.name if obj.asset_id else None
+
 
 class TransactionIn(Schema):
     type: str
     amount: Decimal
     category: Optional[int] = None
+    asset: Optional[int] = None
     date: DateType
     note: Optional[str] = None
 
@@ -112,6 +123,7 @@ class TransactionPatch(Schema):
     type: Optional[str] = None
     amount: Optional[Decimal] = None
     category: Optional[int] = None
+    asset: Optional[int] = None
     date: Optional[DateType] = None
     note: Optional[str] = None
 
@@ -153,19 +165,46 @@ class AssetOut(Schema):
     name: str
     asset_type: str
     value: str
+    purchase_price: Optional[str] = None
+    purchase_date: Optional[DateType] = None
+    useful_life_years: Optional[int] = None
+    # Sum of expense transactions tagged with this asset (see
+    # Transaction.asset) - only populated by GET /api/assets, which
+    # annotates each instance before serializing (same pattern
+    # CategoryOut.spent_this_month uses), so it's 0 from create/update
+    # responses.
+    paid_amount: float = 0.0
+    remaining_balance: Optional[float] = None
     note: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     @staticmethod
     def resolve_value(obj) -> str:
-        return str(obj.value)
+        return str(obj.computed_value())
+
+    @staticmethod
+    def resolve_purchase_price(obj) -> Optional[str]:
+        return str(obj.purchase_price) if obj.purchase_price is not None else None
+
+    @staticmethod
+    def resolve_paid_amount(obj) -> float:
+        return getattr(obj, "paid_amount", 0.0)
+
+    @staticmethod
+    def resolve_remaining_balance(obj) -> Optional[float]:
+        if obj.purchase_price is None:
+            return None
+        return max(0.0, float(obj.purchase_price) - getattr(obj, "paid_amount", 0.0))
 
 
 class AssetIn(Schema):
     name: str
     asset_type: str = "other"
     value: Decimal
+    purchase_price: Optional[Decimal] = None
+    purchase_date: Optional[DateType] = None
+    useful_life_years: Optional[int] = None
     note: Optional[str] = None
 
 
@@ -173,6 +212,9 @@ class AssetPatch(Schema):
     name: Optional[str] = None
     asset_type: Optional[str] = None
     value: Optional[Decimal] = None
+    purchase_price: Optional[Decimal] = None
+    purchase_date: Optional[DateType] = None
+    useful_life_years: Optional[int] = None
     note: Optional[str] = None
 
 

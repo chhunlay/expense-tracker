@@ -12,6 +12,8 @@ same shape (a random hex key per user), just not borrowed from a
 library we otherwise don't use.
 """
 import secrets
+from datetime import date
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -76,6 +78,13 @@ class Transaction(models.Model):
     # the transactions that used it, same behavior as the Flask
     # version's ON DELETE SET NULL foreign key.
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    # An expense transaction can optionally be tagged as a payment
+    # toward an Asset bought on installment (e.g. a laptop paid off
+    # over several months) - "Asset" is a forward string reference
+    # since that class is defined later in this file. paid_amount for
+    # such an asset is just the sum of its linked transactions (see
+    # list_assets() in api.py), not a separately tracked number.
+    asset = models.ForeignKey("Asset", on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
     note = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -136,7 +145,19 @@ class Asset(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assets")
     name = models.CharField(max_length=150)
     asset_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default=OTHER)
+    # The value shown/used everywhere (net worth, this list) once
+    # depreciation is set up - see computed_value(). Kept as a plain
+    # field (rather than dropped) so an asset with no depreciation
+    # fields set still works exactly as before: a manually-entered,
+    # manually-updated current value.
     value = models.DecimalField(max_digits=12, decimal_places=2)
+    # Depreciation is opt-in - all three of these need to be set for
+    # computed_value() to override `value`. purchase_price doubles as
+    # the total price for installment tracking (Transaction.asset),
+    # since both concepts share the same "what did this cost" number.
+    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    purchase_date = models.DateField(null=True, blank=True)
+    useful_life_years = models.PositiveIntegerField(null=True, blank=True)
     note = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -146,6 +167,21 @@ class Asset(models.Model):
 
     def __str__(self):
         return self.name
+
+    def is_depreciating(self) -> bool:
+        return self.purchase_price is not None and self.purchase_date is not None and bool(self.useful_life_years)
+
+    def computed_value(self) -> Decimal:
+        """Straight-line depreciation from purchase_price down to 0 over
+        useful_life_years, floored at 0 once fully depreciated. Falls
+        back to the plain `value` field for a non-depreciating asset."""
+        if not self.is_depreciating():
+            return self.value
+        age_years = (date.today() - self.purchase_date).days / 365.25
+        if age_years >= self.useful_life_years:
+            return Decimal("0.00")
+        remaining_fraction = Decimal(str(max(0.0, 1 - age_years / self.useful_life_years)))
+        return (self.purchase_price * remaining_fraction).quantize(Decimal("0.01"))
 
 
 class SavedSearch(models.Model):
