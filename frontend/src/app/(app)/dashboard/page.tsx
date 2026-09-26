@@ -494,7 +494,7 @@ export default function DashboardPage() {
                     <div key={b.name}>
                       <div className="mb-1 flex justify-between text-sm">
                         <span className="flex items-center gap-1.5">
-                          <CategoryIcon icon={b.icon} className="text-muted" width={15} height={15} />
+                          <CategoryIcon icon={b.icon} width={15} height={15} style={{ color: b.color }} />
                           {b.name}
                         </span>
                         <span className="text-muted">

@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.3.3] - 2026-09-26
+### Fixed
+- Budgets list icons were plain grey instead of tinted with the
+  category's color, unlike the breakdown and Recent lists added in
+  3.3.2.
+
 ## [3.3.2] - 2026-09-26
 ### Changed
 - Dashboard's "Where it went" breakdown and "Recent" transactions list
