@@ -87,6 +87,7 @@ export interface MonthlyTotal {
 export interface TopCategory {
   name: string;
   color: string;
+  icon: string;
   total: number;
 }
 

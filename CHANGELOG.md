@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.4.0] - 2026-09-26
+### Added
+- Reports page is now a real chart dashboard instead of plain number
+  lists: 12-month income/expense/net totals as stat cards, a grouped
+  bar chart for the 12-month income vs. expense trend, and a doughnut
+  chart + icon list for top categories (same style as the Dashboard's
+  "Where it went"). `GET /api/reports`'s `top_categories` now includes
+  each category's `icon`.
+
 ## [3.3.4] - 2026-09-26
 ### Fixed
 - A category's name/budget edit could be silently lost: both only
