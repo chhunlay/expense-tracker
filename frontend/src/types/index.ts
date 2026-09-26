@@ -8,6 +8,7 @@ export interface Category {
   name: string;
   color: string;
   type: "expense" | "income";
+  icon: string;
   budget_limit: string | null;
   // Only populated by GET /api/categories (see backend's resolver) -
   // absent/0 from the create/update responses.
@@ -44,6 +45,7 @@ export interface BreakdownItem {
 export interface BudgetProgressItem {
   name: string;
   color: string;
+  icon: string;
   spent: number;
   limit: number;
   pct: number;

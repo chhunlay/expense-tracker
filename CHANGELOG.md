@@ -3,6 +3,20 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.3.0] - 2026-09-26
+### Added
+- Categories can now be given an icon (a fixed set of stroke-outline
+  icons matching the sidebar's own style, picked from a new IconPicker
+  popover next to the existing color swatch on the Categories page,
+  both when adding a category and when editing one inline). New
+  `Category.icon` field (`backend/apps/core/models.py`), included in
+  `GET/POST/PATCH /api/categories` and in the Dashboard summary's
+  `budget_progress` entries.
+### Changed
+- Dashboard Budgets list now shows each category's icon next to its
+  name and sorts rows by amount spent, highest first, instead of
+  category name order.
+
 ## [3.2.0] - 2026-09-20
 ### Added
 - **Transactions gained an Odoo-style search panel**: a single Filter

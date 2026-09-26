@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
 
 import { apiFetch, ApiError } from "@/lib/api";
+import { CategoryIcon } from "@/lib/categoryIcons";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only used by the Net worth card, commented out below
 import { AssetsIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { useTranslation } from "@/lib/i18n";
@@ -487,10 +488,15 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {summary.budget_progress.map((b) => (
+                  {[...summary.budget_progress]
+                    .sort((a, b) => b.spent - a.spent)
+                    .map((b) => (
                     <div key={b.name}>
                       <div className="mb-1 flex justify-between text-sm">
-                        <span>{b.name}</span>
+                        <span className="flex items-center gap-1.5">
+                          <CategoryIcon icon={b.icon} className="text-muted" width={15} height={15} />
+                          {b.name}
+                        </span>
                         <span className="text-muted">
                           {money(b.spent)} / {money(b.limit)}
                         </span>

@@ -30,6 +30,27 @@ class Category(models.Model):
     # Income categories instead of listing both at once.
     type = models.CharField(max_length=7, choices=TYPE_CHOICES, default=EXPENSE)
     budget_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # One of ICON_CHOICES below - picked from a fixed set of stroke-style
+    # icons on the frontend (frontend/src/lib/categoryIcons.tsx), not
+    # freeform, so a bad value there always has TagIcon to fall back to.
+    ICON_CHOICES = [
+        ("food", "Food"),
+        ("groceries", "Groceries"),
+        ("transport", "Transport"),
+        ("home", "Home"),
+        ("subscriptions", "Subscriptions"),
+        ("bills", "Bills"),
+        ("health", "Health"),
+        ("shopping", "Shopping"),
+        ("entertainment", "Entertainment"),
+        ("travel", "Travel"),
+        ("education", "Education"),
+        ("gift", "Gift"),
+        ("cash", "Cash"),
+        ("pet", "Pet"),
+        ("tag", "Other"),
+    ]
+    icon = models.CharField(max_length=20, choices=ICON_CHOICES, default="tag")
 
     class Meta:
         ordering = ["name"]

@@ -74,7 +74,7 @@ def register(request, payload: RegisterIn):
 
     user = User.objects.create_user(username=payload.username, password=payload.password)
     Category.objects.bulk_create(
-        [Category(user=user, name=name, color=color) for name, color in DEFAULT_CATEGORIES]
+        [Category(user=user, name=name, color=color, icon=icon) for name, color, icon in DEFAULT_CATEGORIES]
     )
     token = AuthToken.objects.create(user=user)
     return 201, {"token": token.key}
@@ -447,6 +447,7 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
         budget_progress.append({
             "name": c.name,
             "color": c.color,
+            "icon": c.icon,
             "spent": spent,
             "limit": limit,
             "pct": min(100, round(spent / limit * 100)) if limit else 0,
