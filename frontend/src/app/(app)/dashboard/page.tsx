@@ -140,7 +140,7 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const [monthStr, setMonthStr] = useState(currentMonth);
   const [trendRange, setTrendRange] = useState<string>("this_month");
-  const [chartType, setChartType] = useState<"line" | "bar" | "doughnut">("line");
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -372,7 +372,6 @@ export default function DashboardPage() {
                       [
                         ["line", "Line"],
                         ["bar", "Bar"],
-                        ["doughnut", "Pie"],
                       ] as const
                     ).map(([value, label]) => (
                       <button
@@ -401,38 +400,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               {(() => {
-                // Shared by Line/Bar - Pie ignores hiddenDatasets
-                // (toggling one of two slices off would leave a
-                // meaningless single-slice donut) and aggregates each
-                // series over the whole visible range instead.
+                // Shared by Line/Bar.
                 const visibleSeries = ANALYTICS_SERIES.filter((s) => !hiddenDatasets.has(s.label)).map((s) => ({
                   ...s,
                   data: summary.mini_trend.map((m) => m[s.key]),
                 }));
-
-                if (chartType === "doughnut") {
-                  const totalIncome = summary.mini_trend.reduce((sum, m) => sum + m.income, 0);
-                  const totalExpense = summary.mini_trend.reduce((sum, m) => sum + m.expense, 0);
-                  return (
-                    <Doughnut
-                      data={{
-                        labels: ["Income", "Expense"],
-                        datasets: [
-                          {
-                            data: [totalIncome, totalExpense],
-                            backgroundColor: ["#10b981", "#f43f5e"],
-                            borderWidth: 0,
-                          },
-                        ],
-                      }}
-                      options={{
-                        plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, usePointStyle: true } } },
-                        cutout: "65%",
-                      }}
-                      height={160}
-                    />
-                  );
-                }
 
                 const sharedOptions = {
                   scales: {

@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.4.1] - 2026-09-26
+### Removed
+- Dropped the Pie tab added in 3.4.0's Analytics card - Line and Bar
+  are the only chart modes now.
+
 ## [3.4.0] - 2026-09-26
 ### Added
 - Dashboard's Analytics card gained Line/Bar/Pie tabs next to the
