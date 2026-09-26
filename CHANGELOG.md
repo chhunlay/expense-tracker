@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.3.4] - 2026-09-26
+### Fixed
+- A category's name/budget edit could be silently lost: both only
+  saved on blur, so moving the mouse off the row (which collapses it)
+  or refreshing right after typing never triggered a save. They now
+  also save on their own shortly after typing stops, independent of
+  blur.
+
 ## [3.3.3] - 2026-09-26
 ### Fixed
 - Budgets list icons were plain grey instead of tinted with the

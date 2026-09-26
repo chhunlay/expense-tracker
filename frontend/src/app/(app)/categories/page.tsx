@@ -51,6 +51,25 @@ function CategoryRow({ category, onSaved, onDeleted }: {
     }
   }
 
+  // Backstop for name/budget's blur-based save above: blur never fires
+  // if the mouse leaves the row (collapsing it) or the page is
+  // reloaded right after typing, silently dropping the edit. This
+  // saves it a moment after typing stops regardless, so it's never
+  // depending on blur alone to happen.
+  useEffect(() => {
+    if (name === category.name) return;
+    const timer = setTimeout(() => saveField({}), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
+
+  useEffect(() => {
+    if (budget === (category.budget_limit ?? "")) return;
+    const timer = setTimeout(() => saveField({}), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budget]);
+
   async function handleDelete() {
     if (!confirm(t("Delete this category? Its past transactions become Uncategorized."))) return;
     try {
