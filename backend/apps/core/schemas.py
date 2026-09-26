@@ -269,7 +269,6 @@ class SummaryOut(Schema):
 class TopCategory(Schema):
     name: str
     color: str
-    icon: str
     total: float
 
 

@@ -530,7 +530,7 @@ def reports(request):
         )
         total = float(total or 0)
         if total > 0:
-            top_categories.append(TopCategory(name=c.name, color=c.color, icon=c.icon, total=total))
+            top_categories.append(TopCategory(name=c.name, color=c.color, total=total))
     top_categories.sort(key=lambda c: -c.total)
 
     return {"monthly_totals": monthly_totals, "top_categories": top_categories}
