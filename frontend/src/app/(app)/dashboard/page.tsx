@@ -467,7 +467,7 @@ export default function DashboardPage() {
                     {summary.breakdown.map((b) => (
                       <div key={b.name} className="flex items-center justify-between text-sm">
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: b.color }} />
+                          <CategoryIcon icon={b.icon} width={15} height={15} className="flex-shrink-0" style={{ color: b.color }} />
                           <span className="truncate">{b.name}</span>
                         </span>
                         <span className="text-muted ml-2 flex-shrink-0">{money(b.amount)}</span>
@@ -534,9 +534,12 @@ export default function DashboardPage() {
                   {recent.map((r) => (
                     <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                          style={{ background: r.category_color || "#94a3b8" }}
+                        <CategoryIcon
+                          icon={r.category_icon || "tag"}
+                          width={15}
+                          height={15}
+                          className="flex-shrink-0"
+                          style={{ color: r.category_color || "#94a3b8" }}
                         />
                         <div className="min-w-0">
                           {/* Only the "Uncategorized" fallback gets

@@ -463,12 +463,14 @@ def summary(request, month: str = None, trend_range: str = "this_month"):
     ).select_related("category")
     breakdown_totals: dict[str, float] = {}
     breakdown_colors: dict[str, str] = {}
+    breakdown_icons: dict[str, str] = {}
     for t in breakdown_rows:
         name = t.category.name if t.category else "Uncategorized"
         breakdown_totals[name] = breakdown_totals.get(name, 0.0) + float(t.amount)
         breakdown_colors[name] = t.category.color if t.category else "#94a3b8"
+        breakdown_icons[name] = t.category.icon if t.category else "tag"
     breakdown = [
-        {"name": name, "amount": amount, "color": breakdown_colors[name]}
+        {"name": name, "amount": amount, "color": breakdown_colors[name], "icon": breakdown_icons[name]}
         for name, amount in sorted(breakdown_totals.items(), key=lambda kv: -kv[1])
     ]
     trend_label = format_trend_label(trend_range, trend_start, trend_end)

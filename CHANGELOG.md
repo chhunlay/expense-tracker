@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file, grouped by
 release and ordered oldest to newest.
 
+## [3.3.2] - 2026-09-26
+### Changed
+- Dashboard's "Where it went" breakdown and "Recent" transactions list
+  now show each category's icon (tinted with its color) instead of a
+  plain colored dot, matching the Budgets list. Backend's `breakdown`
+  and transaction responses now include an `icon` field.
+
 ## [3.3.1] - 2026-09-26
 ### Fixed
 - Categories created before the icon picker (3.3.0) all defaulted to

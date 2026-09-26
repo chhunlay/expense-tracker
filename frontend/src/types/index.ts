@@ -22,6 +22,7 @@ export interface Transaction {
   category: number | null;
   category_name: string | null;
   category_color: string | null;
+  category_icon: string | null;
   date: string; // YYYY-MM-DD
   note: string | null;
 }
@@ -40,6 +41,7 @@ export interface BreakdownItem {
   name: string;
   amount: number;
   color: string;
+  icon: string;
 }
 
 export interface BudgetProgressItem {

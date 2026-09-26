@@ -75,6 +75,7 @@ class TransactionOut(Schema):
     category: Optional[int] = None
     category_name: Optional[str] = None
     category_color: Optional[str] = None
+    category_icon: Optional[str] = None
     date: DateType
     note: Optional[str] = None
 
@@ -93,6 +94,10 @@ class TransactionOut(Schema):
     @staticmethod
     def resolve_category_color(obj) -> Optional[str]:
         return obj.category.color if obj.category_id else None
+
+    @staticmethod
+    def resolve_category_icon(obj) -> Optional[str]:
+        return obj.category.icon if obj.category_id else None
 
 
 class TransactionIn(Schema):
@@ -236,6 +241,7 @@ class BreakdownItem(Schema):
     name: str
     amount: float
     color: str
+    icon: str
 
 
 class BudgetProgressItem(Schema):
